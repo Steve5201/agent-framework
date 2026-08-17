@@ -48,8 +48,13 @@ service AuthService {
   rpc AdminGetUsersByIds(AdminGetUsersByIdsRequest) returns (AdminGetUsersByIdsResponse);
   // ListAgents 智能体列表（最高超管看全部，其它按归属过滤）。
   rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
-  // CreateAgent 创建智能体（仅最高超管；owner 被授予该智能体的 agent_admin 角色）。
+  // CreateAgent 创建智能体（仅最高超管；owner 可空，稍后经 BindAgentOwner 绑定）。
+  // owner 被授予该智能体的 agent_admin 角色并绑定 agent 标签。
   rpc CreateAgent(CreateAgentRequest) returns (CreateAgentResponse);
+  // BindAgentOwner 绑定/更换/解绑智能体超管（仅最高超管）。
+  // 绑定新 owner：回收旧 owner 的 agent_admin 角色与 agent 标签，授予新 owner；
+  // owner_user_id 为空串 = 仅解绑当前 owner（不授予新 owner）。
+  rpc BindAgentOwner(BindAgentOwnerRequest) returns (BindAgentOwnerResponse);
   // GetAgent 智能体详情（最高超管任意；其它角色仅限归属域）。
   rpc GetAgent(GetAgentRequest) returns (GetAgentResponse);
   // GetAgentPublic 公开智能体元数据（任意登录用户可查，仅返回前台展示/装配
@@ -215,7 +220,7 @@ message CreateAgentRequest {
   string name = 2;           // 展示名（非空）
   string description = 3;    // 描述（可选）
   string model = 4;          // 默认模型（可选）
-  string owner_user_id = 5;  // 智能体超管（agent_admin）用户 ID
+  string owner_user_id = 5;  // 智能体超管（agent_admin）用户 ID（可选，空 = 稍后经 BindAgentOwner 绑定）
   string avatar = 6;         // 形象 emoji（可选）
   string welcome = 7;        // 欢迎语（可选）
   string system_prompt = 8;  // 按智能体系统提示词（可选）
@@ -224,6 +229,18 @@ message CreateAgentRequest {
 
 message CreateAgentResponse {
   Agent agent = 1;
+}
+
+// BindAgentOwnerRequest 绑定/更换/解绑智能体超管（仅最高超管可调）。
+// owner_user_id 为空串 = 仅解绑当前 owner（不授予新 owner）。
+// 更换 owner 时旧 owner 的 agent_admin 角色与 agent 标签被回收。
+message BindAgentOwnerRequest {
+  string id = 1;              // 智能体 ID
+  string owner_user_id = 2;   // 新超管用户 ID（可选，空串 = 解绑）
+}
+
+message BindAgentOwnerResponse {
+  Agent agent = 1; // 绑定后的智能体记录（owner_user_id 可能为空）
 }
 
 // GetAgentRequest 智能体详情。

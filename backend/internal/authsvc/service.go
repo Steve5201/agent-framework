@@ -518,6 +518,10 @@ func (s *Service) AdminDeleteUser(ctx context.Context, actorID, targetUserID str
 			return errors.New(errors.CodeInvalidArgument, "不能删除最后一名最高超管")
 		}
 	}
+	// owner 已可空：先清空该用户担任 owner 的智能体（防悬空引用），再删用户。
+	if err := s.repo.ClearAgentsOwner(ctx, mustUserID(target.ID)); err != nil {
+		return err
+	}
 	return s.repo.DeleteUser(ctx, mustUserID(target.ID))
 }
 
@@ -592,8 +596,9 @@ func (s *Service) EnsureDefaultAgent(ctx context.Context) error {
 }
 
 // CreateAgent 创建智能体（仅最高超管）：
-//   - 校验参数（id 白名单、名称非空、owner 用户存在、推理强度合法）；
-//   - 将 owner 用户授予 agent_admin 角色并绑定智能体标签，
+//   - 校验参数（id 白名单、名称非空、推理强度合法）；
+//   - owner_user_id 可选：为空则暂不绑定（稍后经 BindAgentOwner 绑定）；
+//   - 绑定 owner 时将该用户授予 agent_admin 角色并绑定智能体标签，
 //     使其成为该智能体的超管（管理员组负责人）。
 func (s *Service) CreateAgent(ctx context.Context, actorID, id, name, description, model, avatar, welcome, systemPrompt, reasoningEffort string, ownerUserID int64) (*Agent, error) {
 	actor, err := s.repo.GetUserByID(ctx, actorID)
@@ -612,23 +617,101 @@ func (s *Service) CreateAgent(ctx context.Context, actorID, id, name, descriptio
 	if err := validateReasoningEffort(reasoningEffort); err != nil {
 		return nil, err
 	}
-	if ownerUserID <= 0 {
-		return nil, errors.New(errors.CodeInvalidArgument, "必须指定智能体超管（owner 用户）")
+	if ownerUserID > 0 {
+		owner, err := s.repo.GetUserByID(ctx, fmt.Sprint(ownerUserID))
+		if err != nil {
+			return nil, errors.New(errors.CodeInvalidArgument, "指定的智能体超管用户不存在")
+		}
+		if owner.Role == RoleSuperAdmin {
+			return nil, errors.New(errors.CodeInvalidArgument, "最高超管不能作为智能体 owner（会失去最高权限）")
+		}
+		// 授予 owner 智能体超管角色 + 绑定智能体标签（幂等覆盖）。
+		if err := s.repo.UpdateUserRole(ctx, ownerUserID, RoleAgentAdmin); err != nil {
+			return nil, err
+		}
+		if err := s.repo.AddUserTag(ctx, fmt.Sprint(ownerUserID), Tag{Key: tagKeyAgent, Value: id}); err != nil {
+			return nil, err
+		}
 	}
-	if _, err := s.repo.GetUserByID(ctx, fmt.Sprint(ownerUserID)); err != nil {
+	return s.repo.CreateAgent(ctx, &Agent{
+		ID: id, Name: name, Description: description, Model: model, OwnerUserID: ownerUserID,
+		Avatar: avatar, Welcome: welcome, SystemPrompt: systemPrompt, ReasoningEffort: reasoningEffort,
+	})
+}
+
+// BindAgentOwner 绑定/更换/解绑智能体超管（仅最高超管）：
+//   - ownerUserID<=0：仅解绑当前 owner（回收其 agent_admin 角色与 agent 标签）；
+//   - ownerUserID>0：校验新用户存在且非最高超管；若当前 owner 不同则先回收，
+//     再授予新 owner agent_admin 角色与 agent 标签。
+//
+// 解耦"创建智能体必须已有用户、创建用户必须已有域"的鸡生蛋问题。
+func (s *Service) BindAgentOwner(ctx context.Context, actorID, id string, ownerUserID int64) (*Agent, error) {
+	actor, err := s.repo.GetUserByID(ctx, actorID)
+	if err != nil {
+		return nil, err
+	}
+	if !actor.Role.CanCreateAgent() {
+		return nil, errors.New(errors.CodePermissionDenied, "仅最高超管可绑定智能体超管")
+	}
+	if err := validateAgentID(id); err != nil {
+		return nil, err
+	}
+	cur, err := s.repo.GetAgent(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if ownerUserID <= 0 {
+		// 解绑：回收当前 owner。
+		if cur.OwnerUserID > 0 {
+			if err := s.revokeAgentOwner(ctx, cur.OwnerUserID, id); err != nil {
+				return nil, err
+			}
+		}
+		return s.repo.UpdateAgentOwner(ctx, id, 0)
+	}
+	newOwner, err := s.repo.GetUserByID(ctx, fmt.Sprint(ownerUserID))
+	if err != nil {
 		return nil, errors.New(errors.CodeInvalidArgument, "指定的智能体超管用户不存在")
 	}
-	// 授予 owner 智能体超管角色 + 绑定智能体标签（幂等覆盖）。
+	if newOwner.Role == RoleSuperAdmin {
+		return nil, errors.New(errors.CodeInvalidArgument, "最高超管不能作为智能体 owner（会失去最高权限）")
+	}
+	// 更换 owner：先回收旧 owner（若存在且不同）。
+	if cur.OwnerUserID > 0 && cur.OwnerUserID != ownerUserID {
+		if err := s.revokeAgentOwner(ctx, cur.OwnerUserID, id); err != nil {
+			return nil, err
+		}
+	}
+	// 授予新 owner 智能体超管角色 + 绑定智能体标签（幂等覆盖）。
 	if err := s.repo.UpdateUserRole(ctx, ownerUserID, RoleAgentAdmin); err != nil {
 		return nil, err
 	}
 	if err := s.repo.AddUserTag(ctx, fmt.Sprint(ownerUserID), Tag{Key: tagKeyAgent, Value: id}); err != nil {
 		return nil, err
 	}
-	return s.repo.CreateAgent(ctx, &Agent{
-		ID: id, Name: name, Description: description, Model: model, OwnerUserID: ownerUserID,
-		Avatar: avatar, Welcome: welcome, SystemPrompt: systemPrompt, ReasoningEffort: reasoningEffort,
-	})
+	return s.repo.UpdateAgentOwner(ctx, id, ownerUserID)
+}
+
+// revokeAgentOwner 回收某用户对该智能体的 owner 权限：若其角色仍为
+// agent_admin 则降为普通用户（防误伤已被提升为最高超管的账号），
+// 并移除指向该智能体的 agent 标签。
+func (s *Service) revokeAgentOwner(ctx context.Context, ownerUserID int64, agentID string) error {
+	uid := fmt.Sprint(ownerUserID)
+	owner, err := s.repo.GetUserByID(ctx, uid)
+	if err != nil {
+		return err
+	}
+	if owner.Role == RoleAgentAdmin {
+		if err := s.repo.UpdateUserRole(ctx, ownerUserID, RoleUser); err != nil {
+			return err
+		}
+	}
+	if owner.HasTag(tagKeyAgent, agentID) {
+		if err := s.repo.RemoveUserTag(ctx, uid, tagKeyAgent); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ListAgents 列出智能体：最高超管看全部；其它管理员/用户只看自己归属的智能体。

@@ -687,6 +687,12 @@ export async function adminSetAgentStatus(id: string, status: 0 | 1): Promise<Ag
   return resp.data.agent
 }
 
+/** 绑定/更换/解绑智能体超管（仅最高超管；owner_user_id 空串 = 解绑） */
+export async function adminBindAgentOwner(id: string, ownerUserId: string): Promise<Agent> {
+  const resp = await api.post<{ agent: Agent }>(`/v1/admin/agents/${encodeURIComponent(id)}/owner`, { owner_user_id: ownerUserId })
+  return resp.data.agent
+}
+
 /** 智能体用量聚合（最近 N 天成功调用；days 1..90，缺省 7） */
 export async function adminGetAgentUsage(id: string, days = 7): Promise<AgentUsage> {
   const resp = await api.get<AgentUsage>(`/v1/admin/agents/${encodeURIComponent(id)}/usage`, { params: { days } })

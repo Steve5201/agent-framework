@@ -57,6 +57,44 @@ func userAgentScope(r *http.Request, requested string) (string, error) {
 	return agent, nil
 }
 
+// agentScopeFor 解析会话/工具/资源类接口的请求域并校验访问权（多租户域隔离）。
+// 与 userAgentScope 的区别：显式处理管理端域（''）与全门户（'*'），并对
+// 管理员类角色的跨域请求**显式拒绝**（而非静默锁定），防越权枚举。
+//
+// 访问权语义：
+//   - super_admin：管理端域（''）、全门户（'*'）、任意具体域；
+//   - agent_admin / admin：管理端域（''）与自身 JWT 归属域，其它域拒绝；
+//   - 普通用户 / 游客：锁定 JWT 自身归属（游客回退默认域），忽略请求参数。
+func agentScopeFor(r *http.Request, requested string) (string, error) {
+	role := roleFrom(r)
+	req := strings.TrimSpace(requested)
+	switch role {
+	case "super_admin":
+		if req == "*" || req == "" {
+			return "", nil // 全门户 / 管理端域
+		}
+	case "agent_admin", "admin":
+		if req == "" {
+			return "", nil // 管理端域
+		}
+		if req == "*" {
+			return "", apperr.New(apperr.CodePermissionDenied, "仅最高超管可访问全部域")
+		}
+		if req != identity.AgentID(r.Context()) {
+			return "", apperr.New(apperr.CodePermissionDenied, "该账号不归属于智能体 "+req)
+		}
+	default: // user / guest：锁定自身归属，忽略请求参数
+		req = identity.AgentID(r.Context())
+		if req == "" {
+			req = defaultAgentID
+		}
+	}
+	if !agentIDRe.MatchString(req) {
+		return "", apperr.New(apperr.CodeInvalidArgument, "非法的智能体 ID（仅限字母/数字/中划线，≤64 字符）")
+	}
+	return req, nil
+}
+
 // ListKBs GET /v1/agent/kbs?agent_id=tutor：列出当前资源域的知识库。
 // 供对话配置区"知识库"弹窗拉取清单（会话级 kb_ids 勾选）；rag 未接入时 503。
 func (c *Clients) ListKBs(w http.ResponseWriter, r *http.Request) {

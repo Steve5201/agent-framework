@@ -41,6 +41,14 @@ func (c *Clients) CreateSession(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
+	// 多租户域隔离：校验请求域在调用者可访问范围（防跨域创建会话加载
+	// 目标域工具集/知识库），锁定结果覆盖原始 agent_id。
+	scope, err := agentScopeFor(r, req.AgentId)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	req.AgentId = scope
 	// 按智能体基础提示词：从 auth 公开元数据权威注入（CreateSessionRequest.
 	// system_prompt，用户请求无法携带——SessionConfig 不暴露该字段；GetAgentPublic
 	// 任意登录用户可查，与门户登录归属语义一致）。查询失败不阻断创建：
@@ -75,10 +83,15 @@ func (c *Clients) ListSessions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := r.URL.Query()
+	scope, err := agentScopeFor(r, q.Get("agent_id"))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
 	req := &agentv1.ListSessionsRequest{
 		Page:     atoiOr(q.Get("page"), 1),
 		PageSize: atoiOr(q.Get("page_size"), 20),
-		AgentId:  q.Get("agent_id"),
+		AgentId:  scope,
 	}
 	resp, err := c.Agent.ListSessions(userCtx(r, userID), req)
 	if err != nil {
@@ -254,8 +267,13 @@ func (c *Clients) ListTools(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
+	scope, err := agentScopeFor(r, r.URL.Query().Get("agent_id"))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
 	resp, err := c.Agent.ListTools(userCtx(r, userID), &agentv1.ListToolsRequest{
-		AgentId: r.URL.Query().Get("agent_id"), // 缺省空 = 本实例域
+		AgentId: scope, // 缺省空 = 本实例域（锁定后为调用者归属域）
 	})
 	if err != nil {
 		writeError(w, r, err)
@@ -281,8 +299,13 @@ func (c *Clients) ListResources(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
+	scope, err := agentScopeFor(r, r.URL.Query().Get("agent_id"))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
 	resp, err := c.Agent.ListResources(userCtx(r, userID), &agentv1.ListResourcesRequest{
-		AgentId: r.URL.Query().Get("agent_id"), // 缺省空 = 本实例域
+		AgentId: scope, // 缺省空 = 本实例域（锁定后为调用者归属域）
 	})
 	if err != nil {
 		writeError(w, r, err)

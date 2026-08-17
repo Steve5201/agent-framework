@@ -384,7 +384,7 @@ export default function AgentsPage() {
               <Input
                 id="ag-owner"
                 value={form.owner_user_id}
-                placeholder="绑定后该用户被授予 agent_admin 并归属此智能体"
+                placeholder="可留空，稍后在智能体详情页绑定 / 更换"
                 onChange={(e) => setForm((f) => ({ ...f, owner_user_id: e.target.value }))}
               />
             </div>

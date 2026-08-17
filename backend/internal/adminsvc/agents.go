@@ -53,6 +53,7 @@ func (m agentsModule) Register(mux *http.ServeMux, _ *Service) {
 	mux.HandleFunc("PATCH /v1/admin/agents/{id}", m.s.handleAdminUpdateAgent)
 	mux.HandleFunc("DELETE /v1/admin/agents/{id}", m.s.handleAdminDeleteAgent)
 	mux.HandleFunc("POST /v1/admin/agents/{id}/status", m.s.handleAdminSetAgentStatus)
+	mux.HandleFunc("POST /v1/admin/agents/{id}/owner", m.s.handleAdminBindAgentOwner)
 	mux.HandleFunc("GET /v1/admin/agents/{id}/usage", m.s.handleAdminAgentUsage)
 	mux.HandleFunc("GET /v1/admin/agents/{id}/defaults", m.s.handleAdminGetAgentDefaults)
 	mux.HandleFunc("PUT /v1/admin/agents/{id}/defaults", m.s.handleAdminPutAgentDefaults)
@@ -227,6 +228,40 @@ func (s *Service) handleAdminSetAgentStatus(w http.ResponseWriter, r *http.Reque
 		s.log.Info("admin set agent status",
 			zap.String("agent_id", r.PathValue("id")),
 			zap.Int32("status", body.Status))
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"agent": agentView(resp.GetAgent())})
+}
+
+// bindAgentOwnerRequest 绑定/更换/解绑智能体超管请求体。
+// owner_user_id 为空串 = 解绑当前 owner（不授予新 owner）。
+type bindAgentOwnerRequest struct {
+	OwnerUserID string `json:"owner_user_id"`
+}
+
+// handleAdminBindAgentOwner POST /v1/admin/agents/{id}/owner（仅最高超管）。
+func (s *Service) handleAdminBindAgentOwner(w http.ResponseWriter, r *http.Request) {
+	ctx, ok := adminCtx(r)
+	if !ok {
+		writeError(w, r, apperr.New(apperr.CodeUnauthenticated, "缺少调用者身份"))
+		return
+	}
+	var body bindAgentOwnerRequest
+	if err := decodeJSON(r, &body); err != nil {
+		writeError(w, r, err)
+		return
+	}
+	resp, err := s.auth.BindAgentOwner(ctx, &authpb.BindAgentOwnerRequest{
+		Id:          r.PathValue("id"),
+		OwnerUserId: body.OwnerUserID,
+	})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	if s.log != nil {
+		s.log.Info("admin bind agent owner",
+			zap.String("agent_id", r.PathValue("id")),
+			zap.String("owner_user_id", body.OwnerUserID))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"agent": agentView(resp.GetAgent())})
 }

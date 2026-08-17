@@ -48,10 +48,16 @@ func newTestManager(t *testing.T) *auth.Manager {
 	return mgr
 }
 
-// signedAccess 签发指定 userID 的 access token。
+// signedAccess 签发指定 userID 的 access token（user 角色，无智能体归属）。
 func signedAccess(t *testing.T, mgr *auth.Manager, userID string) string {
 	t.Helper()
-	tok, _, err := mgr.SignAccess(userID, "user", "")
+	return signedAccessAs(t, mgr, userID, "user", "")
+}
+
+// signedAccessAs 按角色/智能体归属签发 access token（测试域锁定语义用）。
+func signedAccessAs(t *testing.T, mgr *auth.Manager, userID, role, agent string) string {
+	t.Helper()
+	tok, _, err := mgr.SignAccess(userID, role, agent)
 	if err != nil {
 		t.Fatalf("SignAccess: %v", err)
 	}
@@ -704,6 +710,7 @@ func TestUploadChatDocumentHandler_DownstreamError(t *testing.T) {
 func TestCreateSessionHandler(t *testing.T) {
 	mgr := newTestManager(t)
 	clients := &Clients{
+		Auth:  &fakeAuthClient{},
 		Agent: &fakeAgentClient{},
 		JWT:   mgr,
 		Log:   zap.NewNop(),
@@ -745,17 +752,30 @@ func TestCreateSessionHandler_AgentSystemPromptInjected(t *testing.T) {
 		t.Fatalf("应按智能体系统提示词注入, got %q", got)
 	}
 
-	// 无 agent_id（管理端域）：不查 auth、不注入。
+	// 普通用户不带 agent_id：域锁定到 JWT 归属（无归属回退 tutor），同样注入。
 	req2 := httptest.NewRequest(http.MethodPost, "/v1/agent/sessions", strings.NewReader(`{"title":"t2"}`))
 	req2.Header.Set("Authorization", "Bearer "+signedAccess(t, mgr, "1"))
 	rec2 := httptest.NewRecorder()
 	handler.ServeHTTP(rec2, req2)
+	if got := agent.lastCreateReq.GetAgentId(); got != "tutor" {
+		t.Fatalf("用户无 agent_id 应锁定到 tutor, got %q", got)
+	}
+	if got := agent.lastCreateReq.GetSystemPrompt(); got != "你是考研规划导师，专注考研数学" {
+		t.Fatalf("锁定域应注入该域 system_prompt, got %q", got)
+	}
+
+	// 管理端域（超管、无 agent_id）：不查 auth、不注入。
+	req3 := httptest.NewRequest(http.MethodPost, "/v1/agent/sessions", strings.NewReader(`{"title":"t3"}`))
+	req3.Header.Set("Authorization", "Bearer "+signedAccessAs(t, mgr, "1", "super_admin", ""))
+	rec3 := httptest.NewRecorder()
+	handler.ServeHTTP(rec3, req3)
 	if got := agent.lastCreateReq.GetSystemPrompt(); got != "" {
 		t.Fatalf("管理端域会话不应注入 system_prompt, got %q", got)
 	}
 }
 
 // TestCreateSessionHandler_AgentFetchFailure 查询智能体元数据失败不阻断创建。
+// 用超管令牌显式请求 ghost 域（普通用户会被锁定到自身归属，绕过该分支）。
 func TestCreateSessionHandler_AgentFetchFailure(t *testing.T) {
 	mgr := newTestManager(t)
 	agent := &fakeAgentClient{}
@@ -768,7 +788,7 @@ func TestCreateSessionHandler_AgentFetchFailure(t *testing.T) {
 	handler := clients.RequireAuth()(http.HandlerFunc(clients.CreateSession))
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/agent/sessions", strings.NewReader(`{"agent_id":"ghost"}`))
-	req.Header.Set("Authorization", "Bearer "+signedAccess(t, mgr, "1"))
+	req.Header.Set("Authorization", "Bearer "+signedAccessAs(t, mgr, "1", "super_admin", ""))
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 

@@ -223,3 +223,116 @@ func TestCreateAgent_MetadataAndValidation(t *testing.T) {
 }
 
 func idString(v int64) string { return strconv.FormatInt(v, 10) }
+
+// ---------------------------------------------------------------------------
+// owner 可选 + 绑定/更换/解绑（鸡生蛋解耦）
+// ---------------------------------------------------------------------------
+
+// TestCreateAgent_OwnerOptional 创建智能体可不绑定 owner。
+func TestCreateAgent_OwnerOptional(t *testing.T) {
+	svc, _ := newTestService(t)
+	if _, err := svc.EnsureAdmin(context.Background(), "root", testPassword); err != nil {
+		t.Fatalf("EnsureAdmin: %v", err)
+	}
+	root, _ := svc.repo.GetUserByUsername(context.Background(), "root")
+
+	a, err := svc.CreateAgent(context.Background(), root.ID, "orphan", "孤儿智能体", "", "", "", "", "", "", 0)
+	if err != nil {
+		t.Fatalf("CreateAgent(owner=0) 应成功, got %v", err)
+	}
+	if a.OwnerUserID != 0 {
+		t.Fatalf("owner 应为 0, got %d", a.OwnerUserID)
+	}
+	// 再次读取确认未绑定
+	got, err := svc.GetAgent(context.Background(), root.ID, "orphan")
+	if err != nil {
+		t.Fatalf("GetAgent: %v", err)
+	}
+	if got.OwnerUserID != 0 {
+		t.Fatalf("owner 应为 0, got %d", got.OwnerUserID)
+	}
+	// 超管不能作为 owner（防降权）
+	su, _ := svc.repo.GetUserByUsername(context.Background(), "root")
+	suID, _ := strconv.ParseInt(su.ID, 10, 64)
+	if _, err := svc.CreateAgent(context.Background(), root.ID, "bad", "坏", "", "", "", "", "", "", suID); apperr.CodeOf(err) != apperr.CodeInvalidArgument {
+		t.Fatalf("超管作 owner 应 INVALID_ARGUMENT, got %v", err)
+	}
+}
+
+// TestBindAgentOwner 绑定/更换/解绑智能体超管。
+func TestBindAgentOwner(t *testing.T) {
+	svc, _ := newTestService(t)
+	rootID, _ := seedAgents(t, svc) // math 的 owner = math_owner
+
+	// 更换 owner：新用户 alice 接管，旧 owner 回收
+	alice := register(t, svc, "alice")
+	aliceID, _ := strconv.ParseInt(alice.ID, 10, 64)
+	a, err := svc.BindAgentOwner(context.Background(), rootID, "math", aliceID)
+	if err != nil {
+		t.Fatalf("BindAgentOwner 更换失败: %v", err)
+	}
+	if a.OwnerUserID != aliceID {
+		t.Fatalf("owner 应为 alice, got %d", a.OwnerUserID)
+	}
+	aliceAfter, _ := svc.repo.GetUserByUsername(context.Background(), "alice")
+	if aliceAfter.Role != RoleAgentAdmin {
+		t.Fatalf("alice 应升级为 agent_admin, got %s", aliceAfter.Role)
+	}
+	if !aliceAfter.HasTag(tagKeyAgent, "math") {
+		t.Fatalf("alice 应绑定 math 标签, got %+v", aliceAfter.Tags)
+	}
+	oldOwner, _ := svc.repo.GetUserByUsername(context.Background(), "math_owner")
+	if oldOwner.Role != RoleUser {
+		t.Fatalf("旧 owner 应降为 user, got %s", oldOwner.Role)
+	}
+	if oldOwner.HasTag(tagKeyAgent, "math") {
+		t.Fatalf("旧 owner 应移除 math 标签, got %+v", oldOwner.Tags)
+	}
+
+	// 解绑：alice 的 owner 权限被回收
+	a, err = svc.BindAgentOwner(context.Background(), rootID, "math", 0)
+	if err != nil {
+		t.Fatalf("BindAgentOwner 解绑失败: %v", err)
+	}
+	if a.OwnerUserID != 0 {
+		t.Fatalf("解绑后 owner 应为 0, got %d", a.OwnerUserID)
+	}
+	aliceAfter2, _ := svc.repo.GetUserByUsername(context.Background(), "alice")
+	if aliceAfter2.Role != RoleUser {
+		t.Fatalf("解绑后 alice 应降为 user, got %s", aliceAfter2.Role)
+	}
+	if aliceAfter2.HasTag(tagKeyAgent, "math") {
+		t.Fatalf("解绑后 alice 应移除 math 标签, got %+v", aliceAfter2.Tags)
+	}
+}
+
+// TestBindAgentOwner_RBAC 越权与非法入参。
+func TestBindAgentOwner_RBAC(t *testing.T) {
+	svc, _ := newTestService(t)
+	rootID, _ := seedAgents(t, svc)
+
+	// 非超管不可绑定
+	plain := register(t, svc, "plain")
+	alice := register(t, svc, "alice2")
+	aliceID, _ := strconv.ParseInt(alice.ID, 10, 64)
+	if _, err := svc.BindAgentOwner(context.Background(), plain.ID, "math", aliceID); apperr.CodeOf(err) != apperr.CodePermissionDenied {
+		t.Fatalf("普通用户绑定应 PERMISSION_DENIED, got %v", err)
+	}
+
+	// 智能体不存在
+	if _, err := svc.BindAgentOwner(context.Background(), rootID, "nope", aliceID); apperr.CodeOf(err) != apperr.CodeNotFound {
+		t.Fatalf("绑定不存在智能体应 NOT_FOUND, got %v", err)
+	}
+
+	// 新 owner 不存在
+	if _, err := svc.BindAgentOwner(context.Background(), rootID, "math", 999999); apperr.CodeOf(err) != apperr.CodeInvalidArgument {
+		t.Fatalf("绑定不存在用户应 INVALID_ARGUMENT, got %v", err)
+	}
+
+	// 超管不能作 owner
+	su, _ := svc.repo.GetUserByUsername(context.Background(), "root")
+	suID, _ := strconv.ParseInt(su.ID, 10, 64)
+	if _, err := svc.BindAgentOwner(context.Background(), rootID, "math", suID); apperr.CodeOf(err) != apperr.CodeInvalidArgument {
+		t.Fatalf("超管作 owner 应 INVALID_ARGUMENT, got %v", err)
+	}
+}

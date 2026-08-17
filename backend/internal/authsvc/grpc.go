@@ -228,7 +228,7 @@ func (g *grpcServer) ListAgents(ctx context.Context, _ *authpb.ListAgentsRequest
 	return &authpb.ListAgentsResponse{Agents: out}, nil
 }
 
-// CreateAgent 创建智能体（仅最高超管）。
+// CreateAgent 创建智能体（仅最高超管；owner_user_id 可选，空 = 稍后绑定）。
 func (g *grpcServer) CreateAgent(ctx context.Context, req *authpb.CreateAgentRequest) (*authpb.CreateAgentResponse, error) {
 	if req == nil {
 		return nil, invalidArgument("请求体不能为空")
@@ -237,9 +237,13 @@ func (g *grpcServer) CreateAgent(ctx context.Context, req *authpb.CreateAgentReq
 	if actorID == "" {
 		return nil, unauthenticated("缺少调用者身份")
 	}
-	ownerID, err := parseInt64(req.OwnerUserId)
-	if err != nil {
-		return nil, invalidArgument("owner_user_id 必须为数字")
+	var ownerID int64
+	var err error
+	if req.OwnerUserId != "" {
+		ownerID, err = parseInt64(req.OwnerUserId)
+		if err != nil {
+			return nil, invalidArgument("owner_user_id 必须为数字")
+		}
 	}
 	a, err := g.svc.CreateAgent(ctx, actorID, req.Id, req.Name, req.Description, req.Model,
 		req.Avatar, req.Welcome, req.SystemPrompt, req.ReasoningEffort, ownerID)
@@ -247,6 +251,30 @@ func (g *grpcServer) CreateAgent(ctx context.Context, req *authpb.CreateAgentReq
 		return nil, err
 	}
 	return &authpb.CreateAgentResponse{Agent: toProtoAgent(a)}, nil
+}
+
+// BindAgentOwner 绑定/更换/解绑智能体超管（仅最高超管；owner_user_id 空 = 解绑）。
+func (g *grpcServer) BindAgentOwner(ctx context.Context, req *authpb.BindAgentOwnerRequest) (*authpb.BindAgentOwnerResponse, error) {
+	if req == nil || req.Id == "" {
+		return nil, invalidArgument("id 不能为空")
+	}
+	actorID := userIDFromMetadata(ctx)
+	if actorID == "" {
+		return nil, unauthenticated("缺少调用者身份")
+	}
+	var ownerID int64
+	var err error
+	if req.OwnerUserId != "" {
+		ownerID, err = parseInt64(req.OwnerUserId)
+		if err != nil {
+			return nil, invalidArgument("owner_user_id 必须为数字")
+		}
+	}
+	a, err := g.svc.BindAgentOwner(ctx, actorID, req.Id, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	return &authpb.BindAgentOwnerResponse{Agent: toProtoAgent(a)}, nil
 }
 
 // GetAgent 智能体详情（super_admin 任意；agent_admin 限自身归属域）。

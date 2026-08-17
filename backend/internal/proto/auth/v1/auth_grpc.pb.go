@@ -45,6 +45,7 @@ const (
 	AuthService_AdminGetUsersByIds_FullMethodName = "/auth.v1.AuthService/AdminGetUsersByIds"
 	AuthService_ListAgents_FullMethodName         = "/auth.v1.AuthService/ListAgents"
 	AuthService_CreateAgent_FullMethodName        = "/auth.v1.AuthService/CreateAgent"
+	AuthService_BindAgentOwner_FullMethodName     = "/auth.v1.AuthService/BindAgentOwner"
 	AuthService_GetAgent_FullMethodName           = "/auth.v1.AuthService/GetAgent"
 	AuthService_GetAgentPublic_FullMethodName     = "/auth.v1.AuthService/GetAgentPublic"
 	AuthService_UpdateAgent_FullMethodName        = "/auth.v1.AuthService/UpdateAgent"
@@ -86,8 +87,13 @@ type AuthServiceClient interface {
 	AdminGetUsersByIds(ctx context.Context, in *AdminGetUsersByIdsRequest, opts ...grpc.CallOption) (*AdminGetUsersByIdsResponse, error)
 	// ListAgents 智能体列表（最高超管看全部，其它按归属过滤）。
 	ListAgents(ctx context.Context, in *ListAgentsRequest, opts ...grpc.CallOption) (*ListAgentsResponse, error)
-	// CreateAgent 创建智能体（仅最高超管；owner 被授予该智能体的 agent_admin 角色）。
+	// CreateAgent 创建智能体（仅最高超管；owner 可空，稍后经 BindAgentOwner 绑定）。
+	// owner 被授予该智能体的 agent_admin 角色并绑定 agent 标签。
 	CreateAgent(ctx context.Context, in *CreateAgentRequest, opts ...grpc.CallOption) (*CreateAgentResponse, error)
+	// BindAgentOwner 绑定/更换/解绑智能体超管（仅最高超管）。
+	// 绑定新 owner：回收旧 owner 的 agent_admin 角色与 agent 标签，授予新 owner；
+	// owner_user_id 为空串 = 仅解绑当前 owner（不授予新 owner）。
+	BindAgentOwner(ctx context.Context, in *BindAgentOwnerRequest, opts ...grpc.CallOption) (*BindAgentOwnerResponse, error)
 	// GetAgent 智能体详情（最高超管任意；其它角色仅限归属域）。
 	GetAgent(ctx context.Context, in *GetAgentRequest, opts ...grpc.CallOption) (*GetAgentResponse, error)
 	// GetAgentPublic 公开智能体元数据（任意登录用户可查，仅返回前台展示/装配
@@ -241,6 +247,16 @@ func (c *authServiceClient) CreateAgent(ctx context.Context, in *CreateAgentRequ
 	return out, nil
 }
 
+func (c *authServiceClient) BindAgentOwner(ctx context.Context, in *BindAgentOwnerRequest, opts ...grpc.CallOption) (*BindAgentOwnerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BindAgentOwnerResponse)
+	err := c.cc.Invoke(ctx, AuthService_BindAgentOwner_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authServiceClient) GetAgent(ctx context.Context, in *GetAgentRequest, opts ...grpc.CallOption) (*GetAgentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetAgentResponse)
@@ -325,8 +341,13 @@ type AuthServiceServer interface {
 	AdminGetUsersByIds(context.Context, *AdminGetUsersByIdsRequest) (*AdminGetUsersByIdsResponse, error)
 	// ListAgents 智能体列表（最高超管看全部，其它按归属过滤）。
 	ListAgents(context.Context, *ListAgentsRequest) (*ListAgentsResponse, error)
-	// CreateAgent 创建智能体（仅最高超管；owner 被授予该智能体的 agent_admin 角色）。
+	// CreateAgent 创建智能体（仅最高超管；owner 可空，稍后经 BindAgentOwner 绑定）。
+	// owner 被授予该智能体的 agent_admin 角色并绑定 agent 标签。
 	CreateAgent(context.Context, *CreateAgentRequest) (*CreateAgentResponse, error)
+	// BindAgentOwner 绑定/更换/解绑智能体超管（仅最高超管）。
+	// 绑定新 owner：回收旧 owner 的 agent_admin 角色与 agent 标签，授予新 owner；
+	// owner_user_id 为空串 = 仅解绑当前 owner（不授予新 owner）。
+	BindAgentOwner(context.Context, *BindAgentOwnerRequest) (*BindAgentOwnerResponse, error)
 	// GetAgent 智能体详情（最高超管任意；其它角色仅限归属域）。
 	GetAgent(context.Context, *GetAgentRequest) (*GetAgentResponse, error)
 	// GetAgentPublic 公开智能体元数据（任意登录用户可查，仅返回前台展示/装配
@@ -388,6 +409,9 @@ func (UnimplementedAuthServiceServer) ListAgents(context.Context, *ListAgentsReq
 }
 func (UnimplementedAuthServiceServer) CreateAgent(context.Context, *CreateAgentRequest) (*CreateAgentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateAgent not implemented")
+}
+func (UnimplementedAuthServiceServer) BindAgentOwner(context.Context, *BindAgentOwnerRequest) (*BindAgentOwnerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BindAgentOwner not implemented")
 }
 func (UnimplementedAuthServiceServer) GetAgent(context.Context, *GetAgentRequest) (*GetAgentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAgent not implemented")
@@ -659,6 +683,24 @@ func _AuthService_CreateAgent_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_BindAgentOwner_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BindAgentOwnerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).BindAgentOwner(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_BindAgentOwner_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).BindAgentOwner(ctx, req.(*BindAgentOwnerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthService_GetAgent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetAgentRequest)
 	if err := dec(in); err != nil {
@@ -807,6 +849,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateAgent",
 			Handler:    _AuthService_CreateAgent_Handler,
+		},
+		{
+			MethodName: "BindAgentOwner",
+			Handler:    _AuthService_BindAgentOwner_Handler,
 		},
 		{
 			MethodName: "GetAgent",

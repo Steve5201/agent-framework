@@ -285,7 +285,10 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 }
 
 // writeError 写出统一错误体（与 gateway 同构：code/message/request_id）。
+// 必须先 FromGRPCError：下游服务返回的 gRPC status 错误在此恢复为 *Error，
+// 否则 HTTPBody 认不出非 *Error 会兜底成 50001 internal error，掩盖真实业务错误。
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
+	err = apperr.FromGRPCError(err)
 	status, body := apperr.HTTPBody(err)
 	if body["request_id"] == "" {
 		body["request_id"] = apperr.RequestIDFromContext(r.Context())

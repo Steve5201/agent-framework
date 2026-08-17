@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
+  adminBindAgentOwner,
   adminDeleteAgent,
   adminGetAgent,
   adminGetAgentDefaults,
@@ -193,6 +194,12 @@ export default function AgentDetailPage() {
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({ description: '', avatar: '', welcome: '', system_prompt: '' })
   const [saveError, setSaveError] = useState('')
+
+  // 绑定/更换/解绑超管弹窗（仅最高超管）
+  const [ownerOpen, setOwnerOpen] = useState(false)
+  const [ownerId, setOwnerId] = useState('')
+  const [ownerBusy, setOwnerBusy] = useState(false)
+  const [ownerError, setOwnerError] = useState('')
 
   // 默认配置
   const [defaultsDirty, setDefaultsDirty] = useState(false)
@@ -612,6 +619,30 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
     }
   }
 
+  function openOwnerDialog() {
+    setOwnerId(agent?.owner_user_id ?? '')
+    setOwnerError('')
+    setOwnerOpen(true)
+  }
+
+  /** 绑定/更换超管（空串 = 解绑）。 */
+  async function submitOwner() {
+    if (!agent || id === '') return
+    const target = ownerId.trim()
+    setOwnerBusy(true)
+    setOwnerError('')
+    try {
+      const updated = await adminBindAgentOwner(id, target)
+      setAgent(updated)
+      setOwnerOpen(false)
+      setNotice(target ? `已绑定用户 ${target} 为「${agent.name}」超管` : `已解绑「${agent.name}」超管`)
+    } catch (e) {
+      setOwnerError((e as Error).message)
+    } finally {
+      setOwnerBusy(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center py-20">
@@ -784,7 +815,21 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
               <div className="rounded-xl border bg-card p-5">
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">运行配置</h3>
                 <dl className="space-y-2.5 text-sm">
-                  <Row label="超管（owner）" value={agent.owner_user_id || '未绑定'} mono />
+                  <div className="flex gap-4">
+                    <dt className="w-28 shrink-0 text-muted-foreground">超管（owner）</dt>
+                    <dd className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                      <span className="min-w-0 truncate font-mono text-xs text-foreground">{agent.owner_user_id || '未绑定'}</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 shrink-0 px-2 text-[11px]"
+                        onClick={openOwnerDialog}
+                        title="绑定/更换/解绑该智能体超管（仅最高超管）"
+                      >
+                        <UserRound className="size-3" /> 绑定/更换
+                      </Button>
+                    </dd>
+                  </div>
                   <Row label="创建时间" value={fmtTime(agent.created_at)} mono />
                   <Row label="更新时间" value={fmtTime(agent.updated_at)} mono />
                 </dl>
@@ -1290,6 +1335,41 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
               <p className="mt-2 text-sm text-muted-foreground">暂无用量数据（服务未配置或该域近期无调用）</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* 绑定/更换超管弹窗（仅最高超管） */}
+      {ownerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="flex w-full max-w-md flex-col overflow-hidden rounded-xl border bg-background shadow-2xl" role="dialog" aria-modal="true">
+            <div className="border-b px-5 py-3.5">
+              <div className="text-sm font-semibold">绑定 / 更换超管</div>
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                绑定后该用户被授予 agent_admin 并归属此智能体；原超管的 agent_admin 与归属被自动回收。
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              {ownerError && <div className="mb-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{ownerError}</div>}
+              <div className="space-y-1.5">
+                <Label htmlFor="ad-owner">用户 ID（空 = 解绑当前超管）</Label>
+                <Input
+                  id="ad-owner"
+                  value={ownerId}
+                  placeholder="输入用户 ID，如 5"
+                  onChange={(e) => setOwnerId(e.target.value)}
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t bg-muted/30 px-5 py-3">
+              <Button variant="outline" onClick={() => setOwnerOpen(false)} disabled={ownerBusy}>
+                取消
+              </Button>
+              <Button onClick={() => void submitOwner()} disabled={ownerBusy}>
+                {ownerBusy ? <Loader2 className="size-4 animate-spin" /> : ownerId.trim() ? '绑定 / 更换' : '解绑'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

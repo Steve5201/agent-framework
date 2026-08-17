@@ -67,6 +67,24 @@ func (f *fakeRepo) AddUserTag(_ context.Context, id string, tag Tag) error {
 	return nil
 }
 
+// RemoveUserTag 移除指定 key 的标签（fake：内存操作）。
+func (f *fakeRepo) RemoveUserTag(_ context.Context, id string, key string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.usersByID[id]
+	if !ok {
+		return apperr.New(apperr.CodeNotFound, "用户不存在")
+	}
+	out := u.Tags[:0]
+	for _, t := range u.Tags {
+		if t.Key != key {
+			out = append(out, t)
+		}
+	}
+	u.Tags = out
+	return nil
+}
+
 // ListUsers 分页查询用户（keyword 模糊匹配用户名；scope 非空 = 仅含该智能体标签；含标签）。
 func (f *fakeRepo) ListUsers(_ context.Context, keyword, scope string, page, pageSize int) ([]*User, int, error) {
 	f.mu.Lock()
@@ -244,6 +262,33 @@ func (f *fakeRepo) UpdateAgent(_ context.Context, a *Agent) (*Agent, error) {
 	cur.UpdatedAt = time.Now()
 	cp := *cur
 	return &cp, nil
+}
+
+// UpdateAgentOwner 绑定/解绑智能体 owner（fake：ownerUserID<=0 置 0）。
+func (f *fakeRepo) UpdateAgentOwner(_ context.Context, id string, ownerUserID int64) (*Agent, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cur, ok := f.agents[id]
+	if !ok {
+		return nil, apperr.New(apperr.CodeNotFound, "智能体不存在")
+	}
+	cur.OwnerUserID = ownerUserID
+	cur.UpdatedAt = time.Now()
+	cp := *cur
+	return &cp, nil
+}
+
+// ClearAgentsOwner 清空该用户担任 owner 的智能体（fake：内存操作）。
+func (f *fakeRepo) ClearAgentsOwner(_ context.Context, userID int64) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, a := range f.agents {
+		if a.OwnerUserID == userID {
+			a.OwnerUserID = 0
+			a.UpdatedAt = time.Now()
+		}
+	}
+	return nil
 }
 
 // SetAgentStatus 启停智能体（fake：status 直接覆盖）。

@@ -2,6 +2,7 @@ package authsvc
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"strconv"
@@ -24,6 +25,8 @@ type Repository interface {
 	GetUserByID(ctx context.Context, id string) (*User, error)
 	// AddUserTag 为用户追加一条标签（已存在同 key 时覆盖）。
 	AddUserTag(ctx context.Context, id string, tag Tag) error
+	// RemoveUserTag 移除指定 key 的用户标签（不存在时静默成功）。
+	RemoveUserTag(ctx context.Context, id string, key string) error
 	// UpdateUserRole 更新用户角色（阶段3：创建智能体时授予其超管 agent_admin）。
 	UpdateUserRole(ctx context.Context, userID int64, role Role) error
 	// UpdateUserPassword 重置用户密码（哈希后写入）；用户不存在返回 CodeNotFound。
@@ -51,6 +54,10 @@ type Repository interface {
 	ListAgents(ctx context.Context) ([]*Agent, error)
 	// UpdateAgent 更新智能体元数据（全量覆盖指定字段，保留未传字段）。
 	UpdateAgent(ctx context.Context, a *Agent) (*Agent, error)
+	// UpdateAgentOwner 绑定/解绑智能体 owner（ownerUserID<=0 = 解绑置 NULL）。
+	UpdateAgentOwner(ctx context.Context, id string, ownerUserID int64) (*Agent, error)
+	// ClearAgentsOwner 清空指定用户担任 owner 的智能体 owner（删除用户后防悬空）。
+	ClearAgentsOwner(ctx context.Context, userID int64) error
 	// SetAgentStatus 启停智能体；返回更新后的记录。
 	SetAgentStatus(ctx context.Context, id string, status int) (*Agent, error)
 	// DeleteAgent 软删除智能体（status=0）。
@@ -142,6 +149,20 @@ const (
 
 	sqlDeleteUser = `DELETE FROM users WHERE id = $1`
 
+	sqlRemoveUserTag = `UPDATE users SET tags = (
+			SELECT COALESCE(
+				jsonb_agg(t) FILTER (WHERE t IS NOT NULL),
+				'[]'::jsonb
+			) FROM (
+				SELECT jsonb_build_object('key', x.key, 'value', x.value) AS t
+				FROM jsonb_array_elements(
+					CASE WHEN tags IS NULL THEN '[]'::jsonb ELSE tags END
+				) AS elem,
+				jsonb_to_record(elem) AS x(key text, value text)
+				WHERE x.key <> $2
+			) q
+		) WHERE id = $1`
+
 	sqlCountRole = `SELECT count(*) FROM users WHERE role = $1`
 
 	// agentCols 智能体行通用列（INSERT RETURNING / SELECT / UPDATE RETURNING 复用）。
@@ -164,6 +185,12 @@ const (
 
 	sqlSetAgentStatus = `UPDATE agents SET status = $2, updated_at = now()
 		WHERE id = $1 RETURNING ` + agentCols
+
+	sqlUpdateAgentOwner = `UPDATE agents SET owner_user_id = $2, updated_at = now()
+		WHERE id = $1 RETURNING ` + agentCols
+
+	sqlClearAgentsOwner = `UPDATE agents SET owner_user_id = NULL, updated_at = now()
+		WHERE owner_user_id = $1`
 
 	sqlDeleteAgent = `UPDATE agents SET status = 0, updated_at = now()
 		WHERE id = $1 RETURNING ` + agentCols
@@ -277,6 +304,18 @@ func (r *postgresRepo) AddUserTag(ctx context.Context, id string, tag Tag) error
 	var tags []byte
 	if err := r.pool.QueryRow(ctx, sqlAddUserTag, uid, tag.Key, tag.Value).Scan(&tags); err != nil {
 		return apperr.Wrap(apperr.CodeInternal, "追加用户标签失败", err)
+	}
+	return nil
+}
+
+// RemoveUserTag 移除指定 key 的用户标签（不存在时静默成功）。
+func (r *postgresRepo) RemoveUserTag(ctx context.Context, id string, key string) error {
+	uid, err := parseUserID(id)
+	if err != nil {
+		return err
+	}
+	if _, err := r.pool.Exec(ctx, sqlRemoveUserTag, uid, key); err != nil {
+		return apperr.Wrap(apperr.CodeInternal, "移除用户标签失败", err)
 	}
 	return nil
 }
@@ -398,13 +437,17 @@ func (r *postgresRepo) GetFirstSuperAdmin(ctx context.Context) (*User, error) {
 	return u, nil
 }
 
-// rowToAgent 将查询行映射为 Agent 领域模型。
+// rowToAgent 将查询行映射为 Agent 领域模型；owner_user_id 可空（NULL=未绑定，转 0）。
 func rowToAgent(row pgx.Row) (*Agent, error) {
 	var a Agent
+	var owner sql.NullInt64
 	if err := row.Scan(&a.ID, &a.Name, &a.Description, &a.Model,
-		&a.OwnerUserID, &a.Status, &a.CreatedAt, &a.UpdatedAt,
+		&owner, &a.Status, &a.CreatedAt, &a.UpdatedAt,
 		&a.Avatar, &a.Welcome, &a.SystemPrompt, &a.ReasoningEffort); err != nil {
 		return nil, err
+	}
+	if owner.Valid {
+		a.OwnerUserID = owner.Int64
 	}
 	return &a, nil
 }
@@ -449,6 +492,27 @@ func (r *postgresRepo) UpdateAgent(ctx context.Context, a *Agent) (*Agent, error
 		return nil, translateAgentErr(err)
 	}
 	return updated, nil
+}
+
+// UpdateAgentOwner 绑定/解绑智能体 owner（ownerUserID<=0 写 NULL）。
+func (r *postgresRepo) UpdateAgentOwner(ctx context.Context, id string, ownerUserID int64) (*Agent, error) {
+	var owner any // nil = NULL
+	if ownerUserID > 0 {
+		owner = ownerUserID
+	}
+	updated, err := rowToAgent(r.pool.QueryRow(ctx, sqlUpdateAgentOwner, id, owner))
+	if err != nil {
+		return nil, translateAgentErr(err)
+	}
+	return updated, nil
+}
+
+// ClearAgentsOwner 清空指定用户担任 owner 的智能体（删除用户后防悬空引用）。
+func (r *postgresRepo) ClearAgentsOwner(ctx context.Context, userID int64) error {
+	if _, err := r.pool.Exec(ctx, sqlClearAgentsOwner, userID); err != nil {
+		return apperr.Wrap(apperr.CodeInternal, "清空智能体 owner 失败", err)
+	}
+	return nil
 }
 
 func (r *postgresRepo) SetAgentStatus(ctx context.Context, id string, status int) (*Agent, error) {

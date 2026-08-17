@@ -88,6 +88,10 @@ type FileOpsTool struct {
 	// 本进程（非 root）创建出属主错误的用户目录导致沙盒用户无法访问。
 	// 留空 = 本地降级（无沙盒），保持旧行为自建目录。
 	SandboxURL string
+	// DiskQuota 写 protected/ 前的磁盘配额校验回调（模块三·保护区配额）。
+	// nil = 不校验（历史行为）；非 nil 时写入保护区子树前先查配额，
+	// 超配额返回明确错误拒绝写入（错误信息回填给模型）。
+	DiskQuota CheckDiskQuota
 }
 
 // fileOpsArgs 文件操作参数。
@@ -107,7 +111,7 @@ type fileOpsArgs struct {
 func (t *FileOpsTool) Schema() schema.ToolSchema {
 	return schema.ToolSchema{
 		Name:        "file_ops",
-		Description: "文件操作（写需用户确认）：在你的用户工作区（当前工作目录）内读取/写入/列出/搜索/查看文件。path 一律使用相对当前工作目录的相对路径（如 docs/report.md），禁止使用绝对路径或 ../ 越界访问。你的当前目录 = 用户工作区（users/<uid>/，uid 前缀可在 read/write/list 的返回信息里看到，交付文件时用它拼 users/<uid>/xxx 相对路径）；不要访问 users/<uid> 之外的目录（不存在或无权限，必然失败）。技能资源（只读）：技能内文件以 @skills/<技能名>/… 前缀访问（如 @skills/my-skill/ref/doc.md），仅支持 read/list/search/stat，禁止 write；@skills/ 下个别文件可能很大（如 scripts/*.py 可达数百 KB），整读会注入海量 token 撑爆上下文——读取前先 stat 查看大小，超 50KB 的只按 SKILL.md 指引使用、不要整读。action 取值：read=读取文本文件内容（上限 1MB，超限截断）；write=写入或覆盖文件（自动创建父目录，写操作会真实改动磁盘）；list=列出目录内容，每行形如 \"- [目录] 子目录名/\" 或 \"- [文件] 文件名（大小）\"，文件名即真实名称、无任何前缀标记（recursive=true 可递归，tree=true 则输出带缩进的目录树，depth 限制嵌套深度）；search=在目录下按文件名或内容递归搜索文件，返回命中列表（query 为关键词，name_only=true 时仅匹配文件名，max_results 控制结果上限）；stat=查看文件类型/大小/修改时间。本地图片/视频等媒体文件用文本读取会失败，应让前端用 /files/ URL 直接渲染。",
+		Description: "文件操作（写需用户确认）：在你的用户工作区（当前工作目录）内读取/写入/列出/搜索/查看文件。path 一律使用相对当前工作目录的相对路径（如 docs/report.md），禁止使用绝对路径或 ../ 越界访问。你的当前目录 = 用户工作区（users/<uid>/，uid 前缀可在 read/write/list 的返回信息里看到，交付文件时用它拼 users/<uid>/xxx 相对路径）；不要访问 users/<uid> 之外的目录（不存在或无权限，必然失败）。技能资源（只读）：技能内文件以 @skills/<技能名>/… 前缀访问（如 @skills/my-skill/ref/doc.md），仅支持 read/list/search/stat，禁止 write；@skills/ 下个别文件可能很大（如 scripts/*.py 可达数百 KB），整读会注入海量 token 撑爆上下文——读取前先 stat 查看大小，超 50KB 的只按 SKILL.md 指引使用、不要整读。action 取值：read=读取文本文件内容（上限 1MB，超限截断）；write=写入或覆盖文件（自动创建父目录，写操作会真实改动磁盘）；list=列出目录内容，每行形如 \"- [目录] 子目录名/\" 或 \"- [文件] 文件名（大小）\"，文件名即真实名称、无任何前缀标记（recursive=true 可递归，tree=true 则输出带缩进的目录树，depth 限制嵌套深度）；search=在目录下按文件名或内容递归搜索文件，返回命中列表（query 为关键词，name_only=true 时仅匹配文件名，max_results 控制结果上限）；stat=查看文件类型/大小/修改时间。本地图片/视频等媒体文件用文本读取会失败，应让前端用 /files/ URL 直接渲染。工作区 `protected/` 是唯一不会被自动清理的保护区：仅用于存放用户明确要求保留或有长期价值（经用户确认）的内容；临时产物、可再生成内容一律放其它位置（过期自动清理），禁止未经用户确认擅自向 protected/ 写内容。",
 		Parameters: json.RawMessage(`{
 			"type":"object",
 			"properties":{
@@ -191,7 +195,31 @@ func (t *FileOpsTool) Execute(ctx context.Context, args json.RawMessage) (string
 	if err != nil {
 		return "", err
 	}
+
+	// 保护区配额校验（模块三）：仅对"写入 protected/ 子树"生效。保护区是唯一
+	// 永不清除的空间，须受配额约束；临时/散落内容由清理器 TTL 回收，不占配额。
+	if p.Action == "write" && t.DiskQuota != nil {
+		if uid, ok := UserIDFromContext(ctx); ok {
+			protectedDir := filepath.Join(globalRoot, "users", strconv.FormatInt(uid, 10), "protected")
+			if underPath(full, protectedDir) {
+				if qerr := t.DiskQuota(ctx, uid, protectedDir, int64(len(p.Content)), RoleFromContext(ctx)); qerr != nil {
+					return "", qerr
+				}
+			}
+		}
+	}
+
 	return t.dispatch(ctx, p, full, displayBase, "")
+}
+
+// underPath 判断 child 是否在 parent 目录下（含 parent 自身）。
+// 仅用于保护区配额判定的路径归属，不做 I/O。
+func underPath(child, parent string) bool {
+	rel, err := filepath.Rel(parent, child)
+	if err != nil {
+		return false
+	}
+	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)))
 }
 
 // dispatch 按 action 分发（普通路径 displayBase 与技能路径 skillsRoot 共用同一套实现，

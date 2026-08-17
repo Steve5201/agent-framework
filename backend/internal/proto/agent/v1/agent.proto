@@ -96,6 +96,10 @@ message CreateSessionRequest {
   string title = 1; // 会话标题（空则自动生成"新对话"）
   SessionConfig config = 2; // 初始会话配置（可空）
   string agent_id = 3; // 会话所属智能体域：'' = 管理端域；'<id>' = 对应智能体域
+  // 按智能体基础提示词（auth agents.system_prompt，由 gateway 从 auth 元数据注入，
+  // 用户请求无法携带；SessionConfig 不暴露该字段）。非空时固化进会话 config 快照，
+  // 装配时覆盖实例全局提示词；空 = 使用实例全局提示词。
+  string system_prompt = 4;
 }
 
 message CreateSessionResponse {

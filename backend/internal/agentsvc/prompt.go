@@ -45,6 +45,23 @@ const renderProtocolPrompt = `
 - svg：尺寸在根元素上控制，如 <svg width="280" height="160" viewBox="0 0 400 200">；对齐用代码块语言标签，如 ` + fence + `svg align=center。
 `
 
+// protectedDirConvention 工作区保护区（protected/）使用规范。
+//
+// 与 sandbox 清理器（sandboxsvc/cleanup.go）的排除名单配套：用户工作区里
+// 只有 protected/ 永不被自动清理，其余内容按 TTL 过期删除（临时区 7 天、
+// 散落 AI 产物 30 天）。模型必须遵守本规范管理长期资产，避免有价值的内容
+// 被自动清理，也不得擅自塞入浪费磁盘空间。
+const protectedDirConvention = `
+## 工作区保护区 protected/ 使用规范（长期资产存放规则）
+
+你的用户工作区中 ` + fence + `protected/` + fence + ` 是唯一不会被自动清理的目录（其余内容会被系统按过期时间自动删除：聊天上传文档/临时摄取文件 7 天、散落产物 30 天）。请遵守以下规则管理长期资产：
+
+1. 可以放入 protected/ 的：用户明确要求保留的内容、跨会话长期有价值的知识资产（个人偏好、常用模板、用户自己产出的长期文档）。
+2. 禁止放入 protected/ 的：临时产物、可再生成内容、缓存文件、聊天上传的原件、渲染用的临时媒体——这些放临时目录或工作区其它位置即可，过期会被自动清理。
+3. 你判断某内容有长期保留价值时，必须先征得用户确认：在对话末尾一次性列出「建议保留清单」（Markdown 列表，注明每项用途与预计大小），用户同意后才用 file_ops 把对应文件移入 protected/。严禁未经确认擅自塞入。
+4. 用户直接要求保存的内容优先级最高：用户说"把这个保存/记住"时，直接写入 protected/，不必再确认。
+5. 用户的个人画像等系统持久数据由系统存入数据库管理，不要写入 protected/。`
+
 // BuildSystemPrompt 把内容渲染协议拼到基础系统提示词之后。
 // 协议恒存在，确保模型始终知道前端能渲染什么、该输出什么格式。
 func BuildSystemPrompt(base string) string {
@@ -69,7 +86,7 @@ func BuildSystemPromptWithMedia(base string, filesBaseURL string) string {
 			filesBaseURL + "/files/rag-media/<docID>/图片.png。"
 	}
 	if base == "" {
-		return protocol
+		return protocol + "\n\n" + strings.TrimSpace(protectedDirConvention)
 	}
-	return base + "\n\n" + protocol
+	return base + "\n\n" + protocol + "\n\n" + strings.TrimSpace(protectedDirConvention)
 }

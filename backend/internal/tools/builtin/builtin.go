@@ -28,6 +28,9 @@ type Builtin struct {
 	// SkillsRoot 技能根目录（注入给 file_ops，用于 @skills/ 只读资源访问）；
 	// 空 = file_ops 按默认 <工作目录>/skills 解析（与 skill Provider 默认一致）。
 	SkillsRoot string
+	// DiskQuota 写 protected/ 前的磁盘配额校验回调（模块三·保护区配额），
+	// 透传给 file_ops；nil = 不校验（历史行为）。
+	DiskQuota CheckDiskQuota
 }
 
 // Name 实现 ToolProvider 接口。
@@ -41,7 +44,7 @@ func (b Builtin) Tools() []tool.Tool {
 	return []tool.Tool{
 		CalculatorTool{},
 		&WebSearchTool{Backend: b.WebSearchBackend},
-		&FileOpsTool{SkillsRoot: b.SkillsRoot, SandboxURL: b.SandboxURL},
+		&FileOpsTool{SkillsRoot: b.SkillsRoot, SandboxURL: b.SandboxURL, DiskQuota: b.DiskQuota},
 		&CodeExecutorTool{Allowlist: b.CodeExecAllowlist, SandboxURL: b.SandboxURL},
 	}
 }

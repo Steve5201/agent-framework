@@ -265,6 +265,30 @@ func (g *grpcServer) GetAgent(ctx context.Context, req *authpb.GetAgentRequest) 
 	return &authpb.GetAgentResponse{Agent: toProtoAgent(a)}, nil
 }
 
+// GetAgentPublic 公开智能体元数据（任意登录用户；白名单字段）。
+func (g *grpcServer) GetAgentPublic(ctx context.Context, req *authpb.GetAgentRequest) (*authpb.GetAgentPublicResponse, error) {
+	if req == nil || req.Id == "" {
+		return nil, invalidArgument("id 不能为空")
+	}
+	actorID := userIDFromMetadata(ctx)
+	if actorID == "" {
+		return nil, unauthenticated("缺少调用者身份")
+	}
+	a, err := g.svc.GetAgentPublic(ctx, actorID, req.Id)
+	if err != nil {
+		return nil, err
+	}
+	return &authpb.GetAgentPublicResponse{
+		Id:              a.ID,
+		Name:            a.Name,
+		Description:     a.Description,
+		Avatar:          a.Avatar,
+		Welcome:         a.Welcome,
+		SystemPrompt:    a.SystemPrompt,
+		ReasoningEffort: a.ReasoningEffort,
+	}, nil
+}
+
 // UpdateAgent 更新智能体元数据（super_admin 任意；agent_admin 限自身归属域）。
 func (g *grpcServer) UpdateAgent(ctx context.Context, req *authpb.UpdateAgentRequest) (*authpb.UpdateAgentResponse, error) {
 	if req == nil || req.Id == "" {

@@ -67,6 +67,33 @@ func TestGetAgent_RBAC(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// GetAgentPublic（按智能体 system_prompt 注入用）：任意登录用户可查，
+// 仅白名单字段，管理字段不外泄。
+// ---------------------------------------------------------------------------
+
+func TestGetAgentPublic_Whitelist(t *testing.T) {
+	svc, _ := newTestService(t)
+	seedAgents(t, svc) // math 智能体：system_prompt="你是数学助手"，avatar/welcome/reasoning_effort 有值
+	plain := register(t, svc, "plain2")
+
+	a, err := svc.GetAgentPublic(context.Background(), plain.ID, "math")
+	if err != nil {
+		t.Fatalf("普通用户 GetAgentPublic 应成功: %v", err)
+	}
+	if a.Name != "数学智能体" || a.SystemPrompt != "你是数学助手" || a.ReasoningEffort != "high" || a.Avatar != "🦉" || a.Welcome != "你好" {
+		t.Fatalf("白名单字段透出异常: %+v", a)
+	}
+	// 管理字段不外泄（owner/status/默认模型）
+	if a.OwnerUserID != 0 || a.Status != 0 || a.Model != "" {
+		t.Fatalf("管理字段应被剔除: %+v", a)
+	}
+	// 不存在
+	if _, err := svc.GetAgentPublic(context.Background(), plain.ID, "nope"); apperr.CodeOf(err) != apperr.CodeNotFound {
+		t.Fatalf("不存在应 NOT_FOUND, got %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // UpdateAgent（P2-AI）：全量覆盖语义 + 空串=清空 + reasoning_effort 校验
 // ---------------------------------------------------------------------------
 

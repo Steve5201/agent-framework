@@ -334,6 +334,7 @@ gateway 会把该 ID 贯穿到内部 gRPC 调用与日志。不带时 gateway �
 ```json
 {
   "title": "高等数学答疑",
+  "agent_id": "tutor",
   "config": {
     "enabled_tools": ["calculator", "get_current_time"],
     "thinking": { "enabled": true, "reasoning_effort": "high" }
@@ -342,6 +343,7 @@ gateway 会把该 ID 贯穿到内部 gRPC 调用与日志。不带时 gateway �
 ```
 
 - `title` 可省略（省略则自动命名为"新对话"）。
+- `agent_id` 可省略：会话所属智能体域（'' = 管理端域）。**按智能体系统提示词**（管理端「智能体管理」配置的 `system_prompt`，即 `PATCH /v1/admin/agents/{id}` 字段）由 gateway 从 auth 元数据**自动注入**——客户端不可携带、也不可覆盖：非空时作为该会话的**基础身份/行为提示词**（优先于实例全局 `AGENT_SYSTEM_PROMPT`），内容渲染协议 / 媒体基址协议 / 保护区规范仍作为代码常量追加其后；会话创建时固化进 config 快照（此后管理端修改只影响新会话），普通用户更新配置不可改动该字段。
 - `config` 可省略：`enabled_tools` = 工具白名单（空/缺省 = 全部工具启用）；`thinking` = 思考模式（`enabled=false` 关闭思考；`reasoning_effort` ∈ low/high/max，缺省 = 厂商默认 high）；`mode` = 运行模式（`single` 单智能体 / `orchestrate` 多智能体编排，缺省 = `single`）。
 
 **成功响应**（`201 Created`）：

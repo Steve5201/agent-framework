@@ -1,5 +1,38 @@
-import { describe, expect, it } from 'vitest'
-import { isVideoUrl, parseEChartsOption, sanitizeSVG } from './rich'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+// downloadUrl 桌面端分支（Tauri）：mock openExternal，断言直接跳系统浏览器、不走 fetch。
+const mocks = vi.hoisted(() => ({ openExternal: vi.fn() }))
+vi.mock('./external', () => ({ openExternal: mocks.openExternal }))
+
+import { downloadUrl, isVideoUrl, parseEChartsOption, sanitizeSVG } from './rich'
+
+describe('downloadUrl', () => {
+  beforeEach(() => {
+    mocks.openExternal.mockClear()
+    // 默认清理 Tauri 环境标记，避免影响其它用例
+    delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__
+  })
+
+  it('Tauri 环境直接跳系统默认浏览器（openExternal），不 fetch Blob', () => {
+    ;(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {}
+    const fetchSpy =
+      typeof globalThis.fetch === 'function' ? vi.spyOn(globalThis, 'fetch') : null
+    downloadUrl('http://127.0.0.1:8080/files/a.png', 'a.png')
+    expect(mocks.openExternal).toHaveBeenCalledWith('http://127.0.0.1:8080/files/a.png')
+    expect(fetchSpy ? fetchSpy.mock.calls.length : 0).toBe(0)
+    fetchSpy?.mockRestore()
+  })
+
+  it('浏览器环境保持 fetch Blob 下载，跨域失败回退 openExternal', async () => {
+    const fetchSpy =
+      typeof globalThis.fetch === 'function'
+        ? vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
+        : null
+    downloadUrl('https://x/a.png', 'a.png')
+    await vi.waitFor(() => expect(mocks.openExternal).toHaveBeenCalledWith('https://x/a.png'))
+    fetchSpy?.mockRestore()
+  })
+})
 
 describe('isVideoUrl', () => {
   it('识别视频扩展名（忽略查询串/锚点）', () => {

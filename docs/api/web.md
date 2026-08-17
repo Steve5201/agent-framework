@@ -352,7 +352,8 @@ chat store 的 `streamChat` handler `onToolCall` 中检测 `LOCAL_TOOL_NAMES.has
 - **注册**：仅普通门户显示注册入口（注册即该门户普通用户，走 `/v1/auth/register/{agent_id}`）；**超管门户 `/login/*` 隐藏注册**（超管账号仅由最高超管在管理端创建，后端亦拒绝 `*` 门户注册）；`*` 门户登录限全门户归属者（越权防护见 P2-Z）。
 - **管理员归属校验**：管理员账号经门户登录必须归属该门户（后端校验，非本人 403"该账号不归属于智能体 X"）；super_admin（无归属）禁止走门户入口，强制走管理员入口 `/v1/auth/login`。
 - **记住密码**（`src/lib/remember.ts`，P2-AA/AC 后）：**统一走 localStorage**（base64 仅混淆、**非加密**，XSS 泄露风险已注释——浏览器无法接入系统凭据库）；**按门户域隔离**存储（`agent.remembered_credentials.<agentId>`，含 `*` 域），旧单域 key 一次性迁移；挂载时按当前域回填用户名/密码并勾选，取消勾选清除当前域凭据。
-- **按角色跳转**：已登录/登录成功后用 `isAdminRole` 判定——`super_admin` / `agent_admin` / `admin` → `/admin/chat` 管理端域；普通用户 → `/agent/{agentId}` 对应智能体门户；登录成功后先合并游客会话（`mergeGuestSessions`，失败不阻断）。
+- **按角色跳转（落地角色归属会话域，P2-AG）**：已登录/登录成功后用 `isAdminRole` 判定——管理员 → `/agent/{getHomeScope(user)}` 角色归属会话域（`super_admin` → `/agent/*` 全部域；`agent_admin` / `admin` → `/agent/{绑定域}`）；普通用户 → `/agent/{agentId}` 对应智能体门户；登录成功后先合并游客会话（`mergeGuestSessions`，失败不阻断）。修复背景：原一律跳 `/admin/chat`（管理端域）与管理员会话实际归属脱节，曾致"登录后首屏空列表、需手动切 `*` 域才出现"。
+- **归属域兜底（`getHomeScope`，方案 C）**：`src/lib/roles.ts` 新增 `getHomeScope(user)`——超管→`*`、agent_admin/admin→绑定域、普通用户/游客→`''`。管理端对话域（`ChatPage mode="admin"`）无记忆时按它回退会话域（`loadRememberedAgent() || getHomeScope(user)`）；`chat.ts createSession` 对管理端空串域按角色归属回退（超管→`*`→默认域 tutor、绑定域管理员→绑定域），**不再产生 `agent_id=''` 的孤儿会话**。测试：`roles.test.ts`（getHomeScope 4 例）+ `chat.createSession.test.ts`（管理端空串回退 3 例）+ `ChatPage.test.tsx`（已登录超管/绑定域管理员回退 2 例）。
 - **返回游客模式**：表单下方「以游客身份继续（不登录）」按钮 → `/agent/{agentId}`，本地游客会话不丢失（覆盖"从游客模式进登录页想返回"与"登录页兜底"场景）。
 - **服务器地址**：`agent.server_url` 持久化（见第 3 节），保存立即生效。
 - **测试**：`LoginPage.test.tsx`（表单/错误提示/门户注册显隐/服务器地址/记住密码域隔离）。

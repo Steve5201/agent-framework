@@ -62,6 +62,9 @@ type SessionAgentStat struct {
 	Sessions int64
 }
 
+// maxSystemPromptRunes 按智能体基础提示词长度上限（rune 计数，防超长文本落库）。
+const maxSystemPromptRunes = 4096
+
 // SessionConfig 会话级配置（sessions.config JSONB 落库）。
 // EnabledTools 为空 = 全部工具启用；Thinking 为空 = 思考按厂商默认（开启）。
 type SessionConfig struct {
@@ -100,6 +103,11 @@ type SessionConfig struct {
 	MaxMessages int `json:"max_messages,omitempty"`
 	// MaxThinkingRounds 思考（工具调用）轮次上限；0 = 不单独限制。
 	MaxThinkingRounds int `json:"max_thinking_rounds,omitempty"`
+	// SystemPrompt 按智能体基础提示词（管理员级，只读于普通用户配置区）。
+	// 来自 auth agents.system_prompt，经 CreateSessionRequest.system_prompt 固化进
+	// 会话 config 快照（gateway 注入，SessionConfig 不暴露该字段，用户不可篡改）；
+	// 非空时装配覆盖实例全局提示词（AGENT_SYSTEM_PROMPT）；空 = 用实例全局。
+	SystemPrompt string `json:"system_prompt,omitempty"`
 
 	// Model 会话选定的模型名（llm-gateway 模型注册表内名称；空 = 未设置，
 	// 装配时回退服务实例默认模型）。普通可配字段：用户在配置区选择，

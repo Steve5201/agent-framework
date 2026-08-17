@@ -493,6 +493,16 @@ export interface UserQuota {
   used_this_month: number // 本月累计已用（实时聚合）
 }
 
+// ---- 工作区磁盘配额（/v1/admin/disk-quota，仅 super_admin） -------------
+
+/** 单用户工作区保护区（protected/）磁盘配额视图；0 = 不限 */
+export interface DiskQuota {
+  user_id: number
+  disk_quota_mb: number // 保护区配额上限（MB）；0 = 不限
+  updated_by: number
+  updated_at: string
+}
+
 // ---- 大模型管理（阶段3·P3 /v1/admin/models，super_admin + agent_admin） ----
 
 /** 大模型接入配置（管理端视图；API Key 只存在于 llm-gateway，此处为打码值） */

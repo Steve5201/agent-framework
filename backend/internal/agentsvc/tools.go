@@ -32,6 +32,9 @@ type ToolSetOptions struct {
 	// 使模型能用 @skills/<技能名>/… 虚拟路径读取技能内文档与脚本；
 	// 空 = file_ops 按默认 <工作目录>/skills 解析（与 skill Provider 默认一致）。
 	SkillsRoot string
+	// DiskQuota 写 protected/ 前的磁盘配额校验回调（模块三·保护区配额）。
+	// nil = 不校验（历史行为）；装配方（cmd/agent）注入 agentsvc.DiskQuotaEnforcer。
+	DiskQuota builtin.CheckDiskQuota
 	// Providers 附加工具提供者（Skill / MCP 等外部能力源，按声明顺序注册）。
 	Providers []tools.ToolProvider
 }
@@ -58,6 +61,12 @@ func WithSandboxURL(url string) ToolSetOption {
 // 应与 Skill Provider 的 Root 保持一致（缺省均为 <工作目录>/skills）。
 func WithSkillsRoot(root string) ToolSetOption {
 	return func(o *ToolSetOptions) { o.SkillsRoot = root }
+}
+
+// WithDiskQuota 指定写 protected/ 前的磁盘配额校验回调（模块三·保护区配额）。
+// nil = 不校验（历史行为）。
+func WithDiskQuota(q builtin.CheckDiskQuota) ToolSetOption {
+	return func(o *ToolSetOptions) { o.DiskQuota = q }
 }
 
 // WithProviders 追加外部工具提供者（Skill / MCP）。
@@ -89,6 +98,7 @@ func DefaultToolSet(opts ...ToolSetOption) (*tool.Registry, error) {
 		CodeExecAllowlist: o.CodeExecAllowlist,
 		SandboxURL:        o.SandboxURL,
 		SkillsRoot:        o.SkillsRoot,
+		DiskQuota:         o.DiskQuota,
 	}); err != nil {
 		return nil, fmt.Errorf("agentsvc: 注册内置工具集失败: %w", err)
 	}

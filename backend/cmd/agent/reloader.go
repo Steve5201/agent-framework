@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
 	"github.com/Steve5201/agent-backend/internal/agentsvc"
@@ -45,6 +46,7 @@ const (
 type hotReloader struct {
 	svc       *agentsvc.Service
 	cfg       *config.Config
+	pool      *pgxpool.Pool // 装配磁盘配额执行器（模块三）；nil = 不校验
 	log       *zap.Logger
 	skillsDir string
 	mcpFile   string
@@ -56,10 +58,11 @@ type hotReloader struct {
 	rebuildM sync.Mutex // rebuild 串行化（fsnotify debounce 与轮询可能并发触发）
 }
 
-func newHotReloader(svc *agentsvc.Service, cfg *config.Config, log *zap.Logger, seedCloser func()) *hotReloader {
+func newHotReloader(svc *agentsvc.Service, cfg *config.Config, pool *pgxpool.Pool, log *zap.Logger, seedCloser func()) *hotReloader {
 	return &hotReloader{
 		svc:       svc,
 		cfg:       cfg,
+		pool:      pool,
 		log:       log,
 		skillsDir: agentSkillsDir(cfg),
 		mcpFile:   agentMcpFile(cfg),
@@ -71,7 +74,7 @@ func newHotReloader(svc *agentsvc.Service, cfg *config.Config, log *zap.Logger, 
 func (h *hotReloader) rebuild() {
 	h.rebuildM.Lock()
 	defer h.rebuildM.Unlock()
-	reg, closeNew, err := buildToolRegistry(h.cfg, h.log)
+	reg, closeNew, err := buildToolRegistry(h.cfg, h.pool, h.log)
 	if err != nil {
 		h.log.Error("hot reload: rebuild tool registry failed, 继续使用旧注册表", zap.Error(err))
 		return
@@ -185,8 +188,8 @@ func (h *hotReloader) poll(ctx context.Context) {
 // ---------------------------------------------------------------------------
 
 // startReloader 启动热加载（fsnotify + 快照轮询），返回 stop 函数。
-func startReloader(svc *agentsvc.Service, cfg *config.Config, log *zap.Logger, seedCloser func()) func() {
-	h := newHotReloader(svc, cfg, log, seedCloser)
+func startReloader(svc *agentsvc.Service, cfg *config.Config, pool *pgxpool.Pool, log *zap.Logger, seedCloser func()) func() {
+	h := newHotReloader(svc, cfg, pool, log, seedCloser)
 
 	// 快照轮询兜底：fsnotify 不可靠（Docker bind mount）时依然保存即生效。
 	ctx, cancel := context.WithCancel(context.Background())

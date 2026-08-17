@@ -27,7 +27,9 @@
 //	SANDBOX_CODE_EXEC_ALLOWLIST 命令白名单正则（逗号分隔，默认空）
 //	SANDBOX_PARSERS_DIR        预置解析脚本目录（默认 /opt/rag-parsers，profile 模式使用）
 //	SANDBOX_CLEANUP_INTERVAL_HOURS 工作区清理周期小时（默认 6；0=禁用）
-//	SANDBOX_CLEANUP_TTL_HOURS  过期目录保留小时（默认 168=7 天；chat-files/ingest 白名单）
+//	SANDBOX_CLEANUP_TTL_HOURS  短期 TTL 小时（默认 168=7 天；chat-files/ingest 临时区）
+//	SANDBOX_CLEANUP_LONG_TTL_HOURS 长期 TTL 小时（默认 720=30 天；散落 AI 产物，
+//	      含 chat-docs 渲染文档、file_ops 工作文件等；protected/ 永不清）
 package main
 
 import (
@@ -75,14 +77,17 @@ func main() {
 		Executor:   executor,
 	})
 
-	// 工作区定期清理（模块三）：TTL 默认 7 天；间隔 0 = 禁用。
+	// 工作区定期清理（模块三）：短期 TTL 默认 7 天（chat-files/ingest）、
+	// 长期 TTL 默认 30 天（散落 AI 产物，含 chat-docs 等）；间隔 0 = 禁用。
+	// protected/ 与 rag-media/ 永不清（前者为显式保留资产，后者由 rag 侧 DB 判空）。
 	workRoot := getenv("SANDBOX_WORK_ROOT", "/work")
 	cleanupInterval := time.Duration(getenvInt("SANDBOX_CLEANUP_INTERVAL_HOURS", 6)) * time.Hour
 	cleanupTTL := time.Duration(getenvInt("SANDBOX_CLEANUP_TTL_HOURS", 168)) * time.Hour
+	cleanupLongTTL := time.Duration(getenvInt("SANDBOX_CLEANUP_LONG_TTL_HOURS", 720)) * time.Hour
 	if cleanupInterval > 0 {
 		ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 		defer stop()
-		go runCleanupLoop(ctx, sandboxsvc.NewCleaner(workRoot, cleanupTTL, log), cleanupInterval, log)
+		go runCleanupLoop(ctx, sandboxsvc.NewCleaner(workRoot, cleanupTTL, cleanupLongTTL, log), cleanupInterval, log)
 	}
 
 	addr := ":" + strconv.Itoa(cfg.HTTPPort)

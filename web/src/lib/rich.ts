@@ -1,5 +1,6 @@
 /** 富媒体渲染协议辅助函数（需求 9）。协议说明见 backend agentsvc/prompt.go 与 docs/api/web.md。 */
 import { openExternal } from './external'
+import { isTauri } from './storage'
 import { getApiBase } from './api'
 
 /**
@@ -38,8 +39,16 @@ export function downloadBlob(data: Blob, filename: string): void {
 
 /** 下载网络/本地资源到本地：fetch 转 Blob 后下载；
  *  跨域且无 CORS 时 fetch 会失败 → 退化为新窗口/系统浏览器打开，由用户另存。
- *  注意：不能直接 window.open（Tauri 里会劫持当前 webview 导航），统一走 openExternal。 */
+ *  注意：不能直接 window.open（Tauri 里会劫持当前 webview 导航），统一走 openExternal。
+ *
+ *  桌面端（Tauri WebView2）差异：WebView2 里 <a download> 的 Blob 下载没有任何
+ *  下载反馈（静默丢弃），与文件下载卡片保持一致——检测到 Tauri 环境时直接跳
+ *  系统默认浏览器，由浏览器接管下载（有进度/完成提示）。 */
 export function downloadUrl(url: string, filename: string): void {
+  if (isTauri()) {
+    void openExternal(url)
+    return
+  }
   fetch(url)
     .then((r) => r.blob())
     .then((blob) => downloadBlob(blob, filename))

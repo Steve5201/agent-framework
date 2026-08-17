@@ -1,6 +1,8 @@
 import { useRef } from 'react'
 import { Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { openExternal } from '@/lib/external'
+import { isTauri } from '@/lib/storage'
 import { downloadBlob, sanitizeSVG } from '@/lib/rich'
 
 /** 内联渲染 SVG 代码块为图片（净化后注入，防 script / 事件属性注入）。
@@ -11,11 +13,17 @@ export default function InlineSVG({ source, align }: { source: string; align?: s
   const wrapRef = useRef<HTMLDivElement>(null)
   const svg = sanitizeSVG(source).trim()
 
-  // 把渲染出的 SVG 序列化回文本，以 .svg 文件下载（保留矢量属性，可编辑）
+  // 把渲染出的 SVG 序列化回文本，以 .svg 文件下载（保留矢量属性，可编辑）。
+  // 桌面端（Tauri WebView2）Blob 下载无反馈：编码为 data: URL 跳系统默认浏览器，
+  // 由浏览器显示图片（可另存）。与 downloadUrl 的桌面端策略保持一致。
   const handleDownload = () => {
     const svgEl = wrapRef.current?.querySelector('svg')
     if (!svgEl) return
     const xml = new XMLSerializer().serializeToString(svgEl)
+    if (isTauri()) {
+      void openExternal(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`)
+      return
+    }
     downloadBlob(new Blob([xml], { type: 'image/svg+xml;charset=utf-8' }), 'image.svg')
   }
 

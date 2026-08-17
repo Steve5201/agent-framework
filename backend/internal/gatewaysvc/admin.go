@@ -25,6 +25,7 @@ func registerAdminRoutes(mux *http.ServeMux, c *Clients) {
 		Agent:             c.Agent,        // 数据管理模块：会话统计经 agent-service gRPC
 		LlmGatewayBaseURL: c.LlmGatewayBaseURL, // 用量按智能体聚合（P2-AI）
 		LlmAdminToken:     c.LlmAdminToken, // 模型注册表管理令牌（P3 大模型管理）
+		AgentHTTPBaseURL:  c.AgentHTTPAddr, // 磁盘配额管理代理目标（模块三）
 		Log:               c.Log,
 		// 上传限制（P4-L 收口 env；0 = adminsvc 内置默认）。
 		KbUploadMaxMB:    c.AdminKbUploadMaxMB,

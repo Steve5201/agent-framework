@@ -52,6 +52,10 @@ service AuthService {
   rpc CreateAgent(CreateAgentRequest) returns (CreateAgentResponse);
   // GetAgent 智能体详情（最高超管任意；其它角色仅限归属域）。
   rpc GetAgent(GetAgentRequest) returns (GetAgentResponse);
+  // GetAgentPublic 公开智能体元数据（任意登录用户可查，仅返回前台展示/装配
+  // 字段，不含 owner/status 等管理信息）。gateway 创建会话时据此注入按智能体
+  // system_prompt——普通用户无需管理权限即可获取，与门户登录归属语义一致。
+  rpc GetAgentPublic(GetAgentRequest) returns (GetAgentPublicResponse);
   // UpdateAgent 更新智能体元数据（名称/描述/模型/形象/系统提示词/推理强度）。
   // 超管任意；agent_admin 仅限自身归属域（不允许改 owner）。
   rpc UpdateAgent(UpdateAgentRequest) returns (UpdateAgentResponse);
@@ -229,6 +233,18 @@ message GetAgentRequest {
 
 message GetAgentResponse {
   Agent agent = 1;
+}
+
+// GetAgentPublicResponse 公开智能体元数据（前台可展示/装配字段白名单，
+// 不含 owner_user_id / status / created_at 等管理字段）。
+message GetAgentPublicResponse {
+  string id = 1;                 // 智能体 ID
+  string name = 2;               // 展示名
+  string description = 3;        // 描述
+  string avatar = 4;             // 形象 emoji
+  string welcome = 5;            // 欢迎语
+  string system_prompt = 6;      // 按智能体系统提示词（空 = 用实例全局 prompt）
+  string reasoning_effort = 7;   // 默认推理强度 low/high/max（空 = 用实例默认）
 }
 
 // UpdateAgentRequest 更新智能体元数据。

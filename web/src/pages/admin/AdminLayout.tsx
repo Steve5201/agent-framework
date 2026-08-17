@@ -7,6 +7,7 @@ import {
   Boxes,
   Cpu,
   Database,
+  HardDrive,
   Loader2,
   ScrollText,
   Server,
@@ -31,6 +32,7 @@ const MODULE_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
   models: Cpu,
   data: Database,
   logs: ScrollText,
+  'disk-quota': HardDrive,
 }
 
 function ModuleIcon({ m }: { m: AdminModule }) {

@@ -444,27 +444,156 @@ fn validate_external_url(url: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// 用系统默认浏览器打开外部链接（前端 invoke('open_external', { url })）。
-/// Windows: `cmd /C start "" "<url>"`；macOS: `open`；Linux: `xdg-open`。
-/// start 的首个 "" 是窗口标题占位，URL 由 std::process::Command 自动按需加引号，
-/// 含空格/& 的 URL 不会被 cmd 拆词。
-#[tauri::command]
-pub fn open_external(url: String) -> Result<(), String> {
-    validate_external_url(&url)?;
+/// 用系统默认处理程序打开目标（URL 或本地文件路径）。
+/// Windows: `cmd /C start "" "<target>"`；macOS: `open`；Linux: `xdg-open`。
+/// start 的首个 "" 是窗口标题占位，target 由 std::process::Command 自动按需加引号，
+/// 含空格/& 的目标不会被 cmd 拆词。
+fn spawn_open(target: &str) -> Result<(), String> {
     use std::process::Command;
 
     let (program, args): (&str, Vec<&str>) = if cfg!(windows) {
-        ("cmd", vec!["/C", "start", "", url.as_str()])
+        ("cmd", vec!["/C", "start", "", target])
     } else if cfg!(target_os = "macos") {
-        ("open", vec![url.as_str()])
+        ("open", vec![target])
     } else {
-        ("xdg-open", vec![url.as_str()])
+        ("xdg-open", vec![target])
     };
     Command::new(program)
         .args(&args)
         .spawn()
-        .map_err(|e| format!("打开系统浏览器失败: {e}"))?;
+        .map_err(|e| format!("打开系统默认程序失败: {e}"))?;
     Ok(())
+}
+
+/// 打开外部链接（前端 invoke('open_external', { url })）。
+/// 常规 http/https/mailto/tel 交给系统默认浏览器打开；data:image/* 数据 URL
+/// （前端图表/SVG 下载按钮生成）解码写入系统临时文件后用默认程序打开——Windows
+/// 没有注册 data: 协议的 ShellExecute 处理程序，直接 `start "data:..."` 会失败，
+/// 必须先落盘成图片文件。
+#[tauri::command]
+pub fn open_external(url: String) -> Result<(), String> {
+    if url.to_ascii_lowercase().starts_with("data:image/") {
+        return open_data_image(&url);
+    }
+    validate_external_url(&url)?;
+    spawn_open(&url)
+}
+
+/// data:image 数据 URL 解码后的大小上限（前端 PNG 截图一般 <1MB，防超长内存/落盘）。
+const MAX_DATA_IMAGE_BYTES: usize = 8 * 1024 * 1024;
+
+/// 解析 data:image/* 数据 URL，解码写入系统临时文件并用默认程序打开。
+/// MIME 白名单只放行常见图片类型——防止把任意内容伪装成可执行/脚本扩展名落地后打开执行。
+fn open_data_image(url: &str) -> Result<(), String> {
+    let (meta, payload) = url.split_once(',').ok_or("data URL 缺少内容")?;
+    if payload.len() > MAX_DATA_IMAGE_BYTES {
+        return Err("图片数据过大".to_string());
+    }
+    // 头部形如 data:image/svg+xml;charset=utf-8;base64
+    let head = meta.trim_start_matches("data:");
+    let (mediatype, is_base64) = match head.find(';') {
+        Some(idx) => (&head[..idx], head[idx..].contains(";base64")),
+        None => (head, false),
+    };
+    let ext = match mediatype.to_ascii_lowercase().as_str() {
+        "image/svg+xml" => "svg",
+        "image/png" => "png",
+        "image/jpeg" => "jpg",
+        "image/webp" => "webp",
+        "image/gif" => "gif",
+        "image/bmp" => "bmp",
+        other => return Err(format!("不支持的图片类型: {other}")),
+    };
+    let bytes = if is_base64 {
+        decode_base64(payload).map_err(|e| format!("base64 解码失败: {e}"))?
+    } else {
+        percent_decode(payload)
+    };
+    if bytes.is_empty() {
+        return Err("图片内容为空".to_string());
+    }
+    if bytes.len() > MAX_DATA_IMAGE_BYTES {
+        return Err("图片数据过大".to_string());
+    }
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let path = std::env::temp_dir().join(format!(
+        "agent_download_{}_{}.{ext}",
+        std::process::id(),
+        nanos
+    ));
+    fs::write(&path, &bytes).map_err(|e| format!("写入临时文件失败: {e}"))?;
+    spawn_open(path.to_str().ok_or("临时文件路径非法")?)?;
+    // 延迟清理：等默认程序读取完毕后删除；失败忽略（系统临时目录兜底回收）。
+    let p = path.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_secs(120));
+        let _ = fs::remove_file(&p);
+    });
+    Ok(())
+}
+
+/// 最小 base64 解码（RFC 4648 标准字母表，容忍缺失 padding）。
+/// 仅为 data URL 图片负载设计，不覆盖 URL-safe 等变体。
+fn decode_base64(input: &str) -> Result<Vec<u8>, String> {
+    const TABLE: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut lut = [0xFFu8; 128];
+    for (i, &c) in TABLE.iter().enumerate() {
+        lut[c as usize] = i as u8;
+    }
+    let mut out = Vec::with_capacity(input.len() / 4 * 3);
+    let mut acc: u32 = 0;
+    let mut bits: u32 = 0;
+    for &b in input.as_bytes() {
+        if b == b'=' {
+            break; // padding 之后无有效数据
+        }
+        if b >= 128 {
+            return Err("非法 base64 字符".to_string());
+        }
+        let v = lut[b as usize];
+        if v == 0xFF {
+            return Err("非法 base64 字符".to_string());
+        }
+        acc = (acc << 6) | u32::from(v);
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((acc >> bits) as u8);
+        }
+    }
+    Ok(out)
+}
+
+/// 百分号解码（UTF-8 字节序列，兼容 JS encodeURIComponent 输出）。非 % 字符原样保留。
+fn percent_decode(input: &str) -> Vec<u8> {
+    let bytes = input.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let (Some(hi), Some(lo)) = (hex_val(bytes[i + 1]), hex_val(bytes[i + 2])) {
+                out.push((hi << 4) | lo);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    out
+}
+
+/// 十六进制字符 → 数值（0-F）。
+fn hex_val(b: u8) -> Option<u8> {
+    match b {
+        b'0'..=b'9' => Some(b - b'0'),
+        b'a'..=b'f' => Some(b - b'a' + 10),
+        b'A'..=b'F' => Some(b - b'A' + 10),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -508,5 +637,54 @@ mod external_tests {
         // 非法 URL 应直接返回错误，不触发任何系统调用。
         let err = open_external("file:///C:/Windows".to_string()).expect_err("应拒绝非法链接");
         assert!(err.contains("仅支持"), "got {err}");
+    }
+
+    #[test]
+    fn base64_decode_standard() {
+        assert_eq!(decode_base64("aGVsbG8=").unwrap(), b"hello");
+    }
+
+    #[test]
+    fn base64_decode_without_padding() {
+        // 容忍缺失 padding（前端 ECharts getDataURL 输出自带 =，这里兜底）
+        assert_eq!(decode_base64("aGVsbG8").unwrap(), b"hello");
+    }
+
+    #[test]
+    fn base64_decode_rejects_invalid_char() {
+        assert!(decode_base64("aGVsbG8!").is_err());
+        assert!(decode_base64("???==").is_err());
+    }
+
+    #[test]
+    fn base64_decode_png_magic_bytes() {
+        // 真实 PNG 头：89 50 4E 47 0D 0A 1A 0A
+        let png = "iVBORw0KGgo=";
+        assert_eq!(
+            decode_base64(png).unwrap(),
+            vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+        );
+    }
+
+    #[test]
+    fn percent_decode_utf8() {
+        // JS encodeURIComponent('你好.svg') 的输出，应还原为原始 UTF-8 字节
+        let decoded = percent_decode("%E4%BD%A0%E5%A5%BD.svg");
+        assert_eq!(decoded, "你好.svg".as_bytes());
+    }
+
+    #[test]
+    fn percent_decode_keeps_plain_chars() {
+        assert_eq!(percent_decode("a b+c.svg"), b"a b+c.svg");
+        // 非法 % 序列原样保留，不 panic
+        assert_eq!(percent_decode("50%"), b"50%");
+    }
+
+    #[test]
+    fn data_image_rejects_without_side_effects() {
+        // 非白名单图片类型 / 空内容：在落盘与打开之前直接报错
+        assert!(open_data_image("data:text/html,hello").is_err());
+        assert!(open_data_image("data:image/tiff,AAAA").is_err());
+        assert!(open_data_image("data:image/svg+xml,").is_err());
     }
 }

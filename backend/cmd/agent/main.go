@@ -84,7 +84,7 @@ func main() {
 	// 4. 工具集 + 业务服务。
 	//    Skill / MCP 外部能力源统一经 tools.ToolProvider 注入（见 agentsvc.WithProviders）。
 	//    构建逻辑在 toolset.go（启动与热加载复用同一份实现）。
-	reg, closeTools, err := buildToolRegistry(cfg, log)
+	reg, closeTools, err := buildToolRegistry(cfg, pool, log)
 	if err != nil {
 		log.Fatal("build tool registry", zap.Error(err))
 	}
@@ -122,8 +122,13 @@ func main() {
 
 	// 4.1 管理端热加载：监听技能目录 + MCP 配置文件，保存即生效（免重启）。
 	//     进行中的会话不受影响，新会话立即使用新工具集。
-	stopReload := startReloader(svc, cfg, log, closeTools)
+	stopReload := startReloader(svc, cfg, pool, log, closeTools)
 	defer stopReload()
+
+	// 4.2 保护区磁盘配额管理端点（模块三）：/v1/admin/disk-quota*（X-Admin-Token）。
+	//     令牌复用 LLM_ADMIN_TOKEN（与 llm-gateway/gateway 管理端点一致），
+	//     由 gateway 的 adminsvc 代理调用；未配置令牌时端点自动 503 禁用。
+	quotaAdmin := agentsvc.NewDiskQuotaAdmin(agentsvc.NewDiskQuotaStore(pool), cfg.LLM.AdminToken, log)
 
 	// 5. 启动 gRPC 业务服务（统一拦截器：request_id → recovery → 日志）。
 	grpcLis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCPort))
@@ -143,7 +148,7 @@ func main() {
 	}
 	httpSrv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", httpPort),
-		Handler:           newHTTPHandler(log),
+		Handler:           newHTTPHandler(quotaAdmin, log),
 		ReadHeaderTimeout: 5 * time.Second, // 防慢速连接耗尽连接池
 	}
 
@@ -184,14 +189,18 @@ func main() {
 	log.Info("agent service stopped gracefully")
 }
 
-// newHTTPHandler 组装 HTTP 路由：健康检查 + /files 本地媒体静态服务。
-// 后续如需扩展在此注册。
-func newHTTPHandler(log *zap.Logger) http.Handler {
+// newHTTPHandler 组装 HTTP 路由：健康检查 + /files 本地媒体静态服务 + 磁盘配额管理端点。
+// quota 可为 nil（禁用管理端点），仅注册健康检查与 /files。
+func newHTTPHandler(quota *agentsvc.DiskQuotaAdmin, log *zap.Logger) http.Handler {
 	mux := http.NewServeMux()
 	server.RegisterHealthz(mux)
 	// /files：只读服务智能体工作目录内文件（与 file_ops 同路径边界），
 	// 供前端渲染本地图片/视频（P2-N 本地媒体交叉项）。
 	mux.Handle("/files/", filesHandler{log: log})
+	// 保护区磁盘配额管理端点（模块三）：X-Admin-Token 校验在 handler 内完成。
+	if quota != nil {
+		quota.RegisterAdmin(mux)
+	}
 	// 统一中间件链：request_id → 访问日志 → panic 恢复。
 	return middleware.Chain(mux,
 		middleware.RequestID(),

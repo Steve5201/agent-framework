@@ -667,6 +667,28 @@ func (s *Service) GetAgent(ctx context.Context, actorID, id string) (*Agent, err
 	return s.repo.GetAgent(ctx, id)
 }
 
+// GetAgentPublic 公开智能体元数据：任意登录用户可查（白名单字段，不含
+// owner/status 等管理信息）。gateway 创建会话时据此注入按智能体 system_prompt
+// ——普通用户无需管理权限即可获取，与门户登录归属语义一致。
+func (s *Service) GetAgentPublic(ctx context.Context, actorID, id string) (*Agent, error) {
+	if _, err := s.repo.GetUserByID(ctx, actorID); err != nil {
+		return nil, err
+	}
+	a, err := s.repo.GetAgent(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return &Agent{
+		ID:              a.ID,
+		Name:            a.Name,
+		Description:     a.Description,
+		Avatar:          a.Avatar,
+		Welcome:         a.Welcome,
+		SystemPrompt:    a.SystemPrompt,
+		ReasoningEffort: a.ReasoningEffort,
+	}, nil
+}
+
 // UpdateAgent 更新智能体元数据：super_admin 任意；agent_admin 仅限自身归属域。
 // 全量覆盖指定字段（name 非空；description/model/avatar/welcome/system_prompt 空=清空；
 // reasoning_effort 空=实例默认，非空须为 low/high/max）。

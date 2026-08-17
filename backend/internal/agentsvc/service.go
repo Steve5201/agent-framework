@@ -465,6 +465,7 @@ func (s *Service) UpdateSessionConfig(ctx context.Context, userID, sessionID int
 	cfg.MaxRounds = sess.Config.MaxRounds
 	cfg.MaxMessages = sess.Config.MaxMessages
 	cfg.MaxThinkingRounds = sess.Config.MaxThinkingRounds
+	cfg.SystemPrompt = sess.Config.SystemPrompt
 	if err := s.repo.UpdateSessionConfig(ctx, sessionID, cfg); err != nil {
 		return nil, err
 	}
@@ -988,9 +989,17 @@ func (s *Service) newAgentWithConfig(ctx context.Context, sessionID int64, histo
 	if mcfg.Model != "" {
 		model = mcfg.Model
 	}
+	// 基础系统提示词：会话快照已按智能体配置（mcfg.SystemPrompt 非空，auth 元
+	// 数据固化）优先，否则回退服务实例全局提示词（AGENT_SYSTEM_PROMPT）。
+	// 内容渲染协议 / 媒体基址协议 / 保护区规范始终由 BuildSystemPromptWithMedia
+	// 在基础提示词之后追加（代码常量契约，不可被配置覆盖）。
+	basePrompt := s.systemPrompt
+	if mcfg.SystemPrompt != "" {
+		basePrompt = mcfg.SystemPrompt
+	}
 	cfg := schema.AgentConfig{
 		Model:             model,
-		SystemPrompt:      BuildSystemPromptWithMedia(s.systemPrompt, s.filesBaseURL),
+		SystemPrompt:      BuildSystemPromptWithMedia(basePrompt, s.filesBaseURL),
 		MaxRounds:         s.effectiveRounds(mcfg.MaxRounds),
 		MaxThinkingRounds: mcfg.MaxThinkingRounds,
 		Memory:            schema.MemoryConfig{MaxMessages: s.effectiveMessages(mcfg.MaxMessages)},

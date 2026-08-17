@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef } from 'react'
 import { Download } from 'lucide-react'
 import * as echarts from 'echarts/core'
 import { cn } from '@/lib/utils'
+import { openExternal } from '@/lib/external'
+import { isTauri } from '@/lib/storage'
+import { parseEChartsOption } from '@/lib/rich'
 import {
   BarChart,
   BoxplotChart,
@@ -31,7 +34,6 @@ import {
   VisualMapComponent,
 } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
-import { parseEChartsOption } from '@/lib/rich'
 
 // 按需注册常用图表（协议白名单）：模型输出的 series.type 属于已注册集合即可渲染。
 // 新增图表类型只需在此追加注册，前端渲染逻辑零改动——充分利用模型对 ECharts 标准
@@ -118,11 +120,17 @@ export default function EChart({
     chartRef.current?.setOption(clean, true)
   }, [option])
 
-  // 图表截图下载（ECharts 官方 getDataURL，白底 + 2x 清晰度）
+  // 图表截图下载（ECharts 官方 getDataURL，白底 + 2x 清晰度）。
+  // 桌面端（Tauri WebView2）<a download> 的 data: URL 下载无反馈：跳系统默认
+  // 浏览器打开 PNG，由浏览器显示图片（可另存）。与 downloadUrl 桌面端策略一致。
   const handleDownload = () => {
     const chart = chartRef.current
     if (!chart) return
     const dataUrl = chart.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#fff' })
+    if (isTauri()) {
+      void openExternal(dataUrl)
+      return
+    }
     const a = document.createElement('a')
     a.href = dataUrl
     a.download = 'chart.png'

@@ -257,6 +257,15 @@ type AgentConfig struct {
 	// 与 llm 层单请求重试互补：此处重试的是"整个子任务"，可覆盖多轮过程中的
 	// 任一次失败，最大限度保证中间链不出错（避免前面成功、后面失败整体报废）。
 	OrchSubtaskRetries int
+
+	// 用户工作区磁盘配额（模块三·保护区配额，MB，0 = 不限）：
+	// 只约束 protected/ 保护区（永不清除的长期资产）的上限，临时/散落内容由
+	// 清理器 TTL 自动回收，不占配额。优先级：sandbox_disk_quota 表显式覆盖 >
+	// 角色默认（本字段）。部署方按机器磁盘在 .env 调整即可。
+	DiskQuotaUserMB       int64 // user        普通用户（AGENT_DISK_QUOTA_MB_USER，默认 256）
+	DiskQuotaAdminMB      int64 // admin       普通管理员（AGENT_DISK_QUOTA_MB_ADMIN，默认 512）
+	DiskQuotaAgentAdminMB int64 // agent_admin 智能体超管（AGENT_DISK_QUOTA_MB_AGENT_ADMIN，默认 1024）
+	DiskQuotaSuperAdminMB int64 // super_admin 最高超管（AGENT_DISK_QUOTA_MB_SUPER_ADMIN，默认 0 = 不限）
 }
 
 // DBConfig PostgreSQL 连接配置。
@@ -428,6 +437,12 @@ func LoadWith(serviceName string, defaultPort int, requireDB bool) (*Config, err
 	v.SetDefault("agent_chat_doc_inject_runes", 8000)
 	v.SetDefault("agent_orch_subtask_timeout_sec", 1800) // 编排子任务单任务超时 1800s（30 分钟，0 = 不限制）；本地大模型响应慢，硬限制宽松化优先保证任务成功（P4-L）
 	v.SetDefault("agent_orch_subtask_retries", 1)
+	// 用户工作区磁盘配额（模块三·保护区配额，MB，0 = 不限）：super_admin 默认
+	// 不限；部署方按机器磁盘在 .env 覆盖（见 AgentConfig.DiskQuota*MB 注释）。
+	v.SetDefault("agent_disk_quota_mb_user", 256)
+	v.SetDefault("agent_disk_quota_mb_admin", 512)
+	v.SetDefault("agent_disk_quota_mb_agent_admin", 1024)
+	v.SetDefault("agent_disk_quota_mb_super_admin", 0)
 
 	// gateway 管理端（admin panel）配置：默认与 agent 同目录/同文件
 	// （本地 go run 均在 backend/ 下运行；docker 里用 ADMIN_* 显式指到 /app）。
@@ -575,6 +590,11 @@ func LoadWith(serviceName string, defaultPort int, requireDB bool) (*Config, err
 			// 编排子任务韧性（P4-L 收口 env）：超时秒数 + 失败重试次数。
 			OrchSubtaskTimeoutSec: v.GetInt("agent_orch_subtask_timeout_sec"),
 			OrchSubtaskRetries:    v.GetInt("agent_orch_subtask_retries"),
+			// 用户工作区磁盘配额（模块三·保护区配额，MB，0 = 不限）。
+			DiskQuotaUserMB:       v.GetInt64("agent_disk_quota_mb_user"),
+			DiskQuotaAdminMB:      v.GetInt64("agent_disk_quota_mb_admin"),
+			DiskQuotaAgentAdminMB: v.GetInt64("agent_disk_quota_mb_agent_admin"),
+			DiskQuotaSuperAdminMB: v.GetInt64("agent_disk_quota_mb_super_admin"),
 		},
 		Gateway: GatewayConfig{
 			AuthAddr:        v.GetString("gateway_auth_addr"),

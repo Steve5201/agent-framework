@@ -14,6 +14,7 @@ import AgentDetailPage from '@/pages/admin/AgentDetailPage'
 import UsersPage from '@/pages/admin/UsersPage'
 import ModelsPage from '@/pages/admin/ModelsPage'
 import DataPage from '@/pages/admin/DataPage'
+import DiskQuotaPage from '@/pages/admin/DiskQuotaPage'
 import { isAdminRole, isSuperAdmin, canManageUsers, getHomeScope } from '@/lib/roles'
 import { getPortalAgentId } from '@/lib/portal'
 import { isTauri } from '@/lib/storage'
@@ -146,6 +147,15 @@ export default function App() {
               element={
                 <RoleGuard allow={isSuperAdmin}>
                   <DataPage />
+                </RoleGuard>
+              }
+            />
+            {/* 磁盘配额：仅最高超管（后端模块清单亦对其它角色隐藏） */}
+            <Route
+              path="disk-quota"
+              element={
+                <RoleGuard allow={isSuperAdmin}>
+                  <DiskQuotaPage />
                 </RoleGuard>
               }
             />

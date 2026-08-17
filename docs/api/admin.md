@@ -440,6 +440,36 @@ Query 参数：
 错误：`days` 非 1..90 → `400`；任一主数据源失败 → `500`（llm-gateway 非 200 亦视为
 内部错误）；无管理员身份 → `401`。
 
+### 4.7 磁盘配额管理（`/v1/admin/disk-quota`，模块三）
+
+用户工作区保护区（`protected/`）磁盘配额管理，仅 super_admin 可见（模块清单过滤）。
+数据表：agent 库 `sandbox_disk_quota`。语义（与 token 配额同构）：
+**有记录 = 显式覆盖（0 = 不限）；无记录 = 走角色默认**（`AGENT_DISK_QUOTA_MB_*`：
+普通用户 256MB / 管理员 512MB / 智能体超管 1GB / 最高超管 0 不限）。
+鉴权：`X-Admin-Token`（复用 `LLM_ADMIN_TOKEN`）；未配置 → `503`，不匹配 → `401`。
+
+#### GET `/v1/admin/disk-quota` — 显式覆盖列表
+
+响应：
+
+```json
+{ "quotas": [ { "user_id": 5, "disk_quota_mb": 1024, "updated_by": 0, "updated_at": "2026-08-18T10:00:00Z" } ] }
+```
+
+#### PUT `/v1/admin/disk-quota/{user_id}` — 设置/更新覆盖
+
+Body：`{ "disk_quota_mb": 1024 }`（MB，`0` = 不限）。
+
+- 响应 `200`：`{ "user_id": 5, "disk_quota_mb": 1024 }`；
+- `user_id` 非正整数 / body 非法 / 负数 → `400`；存储失败 → `500`。
+
+#### DELETE `/v1/admin/disk-quota/{user_id}` — 删除覆盖（恢复角色默认）
+
+- 响应 `200`：`{ "user_id": 5 }`（不存在也成功）；`user_id` 非法 → `400`。
+
+生效链路：gateway `adminsvc` 模块代理 → agent-service `/v1/admin/disk-quota*`；
+file_ops 每次写 protected/ 前查该表 + `du` 懒统计拦截（超限错误回填模型）。
+
 ---
 
 ## 5. 生效链路（免重启的机制）

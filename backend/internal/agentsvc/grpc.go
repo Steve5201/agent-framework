@@ -62,6 +62,24 @@ func (g *GrpcServer) CreateSession(ctx context.Context, req *agentv1.CreateSessi
 	if err != nil {
 		return nil, err
 	}
+	// 按智能体基础提示词（管理员级，auth 元数据，仅经本字段传入——SessionConfig
+	// 不暴露 system_prompt，用户请求无法设置/篡改）：非空时固化进会话 config 快照
+	// （先于用户初始配置写入，UpdateSessionConfig 的服务端继承保证后续用户更新
+	// 配置无法覆盖）；空 = 装配时回退实例全局提示词。
+	if req.SystemPrompt != "" {
+		if len([]rune(req.SystemPrompt)) > maxSystemPromptRunes {
+			return nil, apperr.New(apperr.CodeInvalidArgument, "系统提示词过长")
+		}
+		cfg := sess.Config
+		cfg.SystemPrompt = req.SystemPrompt
+		if err := g.svc.repo.UpdateSessionConfig(ctx, sess.ID, cfg); err != nil {
+			return nil, err
+		}
+		sess, err = g.svc.GetSession(ctx, userID, sess.ID)
+		if err != nil {
+			return nil, err
+		}
+	}
 	// 初始配置非空：创建后应用（含校验），再回读最新会话。
 	if req.Config != nil {
 		if _, err := g.svc.UpdateSessionConfig(ctx, userID, sess.ID, fromProtoConfig(req.Config)); err != nil {

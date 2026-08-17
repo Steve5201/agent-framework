@@ -16,6 +16,7 @@ import type {
   CreateAgentRequest,
   CreateUserRequest,
   DataOverview,
+  DiskQuota,
   HistoryMessage,
   KbDocument,
   KbLite,
@@ -752,6 +753,24 @@ export async function adminSetUserQuota(userId: string, tokenQuotaMonth: number)
 /** 删除用户配额覆盖（恢复角色默认：管理员不限 / 普通用户 1000 万） */
 export async function adminClearUserQuota(userId: string): Promise<void> {
   await api.delete(`/v1/admin/quota/${encodeURIComponent(userId)}`)
+}
+
+// ---- 工作区磁盘配额（/v1/admin/disk-quota，仅 super_admin） -------------
+
+/** 显式磁盘配额覆盖列表（无记录 = 该用户走角色默认） */
+export async function adminListDiskQuota(): Promise<DiskQuota[]> {
+  const resp = await api.get<{ quotas: DiskQuota[] }>('/v1/admin/disk-quota')
+  return resp.data.quotas ?? []
+}
+
+/** 设置/覆盖用户保护区磁盘配额；diskQuotaMb=0 表示不限 */
+export async function adminSetDiskQuota(userId: string, diskQuotaMb: number): Promise<void> {
+  await api.put(`/v1/admin/disk-quota/${encodeURIComponent(userId)}`, { disk_quota_mb: diskQuotaMb })
+}
+
+/** 删除用户磁盘配额覆盖（恢复角色默认） */
+export async function adminClearDiskQuota(userId: string): Promise<void> {
+  await api.delete(`/v1/admin/disk-quota/${encodeURIComponent(userId)}`)
 }
 
 // ---- 大模型管理（P3 /v1/admin/models，super_admin + agent_admin） -------------

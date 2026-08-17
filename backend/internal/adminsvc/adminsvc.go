@@ -87,6 +87,9 @@ type Config struct {
 	// LlmAdminToken llm-gateway 模型管理端点令牌（LLM_ADMIN_TOKEN，P3 大模型
 	// 管理；与 llm-gateway 共享同一环境变量，空 = 模型管理端点返回 503）。
 	LlmAdminToken string
+	// AgentHTTPBaseURL agent-service HTTP 基址（模块三·磁盘配额管理代理目标；
+	// 与 gateway 的 GATEWAY_AGENT_HTTP_ADDR 一致，空 = 磁盘配额模块返回 503）。
+	AgentHTTPBaseURL string
 	// LogsDir 操作审计日志根目录（按智能体域分目录落盘）。
 	// 空 = 工作目录下 admin-logs/。
 	LogsDir string
@@ -112,6 +115,7 @@ type Service struct {
 	log           *zap.Logger
 	llmURL        string // llm-gateway HTTP 基址（用量聚合查询；空 = 未配置）
 	llmAdminToken string // llm-gateway 模型管理端点令牌（空 = 模型管理禁用）
+	agentHTTPBase string // agent-service HTTP 基址（磁盘配额代理；空 = 未配置）
 	http          *http.Client
 	kbMaxBytes    int // 知识库文档上传单文件上限（字节）
 	skillMaxBytes int // 技能/MCP zip 上传上限（字节）
@@ -147,6 +151,7 @@ func NewService(cfg Config) (*Service, error) {
 		log:           cfg.Log,
 		llmURL:        cfg.LlmGatewayBaseURL,
 		llmAdminToken: cfg.LlmAdminToken,
+		agentHTTPBase: cfg.AgentHTTPBaseURL,
 		http:          &http.Client{Timeout: 8 * time.Second},
 		kbMaxBytes:    cfg.KbUploadMaxMB << 20,
 		skillMaxBytes: cfg.SkillUploadMaxMB << 20,
@@ -165,6 +170,7 @@ func NewService(cfg Config) (*Service, error) {
 		newKBModule(s),
 		newMcpModule(s),
 		newUsersModule(s),
+		newDiskQuotaModule(s),
 		newModelsModule(s),
 		newDataModule(s),
 		logsModule{},
@@ -193,7 +199,7 @@ func (s *Service) RegisterRoutes(mux *http.ServeMux) {
 //   - skills/mcp/kb：所有管理员（资源域内按智能体隔离，见各模块）。
 func ModuleVisible(key, role string) bool {
 	switch key {
-	case "agents", "data", "models":
+	case "agents", "data", "models", "disk-quota":
 		return role == "super_admin"
 	case "users":
 		return role == "super_admin" || role == "agent_admin"

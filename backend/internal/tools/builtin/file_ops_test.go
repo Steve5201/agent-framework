@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/Steve5201/agent-framework/llm"
@@ -547,5 +548,82 @@ func TestFileOpsTool_SkillsNamespace(t *testing.T) {
 	if _, err := noCfg.Execute(ctx, fileOpsArgsJSON("read", "@skills/my-script/ref/doc.md", "", false)); err == nil ||
 		!strings.Contains(err.Error(), "不存在") {
 		t.Fatalf("未配置 SkillsRoot 时应按默认技能根解析并报不存在，实际 err=%v", err)
+	}
+}
+
+// TestFileOpsTool_DiskQuota 保护区配额校验装配：
+//   - 仅"写入 protected/ 子树"触发回调，其它位置不触发；
+//   - 回调拒绝 → 写操作整体失败（错误回填给模型）；
+//   - 回调放行 / 未装配回调 → 写入正常。
+func TestFileOpsTool_DiskQuota(t *testing.T) {
+	root := t.TempDir()
+
+	// 记录回调调用参数，结果由调用方注入（放行/拒绝）。
+	var (
+		mu       sync.Mutex
+		calls    int
+		gotUID   int64
+		gotDir   string
+		gotBytes int64
+		gotRole  string
+		reject   error
+	)
+	check := func(_ context.Context, uid int64, dir string, b int64, role string) error {
+		mu.Lock()
+		defer mu.Unlock()
+		calls++
+		gotUID, gotDir, gotBytes, gotRole = uid, dir, b, role
+		return reject
+	}
+
+	tool := &FileOpsTool{Root: root, DiskQuota: check}
+	ctx := llm.WithHeader(llm.WithHeader(context.Background(), userIDHeader, "42"), userRoleHeader, "admin")
+
+	// 1) 写入 protected/ 子树：回调应触发，参数正确；放行 → 写入成功。
+	reject = nil
+	out, err := tool.Execute(ctx, fileOpsArgsJSON("write", "protected/notes.md", "保留内容", false))
+	if err != nil {
+		t.Fatalf("配额放行时应写入成功: %v", err)
+	}
+	if !strings.Contains(out, "已写入") {
+		t.Fatalf("write 输出异常: %s", out)
+	}
+	mu.Lock()
+	if calls != 1 {
+		t.Fatalf("写 protected/ 应触发配额回调 1 次，实际 %d", calls)
+	}
+	if gotUID != 42 || gotDir != filepath.Join(root, "users", "42", "protected") ||
+		gotBytes != int64(len("保留内容")) || gotRole != "admin" {
+		t.Fatalf("回调参数异常: uid=%d dir=%s bytes=%d role=%s", gotUID, gotDir, gotBytes, gotRole)
+	}
+	mu.Unlock()
+
+	// 2) 配额拒绝 → 写操作整体失败，错误信息回填。
+	mu.Lock()
+	calls = 0
+	reject = fmt.Errorf("file_ops: 保护区磁盘配额已满（上限 1 MB）")
+	mu.Unlock()
+	if _, err := tool.Execute(ctx, fileOpsArgsJSON("write", "protected/big.bin", "0123456789", false)); err == nil ||
+		!strings.Contains(err.Error(), "配额已满") {
+		t.Fatalf("配额拒绝应使写入失败，实际 err=%v", err)
+	}
+
+	// 3) 写入 protected/ 之外（chat-docs/ 等临时区）：不触发配额校验。
+	mu.Lock()
+	calls = 0
+	mu.Unlock()
+	if _, err := tool.Execute(ctx, fileOpsArgsJSON("write", "chat-docs/note.txt", "临时内容", false)); err != nil {
+		t.Fatalf("临时区写入不应受配额影响: %v", err)
+	}
+	mu.Lock()
+	if calls != 0 {
+		t.Fatalf("写临时区不应触发配额回调，实际 %d 次", calls)
+	}
+	mu.Unlock()
+
+	// 4) 未装配 DiskQuota（历史行为）：写 protected/ 不受任何限制。
+	plain := &FileOpsTool{Root: root}
+	if _, err := plain.Execute(ctx, fileOpsArgsJSON("write", "protected/legacy.txt", "x", false)); err != nil {
+		t.Fatalf("未装配配额回调时应正常写入: %v", err)
 	}
 }

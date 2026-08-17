@@ -1,11 +1,11 @@
-import { lazy, Suspense, useState, type ReactElement, type ReactNode } from 'react'
+import { lazy, Suspense, useState, type CSSProperties, type ReactElement, type ReactNode } from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
 import rehypeSanitize, { defaultSchema, type Options as SanitizeOptions } from 'rehype-sanitize'
-import { Check, Copy, Download } from 'lucide-react'
+import { Check, Copy, Download, FileImage } from 'lucide-react'
 import { downloadUrl, isVideoUrl, normalizeMediaSrc } from '@/lib/rich'
 import { isExternalLink, openExternal } from '@/lib/external'
 import { normalizeLang } from '@/lib/codeLang'
@@ -117,6 +117,76 @@ export function MediaDownloadButton({ src, kind }: { src: string; kind: 'image' 
     >
       <Download className="h-3.5 w-3.5" />
     </button>
+  )
+}
+
+/**
+ * 内联媒体（图片/视频）渲染 + 404 兜底：工作区媒体文件可能被清理器按 TTL
+ * 回收（chat-docs/ 30 天等），历史消息里的地址随之 404。加载失败时降级为
+ * "文件已失效"占位（保留媒体描述），避免裂图。占位与 ImageMessageCard 的
+ * 降级策略一致。
+ */
+function InlineMedia({
+  src,
+  kind,
+  alt,
+  align,
+  width,
+  height,
+  style,
+  mediaClass,
+}: {
+  src: string
+  kind: 'image' | 'video'
+  alt?: string
+  align?: string
+  width?: string | number
+  height?: string | number
+  style?: CSSProperties
+  mediaClass?: string
+}) {
+  const [broken, setBroken] = useState(false)
+  if (broken) {
+    return (
+      <div
+        className={cn(
+          'my-2 inline-flex max-w-full items-center gap-2 rounded-md border border-dashed bg-muted/40 px-3 py-2 text-xs text-muted-foreground',
+          align === 'center' ? 'mx-auto' : align === 'right' ? 'ml-auto' : '',
+        )}
+      >
+        <FileImage className="size-4 shrink-0" aria-hidden />
+        <span className="truncate">{alt || (kind === 'video' ? '视频' : '图片')}</span>
+        <span>（文件已失效，可能已被自动清理）</span>
+      </div>
+    )
+  }
+  const mediaProps = {
+    className: cn('max-w-full rounded-md', mediaClass),
+    onError: () => setBroken(true),
+  }
+  return (
+    <div
+      className={cn(
+        'relative my-2',
+        kind === 'image' && 'inline-block',
+        align === 'center' ? 'mx-auto' : align === 'right' ? 'ml-auto' : '',
+      )}
+    >
+      {kind === 'video' ? (
+        <video src={src} controls title={alt} width={width} height={height} style={style} {...mediaProps} />
+      ) : (
+        <img
+          src={src}
+          alt={alt ?? ''}
+          loading="lazy"
+          width={width}
+          height={height}
+          style={style}
+          {...mediaProps}
+        />
+      )}
+      <MediaDownloadButton src={src} kind={kind} />
+    </div>
   )
 }
 
@@ -235,12 +305,7 @@ export default function RichContent({
       }
       if (lang === 'video') {
         const url = text.trim()
-        return url ? (
-          <div className={cn('relative my-2', align === 'center' ? 'mx-auto' : align === 'right' ? 'ml-auto' : '')}>
-            <video src={normalizeMediaSrc(url)} controls className="max-w-full rounded-md" />
-            <MediaDownloadButton src={normalizeMediaSrc(url)} kind="video" />
-          </div>
-        ) : null
+        return url ? <InlineMedia src={normalizeMediaSrc(url)} kind="video" align={align} /> : null
       }
       if (lang === 'doc') {
         // 文档生成（render_document）下载卡片：内容为工作区下载路径
@@ -284,38 +349,20 @@ export default function RichContent({
     },
     // 媒体：视频扩展名 → <video>；否则 <img>；均可下载到本地。
     // 尺寸（width/height）与对齐由协议控制：模型可用 HTML 属性或 <p align> 包裹。
+    // 404 兜底统一走 InlineMedia（文件被清理后降级占位，不裂图）。
     img({ src, alt, width, height, style, className: mediaClass }) {
       if (!src) return null
       const mediaSrc = normalizeMediaSrc(src)
-      if (isVideoUrl(src)) {
-        return (
-          <div className="relative my-2 inline-block">
-            <video
-              src={mediaSrc}
-              controls
-              title={alt}
-              width={width}
-              height={height}
-              style={style}
-              className={cn('max-w-full rounded-md', mediaClass)}
-            />
-            <MediaDownloadButton src={mediaSrc} kind="video" />
-          </div>
-        )
-      }
       return (
-        <div className="relative my-2 inline-block">
-          <img
-            src={mediaSrc}
-            alt={alt ?? ''}
-            loading="lazy"
-            width={width}
-            height={height}
-            style={style}
-            className={cn('max-w-full rounded-md', mediaClass)}
-          />
-          <MediaDownloadButton src={mediaSrc} kind="image" />
-        </div>
+        <InlineMedia
+          src={mediaSrc}
+          kind={isVideoUrl(src) ? 'video' : 'image'}
+          alt={alt}
+          width={width}
+          height={height}
+          style={style}
+          mediaClass={mediaClass}
+        />
       )
     },
   }

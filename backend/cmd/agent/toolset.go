@@ -15,10 +15,12 @@ import (
 	"github.com/Steve5201/agent-backend/internal/grpcx"
 	ragv1 "github.com/Steve5201/agent-backend/internal/proto/rag/v1"
 	"github.com/Steve5201/agent-backend/internal/tools"
+	"github.com/Steve5201/agent-backend/internal/tools/builtin"
 	"github.com/Steve5201/agent-backend/internal/tools/kb"
 	"github.com/Steve5201/agent-backend/internal/tools/mcp"
 	"github.com/Steve5201/agent-backend/internal/tools/skill"
 	agenttool "github.com/Steve5201/agent-framework/tool"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // agentSkillsDir 返回本智能体实例的技能根目录（<SkillsDir>/<AgentID>）。
@@ -45,12 +47,34 @@ func agentMcpFile(cfg *config.Config) string {
 
 // buildToolRegistry 构建完整工具注册表（内置工具 + skill + MCP），
 // 返回注册表与释放函数（关闭 MCP 子进程/连接）。热加载时重复调用。
-func buildToolRegistry(cfg *config.Config, log *zap.Logger) (*agenttool.Registry, func(), error) {
+//
+// pool 用于装配保护区磁盘配额执行器（模块三：file_ops 写 protected/ 前校验）；
+// 可为 nil（本地/无 DB 场景降级为不校验）。
+func buildToolRegistry(cfg *config.Config, pool *pgxpool.Pool, log *zap.Logger) (*agenttool.Registry, func(), error) {
 	skillsDir := agentSkillsDir(cfg)
 	extraProviders := []tools.ToolProvider{
 		// 技能：扫描本智能体技能目录（<AGENT_SKILLS_DIR>/<AGENT_ID>），
 		// 目录不存在 = 零技能。
 		skill.NewProvider(skillsDir, log),
+	}
+
+	// 保护区磁盘配额执行器（模块三）：用户工作区 protected/ 是唯一永不清除的
+	// 空间，须按角色默认 + 单用户覆盖校验软上限；临时/散落内容由清理器 TTL 回收。
+	var diskQuota builtin.CheckDiskQuota
+	if pool != nil {
+		store := agentsvc.NewDiskQuotaStore(pool)
+		enforcer := agentsvc.NewDiskQuotaEnforcer(store, agentsvc.RoleDiskQuota{
+			User:       cfg.Agent.DiskQuotaUserMB,
+			Admin:      cfg.Agent.DiskQuotaAdminMB,
+			AgentAdmin: cfg.Agent.DiskQuotaAgentAdminMB,
+			SuperAdmin: cfg.Agent.DiskQuotaSuperAdminMB,
+		}, log)
+		diskQuota = enforcer.Check
+		log.Info("保护区磁盘配额已装配",
+			zap.Int64("user_mb", cfg.Agent.DiskQuotaUserMB),
+			zap.Int64("admin_mb", cfg.Agent.DiskQuotaAdminMB),
+			zap.Int64("agent_admin_mb", cfg.Agent.DiskQuotaAgentAdminMB),
+			zap.Int64("super_admin_mb", cfg.Agent.DiskQuotaSuperAdminMB))
 	}
 
 	// 知识库检索（P3-A6）：AGENT_RAG_ADDR 非空才装配 kb_search 工具。
@@ -83,6 +107,7 @@ func buildToolRegistry(cfg *config.Config, log *zap.Logger) (*agenttool.Registry
 		agentsvc.WithCodeExecAllowlist(cfg.Agent.CodeExecAllowlist),
 		agentsvc.WithSandboxURL(cfg.Agent.SandboxURL),
 		agentsvc.WithSkillsRoot(skillsDir), // 与 skill.NewProvider 同源：@skills/ 只读资源
+		agentsvc.WithDiskQuota(diskQuota),  // 保护区磁盘配额（模块三；nil = 不校验）
 		agentsvc.WithProviders(extraProviders...),
 	)
 	if err != nil {

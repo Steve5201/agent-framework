@@ -59,7 +59,14 @@ func newMockSandbox(t *testing.T, onProfile func(args []string)) *httptest.Serve
 
 // TestClient_Parse 完整链路：ensureWorkspace → 写 input → profile → 读回产物 → 清理 ingest。
 func TestClient_Parse(t *testing.T) {
-	srv := newMockSandbox(t, nil)
+	// 解析执行期间（Parse 尚未走到 defer 清理）断言 input 文件已写入 ingest 目录。
+	// 注：不能在 Parse 返回后断言——Parse 返回前会 RemoveAll 整个 ingest 临时目录
+	//（真实 Linux 容器 RemoveAll 稳定生效，Windows 模拟 FS 下偶发失效），跨环境必挂。
+	srv := newMockSandbox(t, func(args []string) {
+		if _, err := os.Stat(args[0]); err != nil {
+			t.Errorf("input 文件在解析期间应已写入 ingest 目录: %v", err)
+		}
+	})
 	defer srv.Close()
 
 	workRoot := t.TempDir()
@@ -82,15 +89,10 @@ func TestClient_Parse(t *testing.T) {
 		t.Error("不应判定扫描版")
 	}
 
-	// input 文件应写入工作区 ingest 目录。
-	inputPath := filepath.Join(workRoot, "users", "7", "ingest", "doc_abc", "input.pdf")
-	if _, err := os.Stat(inputPath); err != nil {
-		t.Fatalf("input 文件未写入: %v", err)
-	}
 	// ingest 临时目录解析后应清理（defer RemoveAll，best-effort）。
 	// 注：trae-sandbox（Windows 模拟 FS）下 os.RemoveAll 偶发返回 nil 但目录仍存，
 	// 属环境怪癖而非生产缺陷（真实 Linux 容器正常）。测试重试 + 容忍残留。
-	ingestDir := filepath.Dir(inputPath)
+	ingestDir := filepath.Join(workRoot, "users", "7", "ingest", "doc_abc")
 	for i := 0; i < 3; i++ {
 		_ = os.RemoveAll(ingestDir)
 		if _, err := os.Stat(ingestDir); os.IsNotExist(err) {

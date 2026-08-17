@@ -17,6 +17,7 @@ import (
 
 	apperr "github.com/Steve5201/agent-backend/internal/errors"
 	agentv1 "github.com/Steve5201/agent-backend/internal/proto/agent/v1"
+	authpb "github.com/Steve5201/agent-backend/internal/proto/auth/v1"
 	"go.uber.org/zap"
 )
 
@@ -39,6 +40,19 @@ func (c *Clients) CreateSession(w http.ResponseWriter, r *http.Request) {
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, r, err)
 		return
+	}
+	// 按智能体基础提示词：从 auth 公开元数据权威注入（CreateSessionRequest.
+	// system_prompt，用户请求无法携带——SessionConfig 不暴露该字段；GetAgentPublic
+	// 任意登录用户可查，与门户登录归属语义一致）。查询失败不阻断创建：
+	// agent_id 作为域字符串保持原有宽松语义，缺失时回退实例全局提示词。
+	if req.AgentId != "" {
+		if ar, err := c.Auth.GetAgentPublic(userCtx(r, userID), &authpb.GetAgentRequest{Id: req.AgentId}); err != nil {
+			c.Log.Warn("create session: fetch agent system_prompt failed",
+				zap.String("agent_id", req.AgentId),
+				zap.Error(err))
+		} else if sp := ar.GetSystemPrompt(); sp != "" {
+			req.SystemPrompt = sp
+		}
 	}
 	resp, err := c.Agent.CreateSession(userCtx(r, userID), &req)
 	if err != nil {

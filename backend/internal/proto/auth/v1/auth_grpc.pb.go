@@ -46,6 +46,7 @@ const (
 	AuthService_ListAgents_FullMethodName         = "/auth.v1.AuthService/ListAgents"
 	AuthService_CreateAgent_FullMethodName        = "/auth.v1.AuthService/CreateAgent"
 	AuthService_GetAgent_FullMethodName           = "/auth.v1.AuthService/GetAgent"
+	AuthService_GetAgentPublic_FullMethodName     = "/auth.v1.AuthService/GetAgentPublic"
 	AuthService_UpdateAgent_FullMethodName        = "/auth.v1.AuthService/UpdateAgent"
 	AuthService_SetAgentStatus_FullMethodName     = "/auth.v1.AuthService/SetAgentStatus"
 	AuthService_DeleteAgent_FullMethodName        = "/auth.v1.AuthService/DeleteAgent"
@@ -89,6 +90,10 @@ type AuthServiceClient interface {
 	CreateAgent(ctx context.Context, in *CreateAgentRequest, opts ...grpc.CallOption) (*CreateAgentResponse, error)
 	// GetAgent 智能体详情（最高超管任意；其它角色仅限归属域）。
 	GetAgent(ctx context.Context, in *GetAgentRequest, opts ...grpc.CallOption) (*GetAgentResponse, error)
+	// GetAgentPublic 公开智能体元数据（任意登录用户可查，仅返回前台展示/装配
+	// 字段，不含 owner/status 等管理信息）。gateway 创建会话时据此注入按智能体
+	// system_prompt——普通用户无需管理权限即可获取，与门户登录归属语义一致。
+	GetAgentPublic(ctx context.Context, in *GetAgentRequest, opts ...grpc.CallOption) (*GetAgentPublicResponse, error)
 	// UpdateAgent 更新智能体元数据（名称/描述/模型/形象/系统提示词/推理强度）。
 	// 超管任意；agent_admin 仅限自身归属域（不允许改 owner）。
 	UpdateAgent(ctx context.Context, in *UpdateAgentRequest, opts ...grpc.CallOption) (*UpdateAgentResponse, error)
@@ -246,6 +251,16 @@ func (c *authServiceClient) GetAgent(ctx context.Context, in *GetAgentRequest, o
 	return out, nil
 }
 
+func (c *authServiceClient) GetAgentPublic(ctx context.Context, in *GetAgentRequest, opts ...grpc.CallOption) (*GetAgentPublicResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAgentPublicResponse)
+	err := c.cc.Invoke(ctx, AuthService_GetAgentPublic_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authServiceClient) UpdateAgent(ctx context.Context, in *UpdateAgentRequest, opts ...grpc.CallOption) (*UpdateAgentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateAgentResponse)
@@ -314,6 +329,10 @@ type AuthServiceServer interface {
 	CreateAgent(context.Context, *CreateAgentRequest) (*CreateAgentResponse, error)
 	// GetAgent 智能体详情（最高超管任意；其它角色仅限归属域）。
 	GetAgent(context.Context, *GetAgentRequest) (*GetAgentResponse, error)
+	// GetAgentPublic 公开智能体元数据（任意登录用户可查，仅返回前台展示/装配
+	// 字段，不含 owner/status 等管理信息）。gateway 创建会话时据此注入按智能体
+	// system_prompt——普通用户无需管理权限即可获取，与门户登录归属语义一致。
+	GetAgentPublic(context.Context, *GetAgentRequest) (*GetAgentPublicResponse, error)
 	// UpdateAgent 更新智能体元数据（名称/描述/模型/形象/系统提示词/推理强度）。
 	// 超管任意；agent_admin 仅限自身归属域（不允许改 owner）。
 	UpdateAgent(context.Context, *UpdateAgentRequest) (*UpdateAgentResponse, error)
@@ -372,6 +391,9 @@ func (UnimplementedAuthServiceServer) CreateAgent(context.Context, *CreateAgentR
 }
 func (UnimplementedAuthServiceServer) GetAgent(context.Context, *GetAgentRequest) (*GetAgentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAgent not implemented")
+}
+func (UnimplementedAuthServiceServer) GetAgentPublic(context.Context, *GetAgentRequest) (*GetAgentPublicResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAgentPublic not implemented")
 }
 func (UnimplementedAuthServiceServer) UpdateAgent(context.Context, *UpdateAgentRequest) (*UpdateAgentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateAgent not implemented")
@@ -655,6 +677,24 @@ func _AuthService_GetAgent_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_GetAgentPublic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAgentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).GetAgentPublic(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_GetAgentPublic_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).GetAgentPublic(ctx, req.(*GetAgentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthService_UpdateAgent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpdateAgentRequest)
 	if err := dec(in); err != nil {
@@ -771,6 +811,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAgent",
 			Handler:    _AuthService_GetAgent_Handler,
+		},
+		{
+			MethodName: "GetAgentPublic",
+			Handler:    _AuthService_GetAgentPublic_Handler,
 		},
 		{
 			MethodName: "UpdateAgent",

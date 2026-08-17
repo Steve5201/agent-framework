@@ -398,11 +398,13 @@ func TestPatternPathMatch(t *testing.T) {
 // 下游 fake 客户端
 // ---------------------------------------------------------------------------
 
-// fakeAuthClient 最小 auth 客户端：只实现测试需要的 Login / Register。
+// fakeAuthClient 最小 auth 客户端：只实现测试需要的 Login / Register / GetAgentPublic。
 type fakeAuthClient struct {
 	authpb.AuthServiceClient
 	loginErr    error
 	registerErr error
+	agentSp     string // GetAgentPublic 返回的智能体系统提示词
+	agentErr    error  // GetAgentPublic 错误注入
 }
 
 func (f *fakeAuthClient) Register(_ context.Context, _ *authpb.RegisterRequest, _ ...grpc.CallOption) (*authpb.RegisterResponse, error) {
@@ -410,6 +412,13 @@ func (f *fakeAuthClient) Register(_ context.Context, _ *authpb.RegisterRequest, 
 		return nil, f.registerErr
 	}
 	return &authpb.RegisterResponse{UserId: "1", Username: "alice"}, nil
+}
+
+func (f *fakeAuthClient) GetAgentPublic(_ context.Context, _ *authpb.GetAgentRequest, _ ...grpc.CallOption) (*authpb.GetAgentPublicResponse, error) {
+	if f.agentErr != nil {
+		return nil, f.agentErr
+	}
+	return &authpb.GetAgentPublicResponse{Id: "tutor", SystemPrompt: f.agentSp}, nil
 }
 
 func (f *fakeAuthClient) Login(_ context.Context, _ *authpb.LoginRequest, _ ...grpc.CallOption) (*authpb.LoginResponse, error) {
@@ -427,14 +436,15 @@ func (f *fakeAuthClient) Login(_ context.Context, _ *authpb.LoginRequest, _ ...g
 // fakeAgentClient 最小 agent 客户端：实现 CreateSession。
 type fakeAgentClient struct {
 	agentv1.AgentServiceClient
-	createErr    error
-	deleteMsgErr error
-	msgs         []*agentv1.Message // 非空时 ListMessages 返回该列表
-	mergedN      int                // MergeGuestSessions 返回的迁移数
-	mergeErr     error
-	uploadResp   *agentv1.UploadChatDocumentResponse // UploadChatDocument 返回值
-	uploadErr    error                               // UploadChatDocument 错误注入
-	uploadReq    *agentv1.UploadChatDocumentRequest  // 最近一次上传请求（断言用）
+	createErr     error
+	deleteMsgErr  error
+	msgs          []*agentv1.Message // 非空时 ListMessages 返回该列表
+	mergedN       int                // MergeGuestSessions 返回的迁移数
+	mergeErr      error
+	uploadResp    *agentv1.UploadChatDocumentResponse // UploadChatDocument 返回值
+	uploadErr     error                               // UploadChatDocument 错误注入
+	uploadReq     *agentv1.UploadChatDocumentRequest  // 最近一次上传请求（断言用）
+	lastCreateReq *agentv1.CreateSessionRequest       // 最近一次创建会话请求（断言用）
 }
 
 func (f *fakeAgentClient) UploadChatDocument(_ context.Context, req *agentv1.UploadChatDocumentRequest, _ ...grpc.CallOption) (*agentv1.UploadChatDocumentResponse, error) {
@@ -452,10 +462,11 @@ func (f *fakeAgentClient) MergeGuestSessions(_ context.Context, _ *agentv1.Merge
 	return &agentv1.MergeGuestSessionsResponse{Migrated: int32(f.mergedN)}, nil
 }
 
-func (f *fakeAgentClient) CreateSession(_ context.Context, _ *agentv1.CreateSessionRequest, _ ...grpc.CallOption) (*agentv1.CreateSessionResponse, error) {
+func (f *fakeAgentClient) CreateSession(_ context.Context, req *agentv1.CreateSessionRequest, _ ...grpc.CallOption) (*agentv1.CreateSessionResponse, error) {
 	if f.createErr != nil {
 		return nil, f.createErr
 	}
+	f.lastCreateReq = req
 	return &agentv1.CreateSessionResponse{Session: &agentv1.Session{Id: "1", UserId: "1", Title: "新对话"}}, nil
 }
 
@@ -706,6 +717,66 @@ func TestCreateSessionHandler(t *testing.T) {
 
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("创建会话应 201, got %d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+// TestCreateSessionHandler_AgentSystemPromptInjected 带智能体域创建会话时，
+// gateway 从 auth 元数据注入按智能体系统提示词（用户请求无法自行携带）。
+func TestCreateSessionHandler_AgentSystemPromptInjected(t *testing.T) {
+	mgr := newTestManager(t)
+	agent := &fakeAgentClient{}
+	clients := &Clients{
+		Auth:  &fakeAuthClient{agentSp: "你是考研规划导师，专注考研数学"},
+		Agent: agent,
+		JWT:   mgr,
+		Log:   zap.NewNop(),
+	}
+	handler := clients.RequireAuth()(http.HandlerFunc(clients.CreateSession))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/agent/sessions", strings.NewReader(`{"title":"t","agent_id":"tutor"}`))
+	req.Header.Set("Authorization", "Bearer "+signedAccess(t, mgr, "1"))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("创建会话应 201, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if got := agent.lastCreateReq.GetSystemPrompt(); got != "你是考研规划导师，专注考研数学" {
+		t.Fatalf("应按智能体系统提示词注入, got %q", got)
+	}
+
+	// 无 agent_id（管理端域）：不查 auth、不注入。
+	req2 := httptest.NewRequest(http.MethodPost, "/v1/agent/sessions", strings.NewReader(`{"title":"t2"}`))
+	req2.Header.Set("Authorization", "Bearer "+signedAccess(t, mgr, "1"))
+	rec2 := httptest.NewRecorder()
+	handler.ServeHTTP(rec2, req2)
+	if got := agent.lastCreateReq.GetSystemPrompt(); got != "" {
+		t.Fatalf("管理端域会话不应注入 system_prompt, got %q", got)
+	}
+}
+
+// TestCreateSessionHandler_AgentFetchFailure 查询智能体元数据失败不阻断创建。
+func TestCreateSessionHandler_AgentFetchFailure(t *testing.T) {
+	mgr := newTestManager(t)
+	agent := &fakeAgentClient{}
+	clients := &Clients{
+		Auth:  &fakeAuthClient{agentErr: status.Error(codes.NotFound, "agent 不存在")},
+		Agent: agent,
+		JWT:   mgr,
+		Log:   zap.NewNop(),
+	}
+	handler := clients.RequireAuth()(http.HandlerFunc(clients.CreateSession))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/agent/sessions", strings.NewReader(`{"agent_id":"ghost"}`))
+	req.Header.Set("Authorization", "Bearer "+signedAccess(t, mgr, "1"))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("agent 元数据查询失败不应阻断创建, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if got := agent.lastCreateReq.GetSystemPrompt(); got != "" {
+		t.Fatalf("查询失败应回退全局提示词, got %q", got)
 	}
 }
 

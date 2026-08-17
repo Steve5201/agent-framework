@@ -1716,6 +1716,100 @@ func (x *GetAgentResponse) GetAgent() *Agent {
 	return nil
 }
 
+// GetAgentPublicResponse 公开智能体元数据（前台可展示/装配字段白名单，
+// 不含 owner_user_id / status / created_at 等管理字段）。
+type GetAgentPublicResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                                  // 智能体 ID
+	Name            string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                                              // 展示名
+	Description     string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`                                // 描述
+	Avatar          string                 `protobuf:"bytes,4,opt,name=avatar,proto3" json:"avatar,omitempty"`                                          // 形象 emoji
+	Welcome         string                 `protobuf:"bytes,5,opt,name=welcome,proto3" json:"welcome,omitempty"`                                        // 欢迎语
+	SystemPrompt    string                 `protobuf:"bytes,6,opt,name=system_prompt,json=systemPrompt,proto3" json:"system_prompt,omitempty"`          // 按智能体系统提示词（空 = 用实例全局 prompt）
+	ReasoningEffort string                 `protobuf:"bytes,7,opt,name=reasoning_effort,json=reasoningEffort,proto3" json:"reasoning_effort,omitempty"` // 默认推理强度 low/high/max（空 = 用实例默认）
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *GetAgentPublicResponse) Reset() {
+	*x = GetAgentPublicResponse{}
+	mi := &file_auth_v1_auth_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAgentPublicResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAgentPublicResponse) ProtoMessage() {}
+
+func (x *GetAgentPublicResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_auth_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAgentPublicResponse.ProtoReflect.Descriptor instead.
+func (*GetAgentPublicResponse) Descriptor() ([]byte, []int) {
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *GetAgentPublicResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *GetAgentPublicResponse) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *GetAgentPublicResponse) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *GetAgentPublicResponse) GetAvatar() string {
+	if x != nil {
+		return x.Avatar
+	}
+	return ""
+}
+
+func (x *GetAgentPublicResponse) GetWelcome() string {
+	if x != nil {
+		return x.Welcome
+	}
+	return ""
+}
+
+func (x *GetAgentPublicResponse) GetSystemPrompt() string {
+	if x != nil {
+		return x.SystemPrompt
+	}
+	return ""
+}
+
+func (x *GetAgentPublicResponse) GetReasoningEffort() string {
+	if x != nil {
+		return x.ReasoningEffort
+	}
+	return ""
+}
+
 // UpdateAgentRequest 更新智能体元数据。
 // 空串字段 = 清空（name 除外：非空）；reasoning_effort 校验 low/high/max。
 type UpdateAgentRequest struct {
@@ -1734,7 +1828,7 @@ type UpdateAgentRequest struct {
 
 func (x *UpdateAgentRequest) Reset() {
 	*x = UpdateAgentRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[31]
+	mi := &file_auth_v1_auth_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1746,7 +1840,7 @@ func (x *UpdateAgentRequest) String() string {
 func (*UpdateAgentRequest) ProtoMessage() {}
 
 func (x *UpdateAgentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[31]
+	mi := &file_auth_v1_auth_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1759,7 +1853,7 @@ func (x *UpdateAgentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAgentRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAgentRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{31}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *UpdateAgentRequest) GetId() string {
@@ -1827,7 +1921,7 @@ type UpdateAgentResponse struct {
 
 func (x *UpdateAgentResponse) Reset() {
 	*x = UpdateAgentResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[32]
+	mi := &file_auth_v1_auth_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1839,7 +1933,7 @@ func (x *UpdateAgentResponse) String() string {
 func (*UpdateAgentResponse) ProtoMessage() {}
 
 func (x *UpdateAgentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[32]
+	mi := &file_auth_v1_auth_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1852,7 +1946,7 @@ func (x *UpdateAgentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAgentResponse.ProtoReflect.Descriptor instead.
 func (*UpdateAgentResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{32}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *UpdateAgentResponse) GetAgent() *Agent {
@@ -1873,7 +1967,7 @@ type SetAgentStatusRequest struct {
 
 func (x *SetAgentStatusRequest) Reset() {
 	*x = SetAgentStatusRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[33]
+	mi := &file_auth_v1_auth_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1885,7 +1979,7 @@ func (x *SetAgentStatusRequest) String() string {
 func (*SetAgentStatusRequest) ProtoMessage() {}
 
 func (x *SetAgentStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[33]
+	mi := &file_auth_v1_auth_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1898,7 +1992,7 @@ func (x *SetAgentStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAgentStatusRequest.ProtoReflect.Descriptor instead.
 func (*SetAgentStatusRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{33}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *SetAgentStatusRequest) GetId() string {
@@ -1924,7 +2018,7 @@ type SetAgentStatusResponse struct {
 
 func (x *SetAgentStatusResponse) Reset() {
 	*x = SetAgentStatusResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[34]
+	mi := &file_auth_v1_auth_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1936,7 +2030,7 @@ func (x *SetAgentStatusResponse) String() string {
 func (*SetAgentStatusResponse) ProtoMessage() {}
 
 func (x *SetAgentStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[34]
+	mi := &file_auth_v1_auth_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1949,7 +2043,7 @@ func (x *SetAgentStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAgentStatusResponse.ProtoReflect.Descriptor instead.
 func (*SetAgentStatusResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{34}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *SetAgentStatusResponse) GetAgent() *Agent {
@@ -1969,7 +2063,7 @@ type DeleteAgentRequest struct {
 
 func (x *DeleteAgentRequest) Reset() {
 	*x = DeleteAgentRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[35]
+	mi := &file_auth_v1_auth_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1981,7 +2075,7 @@ func (x *DeleteAgentRequest) String() string {
 func (*DeleteAgentRequest) ProtoMessage() {}
 
 func (x *DeleteAgentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[35]
+	mi := &file_auth_v1_auth_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1994,7 +2088,7 @@ func (x *DeleteAgentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAgentRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAgentRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{35}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *DeleteAgentRequest) GetId() string {
@@ -2012,7 +2106,7 @@ type DeleteAgentResponse struct {
 
 func (x *DeleteAgentResponse) Reset() {
 	*x = DeleteAgentResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[36]
+	mi := &file_auth_v1_auth_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2024,7 +2118,7 @@ func (x *DeleteAgentResponse) String() string {
 func (*DeleteAgentResponse) ProtoMessage() {}
 
 func (x *DeleteAgentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[36]
+	mi := &file_auth_v1_auth_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2037,7 +2131,7 @@ func (x *DeleteAgentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAgentResponse.ProtoReflect.Descriptor instead.
 func (*DeleteAgentResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{36}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{37}
 }
 
 var File_auth_v1_auth_proto protoreflect.FileDescriptor
@@ -2151,7 +2245,15 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\x0fGetAgentRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"8\n" +
 	"\x10GetAgentResponse\x12$\n" +
-	"\x05agent\x18\x01 \x01(\v2\x0e.auth.v1.AgentR\x05agent\"\xf2\x01\n" +
+	"\x05agent\x18\x01 \x01(\v2\x0e.auth.v1.AgentR\x05agent\"\xe0\x01\n" +
+	"\x16GetAgentPublicResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x16\n" +
+	"\x06avatar\x18\x04 \x01(\tR\x06avatar\x12\x18\n" +
+	"\awelcome\x18\x05 \x01(\tR\awelcome\x12#\n" +
+	"\rsystem_prompt\x18\x06 \x01(\tR\fsystemPrompt\x12)\n" +
+	"\x10reasoning_effort\x18\a \x01(\tR\x0freasoningEffort\"\xf2\x01\n" +
 	"\x12UpdateAgentRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -2170,7 +2272,8 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\x05agent\x18\x01 \x01(\v2\x0e.auth.v1.AgentR\x05agent\"$\n" +
 	"\x12DeleteAgentRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x15\n" +
-	"\x13DeleteAgentResponse2\xee\t\n" +
+	"\x13DeleteAgentResponse2\xbb\n" +
+	"\n" +
 	"\vAuthService\x12?\n" +
 	"\bRegister\x12\x18.auth.v1.RegisterRequest\x1a\x19.auth.v1.RegisterResponse\x126\n" +
 	"\x05Login\x12\x15.auth.v1.LoginRequest\x1a\x16.auth.v1.LoginResponse\x12<\n" +
@@ -2186,7 +2289,8 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"ListAgents\x12\x1a.auth.v1.ListAgentsRequest\x1a\x1b.auth.v1.ListAgentsResponse\x12H\n" +
 	"\vCreateAgent\x12\x1b.auth.v1.CreateAgentRequest\x1a\x1c.auth.v1.CreateAgentResponse\x12?\n" +
-	"\bGetAgent\x12\x18.auth.v1.GetAgentRequest\x1a\x19.auth.v1.GetAgentResponse\x12H\n" +
+	"\bGetAgent\x12\x18.auth.v1.GetAgentRequest\x1a\x19.auth.v1.GetAgentResponse\x12K\n" +
+	"\x0eGetAgentPublic\x12\x18.auth.v1.GetAgentRequest\x1a\x1f.auth.v1.GetAgentPublicResponse\x12H\n" +
 	"\vUpdateAgent\x12\x1b.auth.v1.UpdateAgentRequest\x1a\x1c.auth.v1.UpdateAgentResponse\x12Q\n" +
 	"\x0eSetAgentStatus\x12\x1e.auth.v1.SetAgentStatusRequest\x1a\x1f.auth.v1.SetAgentStatusResponse\x12H\n" +
 	"\vDeleteAgent\x12\x1b.auth.v1.DeleteAgentRequest\x1a\x1c.auth.v1.DeleteAgentResponseBBZ@github.com/Steve5201/agent-backend/internal/proto/auth/v1;authv1b\x06proto3"
@@ -2203,7 +2307,7 @@ func file_auth_v1_auth_proto_rawDescGZIP() []byte {
 	return file_auth_v1_auth_proto_rawDescData
 }
 
-var file_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
+var file_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_auth_v1_auth_proto_goTypes = []any{
 	(*RegisterRequest)(nil),            // 0: auth.v1.RegisterRequest
 	(*RegisterResponse)(nil),           // 1: auth.v1.RegisterResponse
@@ -2236,26 +2340,27 @@ var file_auth_v1_auth_proto_goTypes = []any{
 	(*CreateAgentResponse)(nil),        // 28: auth.v1.CreateAgentResponse
 	(*GetAgentRequest)(nil),            // 29: auth.v1.GetAgentRequest
 	(*GetAgentResponse)(nil),           // 30: auth.v1.GetAgentResponse
-	(*UpdateAgentRequest)(nil),         // 31: auth.v1.UpdateAgentRequest
-	(*UpdateAgentResponse)(nil),        // 32: auth.v1.UpdateAgentResponse
-	(*SetAgentStatusRequest)(nil),      // 33: auth.v1.SetAgentStatusRequest
-	(*SetAgentStatusResponse)(nil),     // 34: auth.v1.SetAgentStatusResponse
-	(*DeleteAgentRequest)(nil),         // 35: auth.v1.DeleteAgentRequest
-	(*DeleteAgentResponse)(nil),        // 36: auth.v1.DeleteAgentResponse
-	(*timestamp.Timestamp)(nil),        // 37: google.protobuf.Timestamp
+	(*GetAgentPublicResponse)(nil),     // 31: auth.v1.GetAgentPublicResponse
+	(*UpdateAgentRequest)(nil),         // 32: auth.v1.UpdateAgentRequest
+	(*UpdateAgentResponse)(nil),        // 33: auth.v1.UpdateAgentResponse
+	(*SetAgentStatusRequest)(nil),      // 34: auth.v1.SetAgentStatusRequest
+	(*SetAgentStatusResponse)(nil),     // 35: auth.v1.SetAgentStatusResponse
+	(*DeleteAgentRequest)(nil),         // 36: auth.v1.DeleteAgentRequest
+	(*DeleteAgentResponse)(nil),        // 37: auth.v1.DeleteAgentResponse
+	(*timestamp.Timestamp)(nil),        // 38: google.protobuf.Timestamp
 }
 var file_auth_v1_auth_proto_depIdxs = []int32{
 	12, // 0: auth.v1.LoginResponse.user:type_name -> auth.v1.User
 	12, // 1: auth.v1.MeResponse.user:type_name -> auth.v1.User
-	37, // 2: auth.v1.User.created_at:type_name -> google.protobuf.Timestamp
+	38, // 2: auth.v1.User.created_at:type_name -> google.protobuf.Timestamp
 	13, // 3: auth.v1.User.tags:type_name -> auth.v1.Tag
 	13, // 4: auth.v1.AdminCreateUserRequest.tags:type_name -> auth.v1.Tag
 	12, // 5: auth.v1.AdminCreateUserResponse.user:type_name -> auth.v1.User
 	12, // 6: auth.v1.AdminListUsersResponse.users:type_name -> auth.v1.User
 	12, // 7: auth.v1.AdminUpdateUserResponse.user:type_name -> auth.v1.User
 	12, // 8: auth.v1.AdminGetUsersByIdsResponse.users:type_name -> auth.v1.User
-	37, // 9: auth.v1.Agent.created_at:type_name -> google.protobuf.Timestamp
-	37, // 10: auth.v1.Agent.updated_at:type_name -> google.protobuf.Timestamp
+	38, // 9: auth.v1.Agent.created_at:type_name -> google.protobuf.Timestamp
+	38, // 10: auth.v1.Agent.updated_at:type_name -> google.protobuf.Timestamp
 	24, // 11: auth.v1.ListAgentsResponse.agents:type_name -> auth.v1.Agent
 	24, // 12: auth.v1.CreateAgentResponse.agent:type_name -> auth.v1.Agent
 	24, // 13: auth.v1.GetAgentResponse.agent:type_name -> auth.v1.Agent
@@ -2275,28 +2380,30 @@ var file_auth_v1_auth_proto_depIdxs = []int32{
 	25, // 27: auth.v1.AuthService.ListAgents:input_type -> auth.v1.ListAgentsRequest
 	27, // 28: auth.v1.AuthService.CreateAgent:input_type -> auth.v1.CreateAgentRequest
 	29, // 29: auth.v1.AuthService.GetAgent:input_type -> auth.v1.GetAgentRequest
-	31, // 30: auth.v1.AuthService.UpdateAgent:input_type -> auth.v1.UpdateAgentRequest
-	33, // 31: auth.v1.AuthService.SetAgentStatus:input_type -> auth.v1.SetAgentStatusRequest
-	35, // 32: auth.v1.AuthService.DeleteAgent:input_type -> auth.v1.DeleteAgentRequest
-	1,  // 33: auth.v1.AuthService.Register:output_type -> auth.v1.RegisterResponse
-	3,  // 34: auth.v1.AuthService.Login:output_type -> auth.v1.LoginResponse
-	5,  // 35: auth.v1.AuthService.Refresh:output_type -> auth.v1.RefreshResponse
-	7,  // 36: auth.v1.AuthService.Logout:output_type -> auth.v1.LogoutResponse
-	9,  // 37: auth.v1.AuthService.Me:output_type -> auth.v1.MeResponse
-	11, // 38: auth.v1.AuthService.ChangePassword:output_type -> auth.v1.ChangePasswordResponse
-	15, // 39: auth.v1.AuthService.AdminCreateUser:output_type -> auth.v1.AdminCreateUserResponse
-	17, // 40: auth.v1.AuthService.AdminListUsers:output_type -> auth.v1.AdminListUsersResponse
-	19, // 41: auth.v1.AuthService.AdminUpdateUser:output_type -> auth.v1.AdminUpdateUserResponse
-	21, // 42: auth.v1.AuthService.AdminDeleteUser:output_type -> auth.v1.AdminDeleteUserResponse
-	23, // 43: auth.v1.AuthService.AdminGetUsersByIds:output_type -> auth.v1.AdminGetUsersByIdsResponse
-	26, // 44: auth.v1.AuthService.ListAgents:output_type -> auth.v1.ListAgentsResponse
-	28, // 45: auth.v1.AuthService.CreateAgent:output_type -> auth.v1.CreateAgentResponse
-	30, // 46: auth.v1.AuthService.GetAgent:output_type -> auth.v1.GetAgentResponse
-	32, // 47: auth.v1.AuthService.UpdateAgent:output_type -> auth.v1.UpdateAgentResponse
-	34, // 48: auth.v1.AuthService.SetAgentStatus:output_type -> auth.v1.SetAgentStatusResponse
-	36, // 49: auth.v1.AuthService.DeleteAgent:output_type -> auth.v1.DeleteAgentResponse
-	33, // [33:50] is the sub-list for method output_type
-	16, // [16:33] is the sub-list for method input_type
+	29, // 30: auth.v1.AuthService.GetAgentPublic:input_type -> auth.v1.GetAgentRequest
+	32, // 31: auth.v1.AuthService.UpdateAgent:input_type -> auth.v1.UpdateAgentRequest
+	34, // 32: auth.v1.AuthService.SetAgentStatus:input_type -> auth.v1.SetAgentStatusRequest
+	36, // 33: auth.v1.AuthService.DeleteAgent:input_type -> auth.v1.DeleteAgentRequest
+	1,  // 34: auth.v1.AuthService.Register:output_type -> auth.v1.RegisterResponse
+	3,  // 35: auth.v1.AuthService.Login:output_type -> auth.v1.LoginResponse
+	5,  // 36: auth.v1.AuthService.Refresh:output_type -> auth.v1.RefreshResponse
+	7,  // 37: auth.v1.AuthService.Logout:output_type -> auth.v1.LogoutResponse
+	9,  // 38: auth.v1.AuthService.Me:output_type -> auth.v1.MeResponse
+	11, // 39: auth.v1.AuthService.ChangePassword:output_type -> auth.v1.ChangePasswordResponse
+	15, // 40: auth.v1.AuthService.AdminCreateUser:output_type -> auth.v1.AdminCreateUserResponse
+	17, // 41: auth.v1.AuthService.AdminListUsers:output_type -> auth.v1.AdminListUsersResponse
+	19, // 42: auth.v1.AuthService.AdminUpdateUser:output_type -> auth.v1.AdminUpdateUserResponse
+	21, // 43: auth.v1.AuthService.AdminDeleteUser:output_type -> auth.v1.AdminDeleteUserResponse
+	23, // 44: auth.v1.AuthService.AdminGetUsersByIds:output_type -> auth.v1.AdminGetUsersByIdsResponse
+	26, // 45: auth.v1.AuthService.ListAgents:output_type -> auth.v1.ListAgentsResponse
+	28, // 46: auth.v1.AuthService.CreateAgent:output_type -> auth.v1.CreateAgentResponse
+	30, // 47: auth.v1.AuthService.GetAgent:output_type -> auth.v1.GetAgentResponse
+	31, // 48: auth.v1.AuthService.GetAgentPublic:output_type -> auth.v1.GetAgentPublicResponse
+	33, // 49: auth.v1.AuthService.UpdateAgent:output_type -> auth.v1.UpdateAgentResponse
+	35, // 50: auth.v1.AuthService.SetAgentStatus:output_type -> auth.v1.SetAgentStatusResponse
+	37, // 51: auth.v1.AuthService.DeleteAgent:output_type -> auth.v1.DeleteAgentResponse
+	34, // [34:52] is the sub-list for method output_type
+	16, // [16:34] is the sub-list for method input_type
 	16, // [16:16] is the sub-list for extension type_name
 	16, // [16:16] is the sub-list for extension extendee
 	0,  // [0:16] is the sub-list for field type_name
@@ -2313,7 +2420,7 @@ func file_auth_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_auth_v1_auth_proto_rawDesc), len(file_auth_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   37,
+			NumMessages:   38,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

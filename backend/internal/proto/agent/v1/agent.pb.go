@@ -123,10 +123,14 @@ func (x *MergeGuestSessionsResponse) GetMigrated() int32 {
 }
 
 type CreateSessionRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`                    // 会话标题（空则自动生成"新对话"）
-	Config        *SessionConfig         `protobuf:"bytes,2,opt,name=config,proto3" json:"config,omitempty"`                  // 初始会话配置（可空）
-	AgentId       string                 `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"` // 会话所属智能体域：'' = 管理端域；'<id>' = 对应智能体域
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Title   string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`                    // 会话标题（空则自动生成"新对话"）
+	Config  *SessionConfig         `protobuf:"bytes,2,opt,name=config,proto3" json:"config,omitempty"`                  // 初始会话配置（可空）
+	AgentId string                 `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"` // 会话所属智能体域：'' = 管理端域；'<id>' = 对应智能体域
+	// 按智能体基础提示词（auth agents.system_prompt，由 gateway 从 auth 元数据注入，
+	// 用户请求无法携带；SessionConfig 不暴露该字段）。非空时固化进会话 config 快照，
+	// 装配时覆盖实例全局提示词；空 = 使用实例全局提示词。
+	SystemPrompt  string `protobuf:"bytes,4,opt,name=system_prompt,json=systemPrompt,proto3" json:"system_prompt,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -178,6 +182,13 @@ func (x *CreateSessionRequest) GetConfig() *SessionConfig {
 func (x *CreateSessionRequest) GetAgentId() string {
 	if x != nil {
 		return x.AgentId
+	}
+	return ""
+}
+
+func (x *CreateSessionRequest) GetSystemPrompt() string {
+	if x != nil {
+		return x.SystemPrompt
 	}
 	return ""
 }
@@ -3119,11 +3130,12 @@ const file_agent_v1_agent_proto_rawDesc = "" +
 	"\x19MergeGuestSessionsRequest\x12\x19\n" +
 	"\bguest_id\x18\x01 \x01(\tR\aguestId\"8\n" +
 	"\x1aMergeGuestSessionsResponse\x12\x1a\n" +
-	"\bmigrated\x18\x01 \x01(\x05R\bmigrated\"x\n" +
+	"\bmigrated\x18\x01 \x01(\x05R\bmigrated\"\x9d\x01\n" +
 	"\x14CreateSessionRequest\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12/\n" +
 	"\x06config\x18\x02 \x01(\v2\x17.agent.v1.SessionConfigR\x06config\x12\x19\n" +
-	"\bagent_id\x18\x03 \x01(\tR\aagentId\"D\n" +
+	"\bagent_id\x18\x03 \x01(\tR\aagentId\x12#\n" +
+	"\rsystem_prompt\x18\x04 \x01(\tR\fsystemPrompt\"D\n" +
 	"\x15CreateSessionResponse\x12+\n" +
 	"\asession\x18\x01 \x01(\v2\x11.agent.v1.SessionR\asession\"a\n" +
 	"\x13ListSessionsRequest\x12\x12\n" +

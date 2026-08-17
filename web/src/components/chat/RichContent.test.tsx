@@ -15,14 +15,22 @@ vi.mock('./CodeHighlight', () => ({
 }))
 
 // 链接拦截：保留真实 isExternalLink 实现，仅替身 openExternal 以便断言调用。
-const mocks = vi.hoisted(() => ({ openExternal: vi.fn() }))
+// 下载：替身 downloadUrl，断言下载按钮使用归一化后的完整 URL。
+const mocks = vi.hoisted(() => ({ openExternal: vi.fn(), downloadUrl: vi.fn() }))
 vi.mock('@/lib/external', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/external')>()
   return { ...actual, openExternal: mocks.openExternal }
 })
+vi.mock('@/lib/rich', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/rich')>()
+  return { ...actual, downloadUrl: mocks.downloadUrl }
+})
 
 describe('RichContent（需求 9 富媒体渲染协议）', () => {
-  beforeEach(() => mocks.openExternal.mockClear())
+  beforeEach(() => {
+    mocks.openExternal.mockClear()
+    mocks.downloadUrl.mockClear()
+  })
   it('渲染 Markdown 富文本（加粗/行内码）', () => {
     render(<RichContent content="**加粗** 和 `行内码`" />)
     expect(screen.getByText('加粗').tagName).toBe('STRONG')
@@ -77,6 +85,28 @@ describe('RichContent（需求 9 富媒体渲染协议）', () => {
     const video = container.querySelector('video')
     expect(video).not.toBeNull()
     expect(video).toHaveAttribute('width', '480')
+  })
+
+  it('相对媒体路径拼服务器基址（桌面端 tauri.localhost origin 下也能加载）', () => {
+    localStorage.setItem('agent.server_url', 'http://47.108.207.37:8080')
+    const { container } = render(<RichContent content={'![图](/files/users/1/eq_0.png)'} />)
+    const img = container.querySelector('img')
+    expect(img?.getAttribute('src')).toBe('http://47.108.207.37:8080/files/users/1/eq_0.png')
+    // 下载按钮同样使用归一化后的完整 URL
+    fireEvent.click(container.querySelector('button[aria-label="下载图片"]')!)
+    expect(mocks.downloadUrl).toHaveBeenCalledWith(
+      'http://47.108.207.37:8080/files/users/1/eq_0.png',
+      'image.png',
+    )
+    localStorage.removeItem('agent.server_url')
+  })
+
+  it('外部/绝对媒体 URL 原样保留，不重复拼接基址', () => {
+    const { container } = render(
+      <RichContent content={'![a](https://x/a.png)\n\n```video\n//cdn.example.com/v.mp4\n```'} />,
+    )
+    expect(container.querySelector('img')?.getAttribute('src')).toBe('https://x/a.png')
+    expect(container.querySelector('video')?.getAttribute('src')).toBe('//cdn.example.com/v.mp4')
   })
 
   it('svg 代码块语言标签 align=center → 块级居中包裹', () => {

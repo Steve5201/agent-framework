@@ -4,7 +4,7 @@ import { LogIn, Menu, ShieldAlert } from 'lucide-react'
 import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
 import { isTauri } from '@/lib/storage'
-import { DEFAULT_AGENT_ID, loadRememberedAgent } from '@/lib/roles'
+import { DEFAULT_AGENT_ID, loadRememberedAgent, getHomeScope } from '@/lib/roles'
 import SessionSidebar from '@/components/chat/SessionSidebar'
 import MenuButton from '@/menus/MenuButton'
 import MessageList from '@/components/chat/MessageList'
@@ -38,8 +38,12 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
   const sidebarOpen = useChatStore((s) => s.sidebarOpen)
   const setSidebarOpen = useChatStore((s) => s.setSidebarOpen)
   const status = useAuthStore((s) => s.status)
+  const user = useAuthStore((s) => s.user)
 
-  const scope = mode === 'agent' ? (agentId ?? '') : loadRememberedAgent()
+  // 管理端对话域会话域：记住的智能体优先；无记忆回退角色归属域
+  // （超管 → '*'、agent_admin/admin → 绑定域）。原实现无记忆时回退 ''（管理端
+  // 域），与管理员会话实际归属脱节，曾致"登录后首屏空列表，需手动切 * 域才出现"。
+  const scope = mode === 'agent' ? (agentId ?? '') : loadRememberedAgent() || getHomeScope(user)
   const isGuest = status === 'guest'
   const loginUrl = `/login/${scope}`
 

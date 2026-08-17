@@ -92,12 +92,26 @@ RUN sed -i 's#dl-cdn.alpinelinux.org#mirrors.aliyun.com#g' /etc/apk/repositories
 #     所以必须在构建期装包把 icd json + libvk_swiftshader.so 落到 /usr/lib/chromium/。
 #   - 沙盒执行进程禁网（unshare -n），这些库必须在镜像构建期装好，运行时无法安装。
 RUN if [ "$SERVICE" = "sandbox" ]; then \
-      apk add --no-cache util-linux acl py3-pip pandoc py3-matplotlib chromium chromium-swiftshader font-noto-cjk nss_wrapper && \
+      apk add --no-cache util-linux acl py3-pip pandoc py3-matplotlib chromium chromium-swiftshader font-noto-cjk font-wqy-zenhei nss_wrapper && \
       pip install --break-system-packages -i https://mirrors.aliyun.com/pypi/simple/ --extra-index-url https://pypi.tuna.tsinghua.edu.cn/simple \
         "pymupdf==1.24.9" "python-docx==1.1.2" "python-pptx==1.0.2" && \
       mkdir -p /work && chown app:app /work && \
       mkdir -p /opt/mplconfig && chmod 777 /opt/mplconfig && \
-      MPLCONFIGDIR=/opt/mplconfig python3 -c "import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt; import matplotlib.font_manager as fm; fm._load_fontmanager(try_read_cache=False)" && \
+      # matplotlib 中文字体全局配置（PNG 里的中文标签乱码根因）：
+      #   - font-noto-cjk 提供的是 .ttc 集合，matplotlib 的 ft2font 只注册 face 0
+      #     （实测仅 "Noto Sans CJK JP"，没有 SC/TC 变体名）；
+      #   - font-wqy-zenhei（文泉驿正黑）是独立 OTF，简体字形全，matplotlib 可直接
+      #     按 "WenQuanYi Zen Hei" 找到，优先级放最前；
+      #   - 放在 /etc/matplotlibrc（matplotlib 全局配置搜索路径）而非 /opt/mplconfig
+      #     卷内，镜像重建即生效、不受 mplconfig 卷 copy-up 残留影响。
+      printf '%s\n' \
+        'font.family: sans-serif' \
+        'font.sans-serif: WenQuanYi Zen Hei, Noto Sans CJK JP, Noto Sans CJK KR, Noto Sans CJK TC, DejaVu Sans' \
+        'axes.unicode_minus: False' \
+        'figure.facecolor: white' \
+        'savefig.facecolor: white' \
+        > /etc/matplotlibrc && \
+      MPLCONFIGDIR=/opt/mplconfig python3 -c "import matplotlib; matplotlib.use('Agg'); import matplotlib.font_manager as fm; fm._load_fontmanager(try_read_cache=False); p=fm.findfont('WenQuanYi Zen Hei', fallback_to_default=False); print('CJK font:', p)" && \
       echo "matplotlib font cache primed"; \
     fi
 

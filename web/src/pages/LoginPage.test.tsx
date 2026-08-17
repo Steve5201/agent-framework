@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom'
 import LoginPage from './LoginPage'
 import { useAuthStore } from '@/stores/auth'
 
@@ -27,12 +27,19 @@ vi.mock('@/lib/remember', () => rememberMocks)
 
 // 需要 Routes 包装：/login/:agentId 是路由参数，否则 useParams 拿不到值。
 // 门户化后登录页必须带 agentId（缺省由 App 路由重定向），默认路径固定 /login/tutor。
+// Landed：捕获登录成功后的落地路由，断言跳转目标（方案 B：管理员落角色归属域）。
+const Landed = () => {
+  const { agentId } = useParams()
+  return <div data-testid="landed" data-agent={agentId} />
+}
+
 const renderPage = (path = '/login/tutor') =>
   render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/:agentId" element={<LoginPage />} />
+        <Route path="/agent/:agentId" element={<Landed />} />
         {/* 登录成功会 Navigate 到 /，通配兜底避免"无路由匹配"告警 */}
         <Route path="*" element={<div />} />
       </Routes>
@@ -224,5 +231,66 @@ describe('LoginPage 记住密码', () => {
       expect((screen.getByLabelText('密码') as HTMLInputElement).value).toBe('Passw0rd1')
     })
     expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 登录落地域（方案 B：管理员登录后不再一律跳 /admin/chat，按角色归属会话域）
+// ---------------------------------------------------------------------------
+describe('LoginPage 登录落地域', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useAuthStore.setState({ user: null, status: 'loading' })
+    apiMocks.login.mockReset()
+    apiMocks.mergeGuestSessions.mockReset()
+    apiMocks.mergeGuestSessions.mockResolvedValue(0)
+    rememberMocks.loadRemembered.mockResolvedValue(null)
+  })
+
+  const fillAndSubmit = async (name: string) => {
+    fireEvent.change(screen.getByLabelText('用户名'), { target: { value: name } })
+    fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'Passw0rd1' } })
+    fireEvent.click(screen.getByRole('button', { name: '登录' }))
+  }
+
+  const expectLanded = (agentId: string) =>
+    waitFor(() =>
+      expect(screen.getByTestId('landed').getAttribute('data-agent')).toBe(agentId),
+    )
+
+  it('超管登录后落地 /agent/*（全部域，非 /admin/chat）', async () => {
+    apiMocks.login.mockResolvedValue({
+      access_token: 'a',
+      refresh_token: 'r',
+      expires_in: 900,
+      user: { id: '1', username: 'root', role: 'super_admin', tags: [{ key: 'agent', value: '*' }] },
+    })
+    renderPage('/login/*')
+    await fillAndSubmit('root')
+    await expectLanded('*')
+  })
+
+  it('绑定域管理员登录后落地其绑定智能体域', async () => {
+    apiMocks.login.mockResolvedValue({
+      access_token: 'a',
+      refresh_token: 'r',
+      expires_in: 900,
+      user: { id: '2', username: 'am', role: 'agent_admin', tags: [{ key: 'agent', value: 'math' }] },
+    })
+    renderPage('/login/*')
+    await fillAndSubmit('am')
+    await expectLanded('math')
+  })
+
+  it('普通用户登录后落地对应智能体门户（行为不变）', async () => {
+    apiMocks.login.mockResolvedValue({
+      access_token: 'a',
+      refresh_token: 'r',
+      expires_in: 900,
+      user: { id: '3', username: 'alice', role: 'user' },
+    })
+    renderPage('/login/tutor')
+    await fillAndSubmit('alice')
+    await expectLanded('tutor')
   })
 })

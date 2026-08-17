@@ -1,9 +1,11 @@
 // roles.ts 单元测试：阶段3·管理员分层的角色判定与资源域解析。
 import { describe, expect, it } from 'vitest'
 import {
+  ALL_AGENT_ID,
   DEFAULT_AGENT_ID,
   ROLE_LABELS,
   canManageUsers,
+  getHomeScope,
   getUserAgentId,
   isAdminRole,
   isSuperAdmin,
@@ -69,6 +71,33 @@ describe('getUserAgentId（智能体归属解析）', () => {
   it('仅识别 key 为 agent 的标签，其它标签忽略', () => {
     const user = { tags: [{ key: 'department', value: 'cs' }] }
     expect(getUserAgentId(user)).toBe(DEFAULT_AGENT_ID)
+  })
+})
+
+describe('getHomeScope（角色归属会话域 · 登录落地与回退兜底）', () => {
+  it('超管 → 全部域（*）', () => {
+    expect(getHomeScope({ role: 'super_admin', tags: [{ key: 'agent', value: '*' }] })).toBe(
+      ALL_AGENT_ID,
+    )
+    // 超管即使未绑定标签也落全部域（getUserAgentId 兜底不影响 * 优先级）
+    expect(getHomeScope({ role: 'super_admin', tags: [] })).toBe(ALL_AGENT_ID)
+  })
+
+  it('agent_admin → 账号绑定智能体域', () => {
+    const user = { role: 'agent_admin', tags: [{ key: 'agent', value: 'math' }] }
+    expect(getHomeScope(user)).toBe('math')
+  })
+
+  it('admin → 账号绑定智能体域', () => {
+    const user = { role: 'admin', tags: [{ key: 'agent', value: 'physics' }] }
+    expect(getHomeScope(user)).toBe('physics')
+  })
+
+  it('普通用户 / 未登录 → 空串（不参与管理端路径）', () => {
+    expect(getHomeScope({ role: 'user', tags: [] })).toBe('')
+    expect(getHomeScope({ role: undefined })).toBe('')
+    expect(getHomeScope(null)).toBe('')
+    expect(getHomeScope(undefined)).toBe('')
   })
 })
 

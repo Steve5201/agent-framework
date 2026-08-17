@@ -50,6 +50,20 @@ export function getUserAgentId(user?: { tags?: UserTag[] } | null): string {
   return tag?.value || DEFAULT_AGENT_ID
 }
 
+/** 角色归属会话域（登录落地 / 管理端对话无记忆时的兜底）：
+ *  - 超管 → '*'（全部域，跨域对话主场）；
+ *  - agent_admin/admin → 账号绑定智能体域；
+ *  - 普通用户/未登录 → ''（不参与管理端路径；调用方自行按门户域处理）。
+ *  修复：管理员登录后一律落地 /admin/chat（scope=''），而会话实际归属在
+ *  具体智能体域（超管门户 '*' 下新建会话回退默认域），导致首屏列表为空，
+ *  必须手动切一次 '*' 才出现（方案 B+C）。 */
+export function getHomeScope(user?: { role?: string; tags?: UserTag[] } | null): string {
+  if (!user) return ''
+  if (isSuperAdmin(user.role)) return ALL_AGENT_ID
+  if (isAdminRole(user.role)) return getUserAgentId(user)
+  return ''
+}
+
 // ---------------------------------------------------------------------------
 // 记住的上次选择智能体（超管切换器）
 // ---------------------------------------------------------------------------

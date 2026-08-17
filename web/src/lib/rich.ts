@@ -1,5 +1,20 @@
 /** 富媒体渲染协议辅助函数（需求 9）。协议说明见 backend agentsvc/prompt.go 与 docs/api/web.md。 */
 import { openExternal } from './external'
+import { getApiBase } from './api'
+
+/**
+ * 媒体 URL 归一化：模型返回的媒体地址可能是完整 URL（外部资源/上传文件）或
+ * 相对路径（/files/...，指向后端静态资源）。相对路径在网页端与服务器同源，
+ * 直接可用；但 Tauri 桌面端 origin 是 tauri.localhost，相对路径会解析到本机
+ * 导致加载失败。统一归一化为完整 URL：
+ *   - 外部/绝对/protocol-relative（http://、https://、//…、data: 等）原样返回；
+ *   - 以 / 开头的路径拼服务器基址；其余相对路径补基址 + /。
+ */
+export function normalizeMediaSrc(src: string): string {
+  if (/^(https?:)?\/\//i.test(src) || /^[a-z][a-z0-9+.-]*:/i.test(src)) return src
+  const base = getApiBase()
+  return src.startsWith('/') ? `${base}${src}` : `${base}/${src}`
+}
 
 /** 视频扩展名：以这些结尾的 Markdown 图片 URL 会被渲染为 <video>。 */
 const VIDEO_EXT_RE = /\.(mp4|webm|ogg|mov|m4v)$/i

@@ -6,7 +6,7 @@ import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
 import rehypeSanitize, { defaultSchema, type Options as SanitizeOptions } from 'rehype-sanitize'
 import { Check, Copy, Download } from 'lucide-react'
-import { downloadUrl, isVideoUrl } from '@/lib/rich'
+import { downloadUrl, isVideoUrl, normalizeMediaSrc } from '@/lib/rich'
 import { isExternalLink, openExternal } from '@/lib/external'
 import { normalizeLang } from '@/lib/codeLang'
 import { cn } from '@/lib/utils'
@@ -237,8 +237,8 @@ export default function RichContent({
         const url = text.trim()
         return url ? (
           <div className={cn('relative my-2', align === 'center' ? 'mx-auto' : align === 'right' ? 'ml-auto' : '')}>
-            <video src={url} controls className="max-w-full rounded-md" />
-            <MediaDownloadButton src={url} kind="video" />
+            <video src={normalizeMediaSrc(url)} controls className="max-w-full rounded-md" />
+            <MediaDownloadButton src={normalizeMediaSrc(url)} kind="video" />
           </div>
         ) : null
       }
@@ -286,11 +286,12 @@ export default function RichContent({
     // 尺寸（width/height）与对齐由协议控制：模型可用 HTML 属性或 <p align> 包裹。
     img({ src, alt, width, height, style, className: mediaClass }) {
       if (!src) return null
+      const mediaSrc = normalizeMediaSrc(src)
       if (isVideoUrl(src)) {
         return (
           <div className="relative my-2 inline-block">
             <video
-              src={src}
+              src={mediaSrc}
               controls
               title={alt}
               width={width}
@@ -298,14 +299,14 @@ export default function RichContent({
               style={style}
               className={cn('max-w-full rounded-md', mediaClass)}
             />
-            <MediaDownloadButton src={src} kind="video" />
+            <MediaDownloadButton src={mediaSrc} kind="video" />
           </div>
         )
       }
       return (
         <div className="relative my-2 inline-block">
           <img
-            src={src}
+            src={mediaSrc}
             alt={alt ?? ''}
             loading="lazy"
             width={width}
@@ -313,7 +314,7 @@ export default function RichContent({
             style={style}
             className={cn('max-w-full rounded-md', mediaClass)}
           />
-          <MediaDownloadButton src={src} kind="image" />
+          <MediaDownloadButton src={mediaSrc} kind="image" />
         </div>
       )
     },

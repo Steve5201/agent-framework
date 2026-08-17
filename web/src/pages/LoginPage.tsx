@@ -3,7 +3,7 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ApiError, login, mergeGuestSessions, register } from '@/lib/api'
 import { clearGuestId, getGuestId, hasGuestId } from '@/lib/guest'
 import { DEFAULT_AGENT_ID } from '@/App'
-import { isAdminRole, isAllAgentScope } from '@/lib/roles'
+import { isAdminRole, isAllAgentScope, getHomeScope } from '@/lib/roles'
 import { getServerUrl, setServerUrl as persistServerUrl } from '@/lib/settings'
 import { clearRemembered, loadRemembered, saveRemembered } from '@/lib/remember'
 import { useAuthStore } from '@/stores/auth'
@@ -97,19 +97,27 @@ export default function LoginPage() {
     }
   }
 
-  // 已登录直接进对话页：管理员（含 super_admin/agent_admin/admin）→ 管理端域；其它 → 对应智能体域
+  // 已登录直接进对话页：管理员（super_admin/agent_admin/admin）→ 角色归属会话域
+  // （超管 /agent/*、其它管理员 /agent/{绑定域}）；普通用户 → 对应智能体域。
   if (status === 'authed') {
     const target = isAdminRole(user?.role)
-      ? '/admin/chat'
+      ? `/agent/${getHomeScope(user)}`
       : `/agent/${effectiveAgentId || DEFAULT_AGENT_ID}`
     return <Navigate to={target} replace />
   }
 
   /**
    * 登录成功后：合并游客会话到账号（失败不阻断登录，仅记录并丢弃本地游客态），
-   * 然后按角色跳转——管理员进管理端，普通用户回对应智能体门户。
+   * 然后按角色跳转——管理员进角色归属会话域，普通用户回对应智能体门户。
+   * （原统一跳 /admin/chat：该域会话列表只含管理端域，与管理员会话实际归属
+   * 脱节，曾致"登录后首屏空列表"——见 getHomeScope 注释。）
+   * 注意：loginUser 用登录响应体而非组件闭包 user——applySession 触发的重渲染
+   * 不会更新正在执行的 handleSubmit 闭包，闭包里 user 仍是登录前的旧值。
    */
-  async function mergeGuestAndLand(role: string | undefined) {
+  async function mergeGuestAndLand(
+    role: string | undefined,
+    loginUser: { role?: string; tags?: { key: string; value: string }[] } | null,
+  ) {
     if (hasGuestId()) {
       const guestId = getGuestId()
       if (guestId) {
@@ -120,7 +128,7 @@ export default function LoginPage() {
       clearGuestId()
     }
     const target = isAdminRole(role)
-      ? '/admin/chat'
+      ? `/agent/${getHomeScope(loginUser)}`
       : `/agent/${effectiveAgentId || DEFAULT_AGENT_ID}`
     navigate(target, { replace: true })
   }
@@ -163,14 +171,14 @@ export default function LoginPage() {
         const resp = await login(name, password, effectiveAgentId)
         await applySession(resp.access_token, resp.refresh_token, resp.user)
         persistRemember(name, password)
-        await mergeGuestAndLand(resp.user?.role)
+        await mergeGuestAndLand(resp.user?.role, resp.user)
       } else {
         await register(name, password, effectiveAgentId)
         // 注册成功 → 直接登录（体验顺滑，避免让用户再输一遍）
         const resp = await login(name, password, effectiveAgentId)
         await applySession(resp.access_token, resp.refresh_token, resp.user)
         persistRemember(name, password)
-        await mergeGuestAndLand(resp.user?.role)
+        await mergeGuestAndLand(resp.user?.role, resp.user)
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : (err as Error).message)

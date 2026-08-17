@@ -28,6 +28,7 @@ vi.mock('@/lib/localTools', () => ({
 }))
 
 import { useChatStore } from '@/stores/chat'
+import { useAuthStore } from '@/stores/auth'
 import { ALL_AGENT_ID, DEFAULT_AGENT_ID } from '@/lib/roles'
 
 beforeEach(() => {
@@ -39,6 +40,7 @@ beforeEach(() => {
     activeId: null,
     messages: [],
   })
+  useAuthStore.setState({ user: null, status: 'guest' })
 })
 
 describe('createSession · 智能体域处理', () => {
@@ -56,7 +58,27 @@ describe('createSession · 智能体域处理', () => {
     expect(apiMocks.createSession).toHaveBeenCalledWith(undefined, 'math')
   })
 
-  it('管理端域（空串）原样透传', async () => {
+  it('管理端域（空串）+ 超管 → 回退默认域，不再产生孤儿会话', async () => {
+    useAuthStore.setState({
+      user: { id: '1', username: 'root', role: 'super_admin', tags: [{ key: 'agent', value: '*' }] } as never,
+      status: 'authed',
+    })
+    useChatStore.setState({ agentId: '' })
+    await useChatStore.getState().createSession()
+    expect(apiMocks.createSession).toHaveBeenCalledWith(undefined, DEFAULT_AGENT_ID)
+  })
+
+  it('管理端域（空串）+ 绑定域管理员 → 落绑定智能体域', async () => {
+    useAuthStore.setState({
+      user: { id: '2', username: 'am', role: 'agent_admin', tags: [{ key: 'agent', value: 'math' }] } as never,
+      status: 'authed',
+    })
+    useChatStore.setState({ agentId: '' })
+    await useChatStore.getState().createSession()
+    expect(apiMocks.createSession).toHaveBeenCalledWith(undefined, 'math')
+  })
+
+  it('管理端域（空串）+ 普通用户/游客 → 保持空串（无管理端路径）', async () => {
     useChatStore.setState({ agentId: '' })
     await useChatStore.getState().createSession()
     expect(apiMocks.createSession).toHaveBeenCalledWith(undefined, '')

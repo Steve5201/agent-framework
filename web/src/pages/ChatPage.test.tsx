@@ -97,11 +97,43 @@ describe('ChatPage · 管理端对话会话域回退', () => {
     useChatStore.setState({ agentId: '', sessions: [], sessionsTotal: 0, activeId: null, messages: [] })
   })
 
-  it('管理端对话无记住的智能体：会话域回退管理端域（空串）', async () => {
+  it('管理端对话无记住的智能体：游客/普通用户会话域回退管理端域（空串）', async () => {
     renderAt('/admin/chat')
     await screen.findByTestId('chat-input')
     expect(useChatStore.getState().agentId).toBe('')
     expect(apiMocks.listSessions).toHaveBeenCalledWith(1, 50, '')
+  })
+
+  it('管理端对话无记住的智能体：已登录超管回退全门户域（*）', async () => {
+    useAuthStore.setState({
+      user: {
+        id: '1',
+        username: 'root',
+        role: 'super_admin',
+        tags: [{ key: 'agent', value: '*' }],
+      } as never,
+      status: 'authed',
+    })
+    renderAt('/admin/chat')
+    await screen.findByTestId('chat-input')
+    expect(useChatStore.getState().agentId).toBe('*')
+    expect(apiMocks.listSessions).toHaveBeenCalledWith(1, 50, '*')
+  })
+
+  it('管理端对话无记住的智能体：绑定域管理员回退其归属域', async () => {
+    useAuthStore.setState({
+      user: {
+        id: '2',
+        username: 'am',
+        role: 'agent_admin',
+        tags: [{ key: 'agent', value: 'math' }],
+      } as never,
+      status: 'authed',
+    })
+    renderAt('/admin/chat')
+    await screen.findByTestId('chat-input')
+    expect(useChatStore.getState().agentId).toBe('math')
+    expect(apiMocks.listSessions).toHaveBeenCalledWith(1, 50, 'math')
   })
 
   it('管理端对话记住选中智能体：会话域回退到该智能体', async () => {

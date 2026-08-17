@@ -14,7 +14,7 @@ import AgentDetailPage from '@/pages/admin/AgentDetailPage'
 import UsersPage from '@/pages/admin/UsersPage'
 import ModelsPage from '@/pages/admin/ModelsPage'
 import DataPage from '@/pages/admin/DataPage'
-import { isAdminRole, isSuperAdmin, canManageUsers } from '@/lib/roles'
+import { isAdminRole, isSuperAdmin, canManageUsers, getHomeScope } from '@/lib/roles'
 import { getPortalAgentId } from '@/lib/portal'
 import { isTauri } from '@/lib/storage'
 import { useAuthStore } from '@/stores/auth'
@@ -24,7 +24,9 @@ export const DEFAULT_AGENT_ID = 'tutor'
 
 /**
  * 根路径兜底：按登录态分流。
- *  - 管理员 → 管理端对话域 /admin/chat
+ *  - 管理员 → 角色归属会话域（超管 /agent/*、其它管理员 /agent/{绑定域}，
+ *    而不是 /admin/chat——后者会话列表只含管理端域，与管理员实际会话归属
+ *    脱节，曾导致"登录后首屏空列表，需手动切 * 域才出现"）
  *  - 桌面端首次运行（Tauri 且未配置门户）→ 门户配置页 /portal
  *  - 其它（普通用户/游客）→ 默认智能体 /agent/tutor
  */
@@ -35,7 +37,7 @@ function HomeRedirect() {
     return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">加载中…</div>
   }
   if (status === 'authed' && isAdminRole(user?.role)) {
-    return <Navigate to="/admin/chat" replace />
+    return <Navigate to={`/agent/${getHomeScope(user)}`} replace />
   }
   // 桌面端没有地址栏：未配置门户时强制先到门户配置页，配置后进对应门户
   if (isTauri()) {

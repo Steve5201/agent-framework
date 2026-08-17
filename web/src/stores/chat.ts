@@ -15,7 +15,8 @@ import {
 } from '@/lib/api'
 import { streamChat, regenerateStream } from '@/lib/sse'
 import { LOCAL_TOOL_NAMES, isTauri, runLocalShell } from '@/lib/localTools'
-import { ALL_AGENT_ID, DEFAULT_AGENT_ID } from '@/lib/roles'
+import { ALL_AGENT_ID, DEFAULT_AGENT_ID, getHomeScope } from '@/lib/roles'
+import { useAuthStore } from '@/stores/auth'
 import { genUuid } from '@/lib/uuid'
 
 const uid = () => genUuid()
@@ -480,8 +481,14 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     // 会话域：创建会话必须具体到某个智能体域，否则后端 validateAgentID
     // 会拒绝（曾导致超管在 '/agent/*' 新建会话按钮无反应）。这里回退
     // 默认域；列表查询 '*' = 全部域（ListSessions 语义）不受影响。
+    // 管理端域（''）同理：无归属的孤儿域，按角色归属域回退（超管 → * →
+    // 默认域、agent_admin/admin → 绑定域），不再产生 agent_id='' 的会话。
     const raw = get().agentId
-    const agentId = raw === ALL_AGENT_ID ? DEFAULT_AGENT_ID : raw
+    let agentId = raw === ALL_AGENT_ID ? DEFAULT_AGENT_ID : raw
+    if (!agentId) {
+      agentId = getHomeScope(useAuthStore.getState().user)
+      if (agentId === ALL_AGENT_ID) agentId = DEFAULT_AGENT_ID
+    }
     const session = await apiCreateSession(undefined, agentId)
     set((s) => ({
       sessions: [session, ...s.sessions],

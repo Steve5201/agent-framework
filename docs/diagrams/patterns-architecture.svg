@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="100%" height="100%" font-family="'Microsoft YaHei','PingFang SC',sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <marker id="arrG" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#16a34a"/>
+    </marker>
+  </defs>
+
+  <!-- 标题 -->
+  <text x="640" y="34" text-anchor="middle" font-size="22" font-weight="bold" fill="#0f172a">设计模式 · 分层架构与依赖注入</text>
+  <text x="640" y="58" text-anchor="middle" font-size="13" fill="#64748b">微服务 + DDD 风格分层 · 依赖倒置（业务依赖接口）· proto 契约跨模块共享 · go.work 多模块</text>
+
+  <!-- ============ backend 分层（左） ============ -->
+  <rect x="40" y="84" width="560" height="520" rx="12" fill="#eff6ff" stroke="#60a5fa"/>
+  <text x="320" y="112" text-anchor="middle" font-size="16" font-weight="bold" fill="#1d4ed8">backend（Go 微服务）· 依赖方向：上 → 下</text>
+
+  <rect x="70" y="132" width="500" height="56" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="320" y="156" text-anchor="middle" font-size="13" font-weight="bold" fill="#1d4ed8">cmd/ · 进程入口（main 装配）</text>
+  <text x="320" y="176" text-anchor="middle" font-size="11" fill="#64748b">agent / auth / gateway / llm-gateway / rag / sandbox</text>
+
+  <path d="M 320 188 L 320 202" fill="none" stroke="#64748b" stroke-width="1.2" marker-end="url(#arr)"/>
+  <rect x="70" y="204" width="500" height="70" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="320" y="228" text-anchor="middle" font-size="13" font-weight="bold" fill="#1d4ed8">gatewaysvc · 传输层（HTTP / gRPC handler）</text>
+  <text x="320" y="250" text-anchor="middle" font-size="11" fill="#64748b">router / middleware（CORS·JWT·限流·reqid）/ openapi.yaml</text>
+  <text x="320" y="268" text-anchor="middle" font-size="11" fill="#64748b">参数校验 → 调用业务层</text>
+
+  <path d="M 320 274 L 320 288" fill="none" stroke="#64748b" stroke-width="1.2" marker-end="url(#arr)"/>
+  <rect x="70" y="290" width="500" height="80" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="320" y="314" text-anchor="middle" font-size="13" font-weight="bold" fill="#1d4ed8">*svc · 业务层（service）</text>
+  <text x="320" y="336" text-anchor="middle" font-size="11" fill="#64748b">agentsvc（会话/工具/编排/文档）· authsvc · adminsvc</text>
+  <text x="320" y="356" text-anchor="middle" font-size="11" fill="#64748b">llmsvc（模型注册表/用量）· rag（ingest/retrieve）</text>
+  <text x="320" y="374" text-anchor="middle" font-size="10" fill="#94a3b8">业务规则 / 状态机 / 编排（不直接拼 SQL）</text>
+
+  <path d="M 320 370 L 320 384" fill="none" stroke="#64748b" stroke-width="1.2" marker-end="url(#arr)"/>
+  <rect x="70" y="386" width="500" height="64" rx="8" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="320" y="410" text-anchor="middle" font-size="13" font-weight="bold" fill="#c2410c">Repository 接口（依赖倒置点）</text>
+  <text x="320" y="432" text-anchor="middle" font-size="11" fill="#64748b">业务层只依赖接口 · 测试注入内存 fake</text>
+  <text x="320" y="450" text-anchor="middle" font-size="10" fill="#94a3b8">repository.go：CreateSession / ListMessages / HideRoundAndAfter …</text>
+
+  <path d="M 320 450 L 320 464" fill="none" stroke="#64748b" stroke-width="1.2" marker-end="url(#arr)"/>
+  <rect x="70" y="466" width="500" height="56" rx="8" fill="#fef2f2" stroke="#fca5a5"/>
+  <text x="320" y="490" text-anchor="middle" font-size="13" font-weight="bold" fill="#b91c1c">postgresRepo（pgxpool 实现）</text>
+  <text x="320" y="510" text-anchor="middle" font-size="11" fill="#64748b">main 装配：NewPostgresRepository(pool) → 注入 service</text>
+
+  <rect x="70" y="540" width="500" height="48" rx="8" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="320" y="570" text-anchor="middle" font-size="12" fill="#15803d">连接池 / 迁移（migrations/ 版本化）/ 事务由 repository 层收口</text>
+
+  <!-- ============ framework 分层（右） ============ -->
+  <rect x="640" y="84" width="600" height="520" rx="12" fill="#f0fdf4" stroke="#4ade80"/>
+  <text x="940" y="112" text-anchor="middle" font-size="16" font-weight="bold" fill="#15803d">framework（可复用框架）· 分层与依赖纪律</text>
+
+  <rect x="670" y="132" width="540" height="64" rx="8" fill="#ffffff" stroke="#86efac"/>
+  <text x="940" y="156" text-anchor="middle" font-size="13" font-weight="bold" fill="#15803d">agent · Session 编排循环（入口）</text>
+  <text x="940" y="178" text-anchor="middle" font-size="11" fill="#64748b">Run / RunStream · 调 LLM → 工具 → 收敛</text>
+
+  <path d="M 940 196 L 940 210" fill="none" stroke="#16a34a" stroke-width="1.2" marker-end="url(#arrG)"/>
+  <rect x="670" y="212" width="540" height="110" rx="8" fill="#ffffff" stroke="#86efac"/>
+  <text x="940" y="236" text-anchor="middle" font-size="13" font-weight="bold" fill="#15803d">依赖组件（接口驱动）</text>
+  <rect x="690" y="250" width="160" height="56" rx="6" fill="#f0fdf4" stroke="#a7f3d0"/>
+  <text x="770" y="272" text-anchor="middle" font-size="12" fill="#14532d">llm · Provider</text>
+  <text x="770" y="292" text-anchor="middle" font-size="10" fill="#94a3b8">deepseek/openai 实现</text>
+  <rect x="860" y="250" width="160" height="56" rx="6" fill="#f0fdf4" stroke="#a7f3d0"/>
+  <text x="940" y="272" text-anchor="middle" font-size="12" fill="#14532d">memory</text>
+  <text x="940" y="292" text-anchor="middle" font-size="10" fill="#94a3b8">短期/长期/压缩</text>
+  <rect x="1030" y="250" width="160" height="56" rx="6" fill="#f0fdf4" stroke="#a7f3d0"/>
+  <text x="1110" y="272" text-anchor="middle" font-size="12" fill="#14532d">tool · Registry</text>
+  <text x="1110" y="292" text-anchor="middle" font-size="10" fill="#94a3b8">Schema + Execute + 审计</text>
+
+  <path d="M 940 322 L 940 336" fill="none" stroke="#16a34a" stroke-width="1.2" marker-end="url(#arrG)"/>
+  <rect x="670" y="338" width="540" height="64" rx="8" fill="#ffffff" stroke="#86efac"/>
+  <text x="940" y="362" text-anchor="middle" font-size="13" font-weight="bold" fill="#15803d">orchestrate · 编排能力（可选装配）</text>
+  <text x="940" y="384" text-anchor="middle" font-size="11" fill="#64748b">spec → dag → planner → executor → aggregator</text>
+
+  <path d="M 940 402 L 940 416" fill="none" stroke="#16a34a" stroke-width="1.2" marker-end="url(#arrG)"/>
+  <rect x="670" y="418" width="540" height="64" rx="8" fill="#ffffff" stroke="#86efac"/>
+  <text x="940" y="442" text-anchor="middle" font-size="13" font-weight="bold" fill="#15803d">schema · 领域契约（消息 / 工具 / 权限）</text>
+  <text x="940" y="464" text-anchor="middle" font-size="11" fill="#64748b">被上层与外部共同引用 · 无业务依赖</text>
+
+  <rect x="670" y="500" width="540" height="88" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="940" y="524" text-anchor="middle" font-size="13" font-weight="bold" fill="#334155">依赖纪律</text>
+  <text x="940" y="548" text-anchor="middle" font-size="11" fill="#475569">· 依赖方向单向：orchestrate → llm/schema；禁止反向</text>
+  <text x="940" y="568" text-anchor="middle" font-size="11" fill="#475569">· framework 独立可测（mock Provider / 内存 fake）</text>
+  <text x="940" y="586" text-anchor="middle" font-size="10" fill="#94a3b8">go.work 串联 backend ↔ framework，各自 go.mod 独立</text>
+
+  <!-- ============ 底部原则 ============ -->
+  <rect x="40" y="640" width="1200" height="110" rx="12" fill="#eef2ff" stroke="#6366f1"/>
+  <text x="80" y="670" font-size="15" font-weight="bold" fill="#4338ca">贯穿设计原则</text>
+  <text x="80" y="696" font-size="12" fill="#475569">· API 优先：proto 契约（agent/auth/rag v1）与 openapi.yaml 是接口事实源，前后端按契约开发</text>
+  <text x="80" y="718" font-size="12" fill="#475569">· 依赖倒置：业务层依赖接口、不依赖实现 → 单测注入 fake，DB/网络由实现层收口</text>
+  <text x="80" y="740" font-size="12" fill="#475569">· 分层薄 + 单向：gateway「薄」、业务「厚」；跨模块改动先改契约再同步实现，禁止 breaking change</text>
+
+  <text x="640" y="776" text-anchor="middle" font-size="11" fill="#94a3b8">所属主图区块：framework 能力层 · 返回 system-overview.svg</text>
+</svg>

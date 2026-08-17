@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="100%" height="100%" font-family="'Microsoft YaHei','PingFang SC',sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <marker id="arrR" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#b91c1c"/>
+    </marker>
+  </defs>
+
+  <!-- 标题 -->
+  <text x="640" y="34" text-anchor="middle" font-size="22" font-weight="bold" fill="#0f172a">沙盒安全隔离模型（sandbox 服务）</text>
+  <text x="640" y="58" text-anchor="middle" font-size="13" fill="#64748b">代码执行与文档解析统一隔离：每用户 uid 降权 + 禁网 + prlimit 限额 + 最小能力集</text>
+
+  <!-- ============ 调用方 ============ -->
+  <rect x="120" y="84" width="360" height="62" rx="10" fill="#eff6ff" stroke="#60a5fa"/>
+  <text x="300" y="110" text-anchor="middle" font-size="14" font-weight="bold" fill="#1d4ed8">agent · 代码执行</text>
+  <text x="300" y="132" text-anchor="middle" font-size="11" fill="#64748b">code_executor（L3 高危，需确认）</text>
+
+  <rect x="800" y="84" width="360" height="62" rx="10" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="980" y="110" text-anchor="middle" font-size="14" font-weight="bold" fill="#c2410c">rag · 文档解析 / 渲染</text>
+  <text x="980" y="132" text-anchor="middle" font-size="11" fill="#64748b">profile 模式：可信预置脚本</text>
+
+  <path d="M 480 115 L 528 115" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <path d="M 800 115 L 748 115" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ============ 沙盒容器 ============ -->
+  <rect x="40" y="170" width="1200" height="340" rx="14" fill="#fef2f2" stroke="#fca5a5" stroke-width="2"/>
+  <text x="640" y="200" text-anchor="middle" font-size="16" font-weight="bold" fill="#b91c1c">sandbox 容器（HTTP :8087 · 仅容器内网可达 · 不发布宿主端口）</text>
+
+  <!-- 主进程 -->
+  <rect x="460" y="216" width="360" height="52" rx="8" fill="#fee2e2" stroke="#fca5a5"/>
+  <text x="640" y="238" text-anchor="middle" font-size="13" fill="#7f1d1d">主进程：root + 精选能力（cap_add）</text>
+  <text x="640" y="258" text-anchor="middle" font-size="11" fill="#64748b">setpriv 降权到每用户专属 uid 后执行 · 执行进程不继承任何能力</text>
+
+  <!-- 四象限 -->
+  <rect x="80" y="286" width="272" height="208" rx="10" fill="#ffffff" stroke="#fca5a5"/>
+  <text x="216" y="314" text-anchor="middle" font-size="14" font-weight="bold" fill="#b91c1c">① 用户隔离</text>
+  <line x1="100" y1="324" x2="332" y2="324" stroke="#fecaca"/>
+  <text x="216" y="348" text-anchor="middle" font-size="12" fill="#475569">uid = SANDBOX_UID_BASE + user_id</text>
+  <text x="216" y="370" text-anchor="middle" font-size="12" fill="#475569">uid == gid · 线性不碰撞</text>
+  <text x="216" y="396" text-anchor="middle" font-size="12" fill="#475569">用户目录 属主=派生uid</text>
+  <text x="216" y="418" text-anchor="middle" font-size="12" fill="#475569">属组=app组 · mode 2775(setgid)</text>
+  <text x="216" y="444" text-anchor="middle" font-size="11" fill="#94a3b8">不用 POSIX ACL：Docker Desktop</text>
+  <text x="216" y="462" text-anchor="middle" font-size="11" fill="#94a3b8">bind mount 不支持 setfacl</text>
+
+  <rect x="364" y="286" width="272" height="208" rx="10" fill="#ffffff" stroke="#fca5a5"/>
+  <text x="500" y="314" text-anchor="middle" font-size="14" font-weight="bold" fill="#b91c1c">② 网络隔离</text>
+  <line x1="384" y1="324" x2="616" y2="324" stroke="#fecaca"/>
+  <text x="500" y="348" text-anchor="middle" font-size="12" fill="#475569">unshare -n 独立网络命名空间</text>
+  <text x="500" y="370" text-anchor="middle" font-size="12" fill="#475569">无网卡 → 禁网</text>
+  <text x="500" y="396" text-anchor="middle" font-size="12" fill="#475569">代码无法外联/回传</text>
+  <text x="500" y="418" text-anchor="middle" font-size="12" fill="#475569">防数据外泄</text>
+  <text x="500" y="444" text-anchor="middle" font-size="11" fill="#94a3b8">（需要 SYS_ADMIN 能力创建）</text>
+
+  <rect x="648" y="286" width="272" height="208" rx="10" fill="#ffffff" stroke="#fca5a5"/>
+  <text x="784" y="314" text-anchor="middle" font-size="14" font-weight="bold" fill="#b91c1c">③ 资源限制</text>
+  <line x1="668" y1="324" x2="900" y2="324" stroke="#fecaca"/>
+  <text x="784" y="348" text-anchor="middle" font-size="12" fill="#475569">prlimit --as 512MB 虚拟内存</text>
+  <text x="784" y="370" text-anchor="middle" font-size="12" fill="#475569">prlimit --cpu 60s 超时终止</text>
+  <text x="784" y="396" text-anchor="middle" font-size="12" fill="#475569">--nofile 1024 打开文件数</text>
+  <text x="784" y="418" text-anchor="middle" font-size="12" fill="#475569">单次执行最大 60s</text>
+  <text x="784" y="444" text-anchor="middle" font-size="11" fill="#94a3b8">profile 模式内存 2048MB</text>
+  <text x="784" y="462" text-anchor="middle" font-size="11" fill="#94a3b8">（matplotlib/numpy 渲染）</text>
+
+  <rect x="932" y="286" width="272" height="208" rx="10" fill="#ffffff" stroke="#fca5a5"/>
+  <text x="1068" y="314" text-anchor="middle" font-size="14" font-weight="bold" fill="#b91c1c">④ 能力与文件系统</text>
+  <line x1="952" y1="324" x2="1184" y2="324" stroke="#fecaca"/>
+  <text x="1068" y="348" text-anchor="middle" font-size="12" fill="#475569">cap_drop: ALL</text>
+  <text x="1068" y="370" text-anchor="middle" font-size="12" fill="#475569">cap_add 仅精选（SYS_ADMIN/</text>
+  <text x="1068" y="390" text-anchor="middle" font-size="12" fill="#475569">SETUID/CHOWN/KILL 等）</text>
+  <text x="1068" y="414" text-anchor="middle" font-size="12" fill="#475569">根文件系统 read_only</text>
+  <text x="1068" y="436" text-anchor="middle" font-size="12" fill="#475569">仅 /work /logs /tmp 可写</text>
+  <text x="1068" y="460" text-anchor="middle" font-size="11" fill="#94a3b8">命令白名单/黑名单双校验</text>
+
+  <!-- ============ 底部：协作模型 ============ -->
+  <path d="M 640 510 L 640 536" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="40" y="538" width="1200" height="200" rx="14" fill="#f0fdf4" stroke="#4ade80"/>
+  <text x="80" y="566" font-size="15" font-weight="bold" fill="#15803d">协作权限模型（每用户工作区 /work/users/&lt;uid&gt;）</text>
+
+  <rect x="80" y="586" width="360" height="90" rx="10" fill="#ffffff" stroke="#86efac"/>
+  <text x="260" y="612" text-anchor="middle" font-size="13" font-weight="bold" fill="#14532d">沙盒执行进程 = 属主</text>
+  <text x="260" y="636" text-anchor="middle" font-size="12" fill="#475569">uid 匹配 → 直接读写</text>
+  <text x="260" y="656" text-anchor="middle" font-size="12" fill="#475569">（用户代码写自己的文件）</text>
+
+  <rect x="460" y="586" width="360" height="90" rx="10" fill="#ffffff" stroke="#86efac"/>
+  <text x="640" y="612" text-anchor="middle" font-size="13" font-weight="bold" fill="#14532d">agent 进程 = app 组</text>
+  <text x="640" y="636" text-anchor="middle" font-size="12" fill="#475569">组权限位协作读写（2775 setgid）</text>
+  <text x="640" y="656" text-anchor="middle" font-size="12" fill="#475569">上传文档 / 读取产物</text>
+
+  <rect x="840" y="586" width="360" height="90" rx="10" fill="#ffffff" stroke="#86efac"/>
+  <text x="1020" y="612" text-anchor="middle" font-size="13" font-weight="bold" fill="#14532d">其它用户 = other=0</text>
+  <text x="1020" y="636" text-anchor="middle" font-size="12" fill="#475569">uid/gid 均不匹配</text>
+  <text x="1020" y="656" text-anchor="middle" font-size="12" fill="#475569">OS 级强隔离</text>
+
+  <text x="80" y="712" font-size="12" fill="#15803d">工作区共享卷：./data/agent ↔ 容器内 /work（agent / sandbox / rag 三服务同一份数据）</text>
+  <text x="640" y="740" text-anchor="middle" font-size="11" fill="#94a3b8">所属主图区块：sandbox 服务 · 返回 system-overview.svg</text>
+</svg>

@@ -1,0 +1,61 @@
+# ===== Go =====
+backend/**/*.exe
+backend/**/*.test
+*.out
+
+# ===== Node (web / desktop) =====
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# ===== Rust / Tauri =====
+desktop/src-tauri/target/
+
+# ===== 本地工具与缓存（不入库）=====
+.tools/
+
+# ===== 环境变量：禁止提交真实密钥 =====
+.env
+.env.local
+*.env
+**/.env.*
+!deploy/.env.example
+
+# ===== 部署数据与镜像包（不入库）=====
+deploy/data/**
+
+# ===== 密钥文件（绝对禁止提交）=====
+deepseek_apikey.txt
+**/deepseek_apikey*.txt
+**/deepseek_apikey*.md
+
+# ===== 日志 =====
+*.log
+
+# ===== Python 缓存与依赖（parser 冒烟依赖目录）=====
+__pycache__/
+*.pyc
+backend/scripts/parsers/.smoke_pydeps/
+
+# ===== 内部文档（P6-F：不入公开仓库）=====
+docs/ops/
+docs/PROGRESS.md
+docs/STUDY-NOTES.md
+docs/OPENCODE-HANDOFF.md
+docs/USER-TESTING.md
+
+# ===== 第三方 / 本地资源（P6-F：不入公开仓库）=====
+skills-main/
+slides_maker-main/
+_slide-maker-lite/
+_slidesmaker.zip
+testdata/
+deepseek.jpg
+
+# ===== IDE / 系统 =====
+.idea/
+.vscode/
+*.iml
+Thumbs.db
+.DS_Store

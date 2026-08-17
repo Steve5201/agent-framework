@@ -1,0 +1,441 @@
+// agent.proto —— Agent 会话与对话服务契约（P2-A）
+//
+// 本文件是对话域的唯一事实来源：agent-service 实现它，gateway 调用它。
+//
+// 设计要点：
+//   - 非流式 Chat 用于不需要打字机效果的场景；StreamChat 用 server-streaming
+//     逐事件下发（文本增量 / 工具调用 / 结束统计），gateway 转成 HTTP SSE；
+//   - user_id 经 gRPC metadata（x-user-id）注入，请求体不含属主字段；
+//   - 会话与消息持久化在 agent_db（见 migrations/agent）。
+syntax = "proto3";
+
+package agent.v1;
+
+option go_package = "github.com/Steve5201/agent-backend/internal/proto/agent/v1;agentv1";
+
+import "google/protobuf/timestamp.proto";
+
+// AgentService Agent 会话与对话服务。
+service AgentService {
+  // CreateSession 创建会话。
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
+  // ListSessions 列出当前用户的会话（分页，按更新时间倒序）。
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+  // GetSession 获取会话详情（含属主校验，非本人返回 NOT_FOUND）。
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
+  // DeleteSession 删除会话（含其全部消息，属主校验）。
+  rpc DeleteSession(DeleteSessionRequest) returns (DeleteSessionResponse);
+  // ListMessages 列出会话全部消息（seq 升序，含工具调用对，属主校验）。
+  // 供前端"历史回看"与"重开浏览器恢复上下文"使用。
+  rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse);
+  // DeleteMessage 删除"一轮完整对话"（属主校验）。
+  // 从该消息所在轮（最近的 user 消息）开始，删除到下一轮 user 消息之前
+  // 的全部消息（含该轮 user 消息、assistant 回答、工具调用对）——用户
+  // 觉得某段对话无意义想整段清理时使用。删除后该会话若已无任何消息，
+  // 会话自动软删（空会话不保留）。
+  rpc DeleteMessage(DeleteMessageRequest) returns (DeleteMessageResponse);
+  // RenameSession 重命名会话（属主校验）。
+  rpc RenameSession(RenameSessionRequest) returns (RenameSessionResponse);
+  // UpdateSessionConfig 更新会话配置（工具权限 / 思考模式等，属主校验）。
+  rpc UpdateSessionConfig(UpdateSessionConfigRequest) returns (UpdateSessionConfigResponse);
+  // ListTools 列出当前默认可用工具集（名称 + 描述），供前端渲染"工具权限"开关。
+  rpc ListTools(ListToolsRequest) returns (ListToolsResponse);
+  // ListResources 列出普通用户可见的资源清单（能力 + 技能）。
+  // 只含 id/名称/说明，不含任何工具名与技能代码（阶段1·权限分层）；
+  // 勾选结果存入 SessionConfig.enabled_resources，服务端翻译为工具白名单。
+  rpc ListResources(ListResourcesRequest) returns (ListResourcesResponse);
+  // Regenerate 重新生成某轮的回答（属主校验）。
+  // 旧版本回答保留（隐藏，可经 SetActiveVersion 切回），该轮之后的旧分支
+  // 被截断（隐藏）；新回答以新版本号落库。
+  rpc Regenerate(RegenerateRequest) returns (RegenerateResponse);
+  // StreamRegenerate 流式重新生成某轮的回答（版本语义同 Regenerate）。
+  // 正文增量/思考/工具调用与编排进度均经 SSE 逐事件下发；结束时带统计。
+  rpc StreamRegenerate(RegenerateRequest) returns (stream StreamChatEvent);
+  // SetActiveVersion 切换某轮的活跃版本（属主校验）。
+  // 隐藏该轮其它版本，并截断（隐藏）该轮之后的全部旧分支消息。
+  rpc SetActiveVersion(SetActiveVersionRequest) returns (SetActiveVersionResponse);
+  // CreateBranch 基于当前上下文创建分支会话（属主校验）。
+  // 复制"到分支点为止"的历史（含分支点所在轮），新会话可继续对话。
+  rpc CreateBranch(CreateBranchRequest) returns (CreateBranchResponse);
+  // Chat 非流式对话：加载历史 → framework.Run → 消息落库 → 返回。
+  rpc Chat(ChatRequest) returns (ChatResponse);
+  // StreamChat 流式对话：文本增量逐事件下发，结束时带统计。
+  rpc StreamChat(StreamChatRequest) returns (stream StreamChatEvent);
+  // SubmitToolResult 回填外部工具调用的执行结果（阶段3·本地工具代理）。
+  // 桌面客户端在完成本地工具执行后调用，唤醒挂起等待的会话继续推理。
+  // user_id 经 metadata 注入并做属主校验。
+  rpc SubmitToolResult(SubmitToolResultRequest) returns (SubmitToolResultResponse);
+  // MergeGuestSessions 登录后把游客阶段的会话合并到当前账号（阶段2·游客模式）。
+  // 游客会话以合成负 user_id 落库（见 auth.GuestUserID）；登录成功后前端
+  // 携带原游客 ID 调用本接口，把该命名空间下全部会话（含其消息）转移给
+  // 当前账号——"游客会话不保留、登录后合并"。调用方必须是真实用户。
+  rpc MergeGuestSessions(MergeGuestSessionsRequest) returns (MergeGuestSessionsResponse);
+  // UploadChatDocument 上传文档供智能体理解（模块二）。
+  // 解析复用 rag ingest 管线（md/txt/html/xlsx 原生；pdf/docx/pptx 委托沙盒），
+  // 解析全文落盘用户工作区 chat-files/<session_id>/，并注入一条限长 user
+  // 消息进会话历史（后续轮次可持续追问）。属主校验同会话。
+  rpc UploadChatDocument(UploadChatDocumentRequest) returns (UploadChatDocumentResponse);
+  // AdminSessionStats 管理端会话统计（数据管理模块，仅最高超管可见）。
+  // 由 gateway adminsvc 经鉴权后调用（内网可信转发）；返回时间窗口内的
+  // 会话聚合：按日新建会话数 + 按智能体域分布 + 全量累计会话数。
+  // 调用者身份仍经 metadata x-user-id 注入，避免裸 gRPC 匿名直连。
+  rpc AdminSessionStats(AdminSessionStatsRequest) returns (AdminSessionStatsResponse);
+}
+
+// MergeGuestSessionsRequest 游客会话合并请求。
+message MergeGuestSessionsRequest {
+  string guest_id = 1; // 游客 ID（前端本地生成，与 X-Guest-ID 头同源）
+}
+
+// MergeGuestSessionsResponse 游客会话合并结果。
+message MergeGuestSessionsResponse {
+  int32 migrated = 1; // 成功迁移的会话数
+}
+
+message CreateSessionRequest {
+  string title = 1; // 会话标题（空则自动生成"新对话"）
+  SessionConfig config = 2; // 初始会话配置（可空）
+  string agent_id = 3; // 会话所属智能体域：'' = 管理端域；'<id>' = 对应智能体域
+}
+
+message CreateSessionResponse {
+  Session session = 1;
+}
+
+message ListSessionsRequest {
+  int32 page = 1;      // 页码，从 1 开始
+  int32 page_size = 2; // 每页条数（默认 20，上限 100）
+  string agent_id = 3; // 只返回该智能体域的会话：'' = 管理端域；空参 = 全部域
+}
+
+message ListSessionsResponse {
+  repeated Session sessions = 1;
+  int64 total = 2; // 总条数（分页用）
+}
+
+message GetSessionRequest {
+  string session_id = 1;
+}
+
+message GetSessionResponse {
+  Session session = 1;
+}
+
+message DeleteSessionRequest {
+  string session_id = 1;
+}
+
+message DeleteSessionResponse {}
+
+message ListMessagesRequest {
+  string session_id = 1; // 目标会话
+}
+
+message ListMessagesResponse {
+  repeated Message messages = 1; // seq 升序的全部消息
+}
+
+message DeleteMessageRequest {
+  string session_id = 1; // 目标会话
+  string message_id = 2; // 目标消息 ID
+}
+
+message DeleteMessageResponse {}
+
+// RenameSessionRequest 重命名会话。
+message RenameSessionRequest {
+  string session_id = 1; // 目标会话
+  string title = 2;      // 新标题（1~100 字符）
+}
+
+message RenameSessionResponse {
+  Session session = 1;
+}
+
+// UpdateSessionConfigRequest 更新会话配置。
+message UpdateSessionConfigRequest {
+  string session_id = 1; // 目标会话
+  SessionConfig config = 2; // 新配置（全量替换）
+}
+
+message UpdateSessionConfigResponse {
+  Session session = 1;
+}
+
+// ListToolsRequest 列出默认可用工具集。
+// agent_id 目标智能体域；空 = 本实例默认域（向后兼容）。
+message ListToolsRequest {
+  string agent_id = 1;
+}
+
+message ListToolsResponse {
+  repeated ToolInfo tools = 1;
+}
+
+// ToolInfo 工具信息（供前端配置 UI 展示）。
+message ToolInfo {
+  string name = 1;        // 工具名（enabled_tools 里使用的标识）
+  string description = 2; // 工具说明（写给用户看的）
+  bool external = 3;      // 是否由外部（桌面客户端）代理执行——本地工具
+}
+
+// ListResourcesRequest 列出资源清单。
+// agent_id 目标智能体域；空 = 本实例默认域（向后兼容）。
+message ListResourcesRequest {
+  string agent_id = 1;
+}
+
+message ListResourcesResponse {
+  repeated ResourceInfo resources = 1;
+}
+
+// ResourceInfo 普通用户可见的资源项（能力或技能）。
+// id 即 enabled_resources 里使用的标识；type 区分来源：
+// capability = 内置能力（如 search/file/code/calculate/time/echo），
+// skill = 管理端上传的技能（如 emoji-helper）。
+message ResourceInfo {
+  string id = 1;          // 资源标识
+  string name = 2;        // 展示名
+  string description = 3; // 一句话说明
+  string type = 4;        // capability | skill
+}
+
+// RegenerateRequest 重新生成某轮回答。
+message RegenerateRequest {
+  string session_id = 1; // 目标会话
+  string message_id = 2; // 该轮任意一条消息（定位轮次）
+}
+
+message RegenerateResponse {
+  string content = 1;       // 新回答文本
+  int32 rounds = 2;         // 消息循环轮数
+  int32 tool_calls = 3;     // 实际执行的工具次数
+  int64 total_tokens = 4;   // 本次消耗 token
+  int32 version = 5;        // 新版本号
+}
+
+// SetActiveVersionRequest 切换某轮活跃版本。
+message SetActiveVersionRequest {
+  string session_id = 1; // 目标会话
+  string message_id = 2; // 该轮任意一条消息（定位轮次）
+  int32 version = 3;     // 目标版本号（0=初始回答）
+}
+
+message SetActiveVersionResponse {}
+
+// CreateBranchRequest 基于当前上下文创建分支会话。
+message CreateBranchRequest {
+  string session_id = 1; // 源会话
+  string message_id = 2; // 分支点：复制"该轮（含）"之前的全部历史
+}
+
+message CreateBranchResponse {
+  Session session = 1;
+}
+
+// Message 会话内单条消息（持久化视图，前端渲染用）。
+message Message {
+  string role = 1;         // user | assistant | tool | system
+  string content = 2;      // 文本内容
+  string tool_call_id = 3; // role=tool 时：对应哪次工具调用
+  string tool_calls = 4;   // role=assistant 时：工具调用指令 JSON（空串=无）
+  string id = 5;           // 数据库主键（BIGSERIAL 转字符串），删除/定位用
+  int64 round_no = 6;      // 轮次序号（user 消息开始新轮；删除/重生成/分支定位用）
+  int32 version = 7;       // 重生成版本号（0=初始回答）
+  int32 total_versions = 8; // 该轮版本总数（ListMessages 统计返回，切换 UI 用）
+  string reasoning = 9;    // assistant 消息的思考内容（DeepSeek reasoning_content）
+}
+
+// Session 会话元数据。
+message Session {
+  string id = 1;
+  string user_id = 2; // 属主（服务端写入；游客为合成负值）
+  string title = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  SessionConfig config = 6; // 会话配置（工具权限 / 思考模式等）
+  string agent_id = 7;      // 会话所属智能体域（'' = 管理端域）
+}
+
+// SessionConfig 会话级配置（JSONB 落库，proto 结构化视图）。
+message SessionConfig {
+  repeated string enabled_tools = 1; // 允许使用的工具名；空 = 全部启用
+  ThinkingConfig thinking = 2;       // 思考模式配置；nil = 厂商默认（思考开启）
+  // 用户级资源标识（能力 id 或技能名）；空 = 全部启用（阶段1）。
+  // 优先于 enabled_tools：两者同时存在时按 enabled_resources 翻译工具白名单。
+  repeated string enabled_resources = 3;
+  // 会话限定的知识库 ID 列表（P3-A6 反转语义）：空 = 本会话不使用知识库检索
+  // （kb_search 不装配）；非空 = kb_search 限定在所选知识库内检索。
+  repeated string kb_ids = 4;
+  // 会话限定的 MCP server 启用列表（管理员会话级配置）；空 = 全部已启用 server
+  // 的 MCP 工具生效（普通用户默认行为）。仅按 server 粒度过滤 mcp_<server>_ 工具。
+  repeated string mcp_servers = 5;
+  // kb_ids 是否已被显式设置（presence 标记）：true = 会话锁定 kb_ids 值，
+  // 空数组（KbIds 为空）即"本会话不使用知识库检索"，不再跟随默认配置；
+  // false = 未设置，读取时动态合并管理端默认知识库。proto3 的 repeated 空数组
+  // 序列化后与未设置不可区分，必须靠该标记表达"显式清空"。
+  bool kb_ids_set = 6;
+  // enabled_resources 是否已被显式设置（presence 标记，与 kb_ids_set 同款）：
+  // true = 会话锁定资源选择——空数组（EnabledResources 为空）即"不启用任何
+  // 能力/技能"（只保留基础对话），不再跟随管理端默认/实例全量；
+  // false = 未设置，空/缺省仍表示"全部启用"（历史语义）。proto3 的 repeated
+  // 空数组序列化后与未设置不可区分，必须靠该标记表达"显式清空"。
+  bool enabled_resources_set = 7;
+  // mcp_servers 是否已被显式设置（presence 标记，同款语义）：
+  // true = 会话锁定 MCP 选择——空数组即"本会话不装配任何 MCP 工具"（全不选）；
+  // false = 未设置，空/缺省 = 管理端全部已启用 server 生效。
+  bool mcp_servers_set = 8;
+  // 管理员级配置（快照固化，普通用户配置区只读；0 = 未设置，装配时回退
+  // 服务实例默认）。proto 层面仅透传，不校验范围——合法性由管理端保证。
+  int32 max_rounds = 9;            // 单次对话最大推理轮数
+  int32 max_messages = 10;         // 短期记忆窗口保留的最大消息数
+  int32 max_thinking_rounds = 11;  // 思考（工具调用）轮次上限；0 = 不单独限制
+  // 会话选定的模型名（llm-gateway 模型注册表内名称；空 = 使用实例默认模型）。
+  // 快照固化的普通字段：用户可在配置区选择，创建会话时从默认配置继承。
+  string model = 12;
+  // 能力/技能各自的 presence 标记（P3 反馈：能力与技能作为独立配置类别，
+  // 各自支持"全不选"显式语义；不再共用 enabled_resources_set 单一标记）。
+  // 组合语义（装配时能力/技能各自独立决定白名单）：
+  //   enabled_capabilities_set=true → 能力白名单 = enabled_resources 中能力项，
+  //       空能力项 = 新会话默认不启用任何能力；
+  //   enabled_skills_set=true → 技能白名单 = enabled_resources 中技能项，
+  //       空技能项 = 新会话默认不启用任何技能；
+  //   对应标记 false = 该类别未设置，跟随实例全量（全部启用）。
+  // 两个标记都未设置 → 退化为旧的联合白名单语义（enabled_resources_set）。
+  bool enabled_capabilities_set = 13;
+  bool enabled_skills_set = 14;
+  // 会话运行模式：single = 单智能体（默认，空/缺省即 single）；
+  // orchestrate = 多智能体编排（用户消息作为编排目标，由编排器拆解为子任务
+  // 协作完成）。子任务角色池由服务端内置（框架内置教研角色池），本字段仅
+  // 控制"是否走编排"这一开关；后期可扩展为角色池配置下发。
+  string mode = 15;
+  // 编排方案（仅 mode=orchestrate 生效）：
+  // fixed = 固定教研模板（默认，空/缺省）；dynamic = LLM 动态分解子任务 DAG。
+  string orchestrate_plan = 16;
+}
+
+// ThinkingConfig 思考模式配置（DeepSeek V4）。
+message ThinkingConfig {
+  bool enabled = 1;            // 思考开关
+  string reasoning_effort = 2; // 推理强度：low | high | max（空 = 厂商默认 high）
+}
+
+message ChatRequest {
+  string session_id = 1; // 目标会话
+  string content = 2;    // 用户消息内容
+}
+
+message ChatResponse {
+  string content = 1;            // 最终回答文本
+  int32 rounds = 2;              // 消息循环轮数（多步任务 > 1）
+  int32 tool_calls = 3;          // 实际执行的工具次数
+  int64 prompt_tokens = 4;       // 输入 token（成本核算）
+  int64 completion_tokens = 5;   // 输出 token
+  int64 total_tokens = 6;        // 合计
+}
+
+message StreamChatRequest {
+  string session_id = 1;
+  string content = 2;
+}
+
+// StreamChatEvent 流式事件：五种类型互斥（oneof）。
+message StreamChatEvent {
+  oneof event {
+    Delta delta = 1;      // 文本/思考增量（逐段下发，前端拼接即打字机效果）
+    ToolCall tool_call = 2; // 工具调用开始（前端可展示"正在调用 XX"）
+    Done done = 3;        // 结束事件（含统计；error 非空表示失败）
+    ToolResult tool_result = 4; // 工具执行返回（含成功内容或失败原因）
+    TaskStatus task_status = 5; // 多智能体编排进度（子任务开始/结束、编排完成/失败）
+  }
+}
+
+message Delta {
+  string content = 1;   // 回答文本增量
+  string reasoning = 2; // 思考内容增量（DeepSeek reasoning_content）
+}
+
+message ToolCall {
+  string name = 1;          // 工具名
+  string arguments = 2;     // 参数 JSON（演示/展示用）
+  string tool_call_id = 3;  // 本次调用的唯一标识（LLM 生成），外部执行回填时关联
+}
+
+message ToolResult {
+  string name = 1;          // 工具名
+  string content = 2;       // 执行结果文本（成功时）
+  string error = 3;         // 失败原因（成功时为空）
+  string tool_call_id = 4;  // 对应 ToolCall.tool_call_id
+}
+
+message Done {
+  int32 rounds = 1;
+  int32 tool_calls = 2;
+  int64 prompt_tokens = 3;
+  int64 completion_tokens = 4;
+  int64 total_tokens = 5;
+  string error = 6; // 空 = 成功；非空 = 失败原因
+}
+
+// TaskStatus 多智能体编排进度事件（对应 orchestrate.ProgressEvent）。
+// 仅 mode=orchestrate 的会话下发；前端据此渲染子任务状态流。
+message TaskStatus {
+  string type = 1;      // task_started | task_content | task_finished | run_completed | run_failed
+  string task_id = 2;   // 子任务 ID（task_* 时非空）
+  string status = 3;    // running | completed | failed | skipped（task_finished 时）
+  string error = 4;     // 失败原因（run_failed / failed 时）
+  int64 total_tokens = 5; // 该子任务累计 token（task_finished 时，成本核算）
+  string content = 6;   // 子任务输出增量（type=task_content 时下发，前端累积渲染实时打字机）
+  string kind = 7;      // task_content 时区分增量内容：text|reasoning|tool_start|tool_end
+}
+
+// SubmitToolResultRequest 外部工具执行结果回填请求。
+message SubmitToolResultRequest {
+  string session_id = 1;   // 目标会话
+  string tool_call_id = 2; // 外部工具调用的唯一标识（tool_call 事件下发）
+  string content = 3;      // 执行结果文本（失败时写入失败原因）
+  bool is_error = 4;       // 是否失败
+}
+
+message SubmitToolResultResponse {}
+
+// UploadChatDocumentRequest 聊天上传文档请求。
+message UploadChatDocumentRequest {
+  string session_id = 1; // 目标会话
+  string file_name = 2;  // 文件名（含扩展名，白名单校验）
+  bytes content = 3;     // 文档原始字节（≤20MB）
+}
+
+// UploadChatDocumentResponse 上传文档处理结果。
+message UploadChatDocumentResponse {
+  string file_name = 1;   // 文件名
+  string rel_path = 2;    // 相对工作区根的展示路径 users/<uid>/chat-files/<sid>/<file>
+  int32 segments = 3;     // 解析段数
+  int32 injected_len = 4; // 注入会话历史的字符数
+  repeated string media = 5;    // 提取的媒体相对路径（rag-media/...）
+  repeated string warnings = 6; // 解析警告（空 = 无）
+}
+
+// AdminSessionStatsRequest 管理端会话统计请求。
+message AdminSessionStatsRequest {
+  int32 days = 1; // 窗口天数（1..90，默认 30）；统计"近 days 天"按日新建会话
+}
+
+// AdminSessionStatsResponse 管理端会话统计响应。
+message AdminSessionStatsResponse {
+  repeated SessionDayStat days = 1;     // 按日新建会话数（近 days 天，含 0 值的完整日序列）
+  repeated SessionAgentStat agents = 2; // 按智能体域会话分布（近 days 天，按会话数倒序）
+  int64 total_sessions = 3;             // 全量累计有效会话数（status=1）
+}
+
+// SessionDayStat 单日新建会话统计。
+message SessionDayStat {
+  string date = 1;    // YYYY-MM-DD（服务端本地时区）
+  int64 sessions = 2; // 该日新建的有效会话数
+}
+
+// SessionAgentStat 单智能体域会话统计。
+message SessionAgentStat {
+  string agent_id = 1; // '' = 管理端域；'<id>' = 对应智能体域
+  int64 sessions = 2;  // 近 days 天该域新建的有效会话数
+}

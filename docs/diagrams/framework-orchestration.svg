@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="100%" height="100%" font-family="'Microsoft YaHei','PingFang SC',sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <!-- 标题 -->
+  <text x="640" y="34" text-anchor="middle" font-size="22" font-weight="bold" fill="#0f172a">framework · 多智能体编排（orchestrate 包）</text>
+  <text x="640" y="58" text-anchor="middle" font-size="13" fill="#64748b">编排器 = 一个 Agent + 编排工具集（orchestrate_plan）· 复用 agent.Session 执行循环 · 角色池 / 固定与动态 DAG</text>
+
+  <!-- ============ 入口 ============ -->
+  <rect x="440" y="86" width="400" height="54" rx="10" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="640" y="109" text-anchor="middle" font-size="14" font-weight="bold" fill="#4338ca">会话 mode=orchestrate</text>
+  <text x="640" y="129" text-anchor="middle" font-size="11" fill="#64748b">orchestrate_plan：fixed | dynamic（空=fixed 向后兼容）</text>
+
+  <path d="M 640 140 L 640 162" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ============ 三段装配 ============ -->
+  <rect x="80" y="164" width="1120" height="150" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="120" y="190" font-size="13" font-weight="bold" fill="#334155">Orchestrator 装配（buildOrchestrator）</text>
+
+  <!-- planner -->
+  <rect x="120" y="204" width="320" height="90" rx="10" fill="#eff6ff" stroke="#60a5fa"/>
+  <text x="280" y="228" text-anchor="middle" font-size="14" font-weight="bold" fill="#1d4ed8">Planner · 任务分解</text>
+  <rect x="140" y="240" width="140" height="40" rx="6" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="210" y="265" text-anchor="middle" font-size="12" fill="#334155">FixedPlanner</text>
+  <rect x="292" y="240" width="140" height="40" rx="6" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="362" y="265" text-anchor="middle" font-size="12" fill="#334155">LLMPlanner</text>
+  <text x="280" y="290" text-anchor="middle" font-size="11" fill="#94a3b8">固定教研模板 / 动态分解（JSON 约束）</text>
+
+  <path d="M 440 250 L 470 250" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- executor -->
+  <rect x="472" y="204" width="340" height="90" rx="10" fill="#fffbeb" stroke="#f59e0b"/>
+  <text x="642" y="228" text-anchor="middle" font-size="14" font-weight="bold" fill="#b45309">Executor · DAG 调度执行</text>
+  <text x="492" y="252" font-size="12" fill="#475569">· 入度 0 节点并行调度（MaxParallel）</text>
+  <text x="492" y="272" font-size="12" fill="#475569">· 完成解锁下游 · 失败降级策略</text>
+  <text x="492" y="292" font-size="12" fill="#475569">· 递归子图（深度≤3 · 总任务≤30）</text>
+
+  <path d="M 812 250 L 842 250" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- aggregator -->
+  <rect x="844" y="204" width="320" height="90" rx="10" fill="#f0fdf4" stroke="#4ade80"/>
+  <text x="1004" y="228" text-anchor="middle" font-size="14" font-weight="bold" fill="#15803d">Aggregator · 汇总精炼</text>
+  <text x="864" y="252" font-size="12" fill="#475569">· 汇总各子任务成果</text>
+  <text x="864" y="272" font-size="12" fill="#475569">· LLM 精炼为最终回答</text>
+  <text x="864" y="292" font-size="12" fill="#94a3b8">子任务输出截断版入历史摘要</text>
+
+  <!-- ============ DAG 示例 ============ -->
+  <text x="640" y="352" text-anchor="middle" font-size="13" font-weight="bold" fill="#334155">执行示例：固定教研 DAG（子任务为独立 agent.Session，纯文本 + 工具白名单）</text>
+  <rect x="120" y="368" width="200" height="56" rx="10" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="220" y="392" text-anchor="middle" font-size="14" fill="#1d4ed8">研究</text>
+  <text x="220" y="412" text-anchor="middle" font-size="11" fill="#94a3b8">1200s · 角色级超时</text>
+  <path d="M 320 396 L 370 396" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="372" y="368" width="200" height="56" rx="10" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="472" y="392" text-anchor="middle" font-size="14" fill="#1d4ed8">大纲</text>
+  <text x="472" y="412" text-anchor="middle" font-size="11" fill="#94a3b8">1500s · 依赖研究</text>
+  <path d="M 572 396 L 622 396" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="624" y="368" width="200" height="56" rx="10" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="724" y="392" text-anchor="middle" font-size="14" fill="#1d4ed8">内容</text>
+  <text x="724" y="412" text-anchor="middle" font-size="11" fill="#94a3b8">1800s · 工具可用</text>
+  <path d="M 824 396 L 874 396" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="876" y="368" width="200" height="56" rx="10" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="976" y="392" text-anchor="middle" font-size="14" fill="#1d4ed8">审核</text>
+  <text x="976" y="412" text-anchor="middle" font-size="11" fill="#94a3b8">1200s · 校验输出</text>
+
+  <text x="640" y="452" text-anchor="middle" font-size="11" fill="#64748b">TaskSpec：ID / 角色 / Goal / Input / OutputSchema（JSON 校验）/ Deps / 模型覆盖 / Subgraph（递归编排）</text>
+
+  <!-- ============ 韧性 ============ -->
+  <rect x="80" y="472" width="540" height="120" rx="10" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="120" y="500" font-size="13" font-weight="bold" fill="#334155">失败降级策略（fail_abort / skip / continue）</text>
+  <text x="120" y="524" font-size="12" fill="#475569">· upstream 截断：防 prompt 膨胀</text>
+  <text x="120" y="546" font-size="12" fill="#475569">· 可重试错误整任务重试（指数退避）</text>
+  <text x="120" y="568" font-size="12" fill="#475569">· 子任务超时默认 1800s（0=不限制）</text>
+  <text x="120" y="586" font-size="11" fill="#94a3b8">角色级超时可覆盖：research 1200 / outline 1500 / content 1800 / review 1200</text>
+
+  <!-- ============ 进度与落库 ============ -->
+  <rect x="660" y="472" width="540" height="120" rx="10" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="700" y="500" font-size="13" font-weight="bold" fill="#334155">进度事件与持久化</text>
+  <text x="700" y="524" font-size="12" fill="#475569">· SSE：task_started / task_finished / run_completed / run_failed</text>
+  <text x="700" y="546" font-size="12" fill="#475569">· 子任务 ID 层级前缀（report.前端）</text>
+  <text x="700" y="568" font-size="12" fill="#475569">· user/assistant 落库 · 摘要 __orch_v1__</text>
+  <text x="700" y="586" font-size="11" fill="#94a3b8">结果层无前缀保持入库兼容</text>
+
+  <!-- ============ 底部 ============ -->
+  <rect x="80" y="620" width="1120" height="120" rx="12" fill="#f0fdf4" stroke="#4ade80"/>
+  <text x="120" y="650" font-size="14" font-weight="bold" fill="#15803d">与文档生成衔接（P4-I/J 阶段2）</text>
+  <text x="120" y="676" font-size="12" fill="#475569">· 目标命中（ppt / word / 泛化"文档"+生成动词）→ 自动提炼 DocumentSpec 结构化文档模型</text>
+  <text x="120" y="700" font-size="12" fill="#475569">· 渲染作为收尾节点：沙盒 profile（render_docx / render_pptx / render_html）→ 产物落 users/&lt;uid&gt;/chat-docs/</text>
+  <text x="120" y="724" font-size="12" fill="#475569">· 图片资产双通道：知识库媒体透传（rag-media/）+ 智能体内联 SVG（svg:// → PyMuPDF 转 PNG）</text>
+
+  <text x="640" y="776" text-anchor="middle" font-size="11" fill="#94a3b8">所属主图区块：framework 能力层 · 返回 system-overview.svg</text>
+</svg>

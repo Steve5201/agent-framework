@@ -1,0 +1,32 @@
+[package]
+name = "agent-desktop"
+version = "0.1.0"
+description = "智能体助手桌面端（Tauri 2 + Rust 壳）"
+authors = ["agent-framework contributors"]
+edition = "2021"
+rust-version = "1.77"
+
+# 库目标：Tauri 要求 lib 名用下划线（main.rs 引用 lib 的 run()）
+[lib]
+name = "agent_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+# 系统通知（P2-85）
+tauri-plugin-notification = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Windows 中文控制台输出解码（GBK→UTF-8）：cmd 错误信息/中文文件内容兜底解码
+encoding_rs = "0.8"
+# 系统凭据库（记住密码，P 阶段1）：Windows 凭据管理器 / macOS Keychain / Linux Secret Service
+keyring = "3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

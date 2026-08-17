@@ -1,0 +1,526 @@
+openapi: 3.0.3
+info:
+  title: Agent Gateway API
+  description: |
+    Agent 微服务网关（通用智能体框架）的唯一对外 HTTP 入口。
+    鉴权方式：注册/登录后拿到 access_token，之后每个请求在
+    Authorization 头携带 `Bearer <access_token>`。token 过期后用
+    refresh_token 调用 /v1/auth/refresh 续期。
+  version: 0.2.0
+servers:
+  - url: http://localhost:8080
+    description: 本地开发
+tags:
+  - name: auth
+    description: 认证：注册 / 登录 / 刷新 / 登出 / 当前用户
+  - name: agent
+    description: 智能体会话与对话
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          example: UNAUTHENTICATED
+        message:
+          type: string
+        request_id:
+          type: string
+          description: 请求链路 ID，排查问题时报给管理员
+    Session:
+      type: object
+      properties:
+        id: { type: string, example: "1" }
+        user_id: { type: string, example: "1" }
+        title: { type: string, example: 考研规划 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        config:
+          $ref: '#/components/schemas/SessionConfig'
+    SessionConfig:
+      type: object
+      description: 会话级配置（工具权限 + 思考模式）。缺省 = 全部工具启用 + 思考按厂商默认
+      properties:
+        enabled_tools:
+          type: array
+          items: { type: string }
+          description: 允许使用的工具名白名单；空/缺省 = 全部启用
+        thinking:
+          type: object
+          properties:
+            enabled: { type: boolean, description: 思考开关（false = 直接回答） }
+            reasoning_effort:
+              type: string
+              enum: [low, high, max]
+              description: 推理强度；缺省 = 厂商默认 high
+    ToolInfo:
+      type: object
+      properties:
+        name: { type: string, description: 工具名（enabled_tools 里的标识） }
+        description: { type: string, description: 工具说明 }
+        external: { type: boolean, default: false, description: 阶段3：true=本地工具，由宿主外部执行（如 local_shell 走桌面端 + tool-results 回填） }
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          description: 数据库主键（BIGSERIAL 转字符串），删除/定位用
+        role:
+          type: string
+          enum: [user, assistant, tool, system]
+        content: { type: string }
+        reasoning:
+          type: string
+          description: assistant 消息的思考内容（DeepSeek reasoning_content）；前端"思考过程"气泡数据源
+        tool_call_id:
+          type: string
+          description: role=tool 时对应哪次工具调用
+        tool_calls:
+          type: string
+          description: role=assistant 时的工具调用指令（JSON 字符串；空串=无）
+        round_no:
+          type: integer
+          description: 轮次序号（每轮从 user 提问开始；重生成/分支/版本切换定位用）
+        version:
+          type: integer
+          description: 该条回答的版本号（0=初始回答，重新生成递增）
+        total_versions:
+          type: integer
+          description: 该轮回答的版本总数（前端切换 UI 用）
+    RegenerateResult:
+      type: object
+      properties:
+        content: { type: string }
+        rounds: { type: integer }
+        tool_calls: { type: integer }
+        total_tokens: { type: integer }
+        version: { type: integer, description: 新生成的版本号 }
+    SessionResult:
+      type: object
+      properties:
+        session: { $ref: "#/components/schemas/Session" }
+    ChatResult:
+      type: object
+      properties:
+        content: { type: string }
+        rounds: { type: integer, description: 工具推理轮数 }
+        tool_calls: { type: integer, description: 实际执行工具次数 }
+        prompt_tokens: { type: integer }
+        completion_tokens: { type: integer }
+        total_tokens: { type: integer }
+paths:
+  /healthz:
+    get:
+      tags: [auth]
+      summary: 健康检查（无需鉴权）
+      responses:
+        "200": { description: 服务存活 }
+  /v1/auth/register:
+    post:
+      tags: [auth]
+      summary: 注册新用户（匿名）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string, minLength: 3, maxLength: 32 }
+                password: { type: string, minLength: 6, maxLength: 72 }
+      responses:
+        "201":
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id: { type: string }
+                  username: { type: string }
+        "400":
+          $ref: "#/components/schemas/Error"
+        "409":
+          description: 用户名已存在
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /v1/auth/login:
+    post:
+      tags: [auth]
+      summary: 登录（匿名），返回双令牌
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string }
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string, description: JWT，短期有效（15m） }
+                  refresh_token: { type: string, description: 长期（7d），可吊销 }
+                  expires_in: { type: integer, description: access 剩余秒数 }
+                  user:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      username: { type: string }
+                      role: { type: string }
+        "401":
+          $ref: "#/components/schemas/Error"
+  /v1/auth/refresh:
+    post:
+      tags: [auth]
+      summary: 刷新令牌（匿名），旧 refresh 一次性吊销并轮换
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        "200":
+          description: 新令牌对
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  refresh_token: { type: string }
+                  expires_in: { type: integer }
+        "401":
+          $ref: "#/components/schemas/Error"
+  /v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: 登出，吊销 refresh 令牌族（重放整族失效）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        "204": { description: 登出成功 }
+  /v1/auth/me:
+    get:
+      tags: [auth]
+      summary: 当前用户资料
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  username: { type: string }
+                  role: { type: string }
+        "401":
+          $ref: "#/components/schemas/Error"
+  /v1/agent/sessions:
+    post:
+      tags: [agent]
+      summary: 创建会话
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string, description: 标题，空则默认"新对话" }
+                config:
+                  $ref: "#/components/schemas/SessionConfig"
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session: { $ref: "#/components/schemas/Session" }
+    get:
+      tags: [agent]
+      summary: 会话列表（分页）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: page_size, in: query, schema: { type: integer, default: 20, maximum: 100 } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions: { type: array, items: { $ref: "#/components/schemas/Session" } }
+                  total: { type: integer }
+  /v1/agent/sessions/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [agent]
+      summary: 会话详情（非本人返回 404，防枚举）
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session: { $ref: "#/components/schemas/Session" }
+        "404": { $ref: "#/components/schemas/Error" }
+    delete:
+      tags: [agent]
+      summary: 删除会话（软删，幂等）
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204": { description: 删除成功 }
+        "404": { $ref: "#/components/schemas/Error" }
+    patch:
+      tags: [agent]
+      summary: 更新会话（重命名 和/或 更新配置）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string, description: 新标题（1~100 字符） }
+                config:
+                  $ref: "#/components/schemas/SessionConfig"
+              description: 至少提供 title 或 config 之一；可同时给出，各自独立应用
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session: { $ref: "#/components/schemas/Session" }
+        "400": { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/schemas/Error" }
+  /v1/agent/tools:
+    get:
+      tags: [agent]
+      summary: 列出默认可用工具集（名称 + 描述，配置开关渲染用）
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tools: { type: array, items: { $ref: "#/components/schemas/ToolInfo" } }
+  /v1/agent/sessions/{id}/messages:
+    get:
+      tags: [agent]
+      summary: 会话历史消息（seq 升序，含工具调用对）
+      description: |
+        返回该会话的全部消息，供前端历史回看 / 重开浏览器恢复上下文。
+        消息按 seq 升序。tool 消息带 tool_call_id，assistant 消息可能带
+        tool_calls（JSON 字符串）。
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items: { $ref: "#/components/schemas/Message" }
+        "404": { $ref: "#/components/schemas/Error" }
+  /v1/agent/sessions/{id}/messages/{mid}:
+    delete:
+      tags: [agent]
+      summary: 删除一轮完整对话（属主校验，不存在幂等成功）
+      description: |
+        删除该消息所在的整轮（该轮 user 提问 + assistant 回答 + 工具调用对）。
+        删除后若会话已无任何消息，会话自动删除（空会话不保留）。
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: mid, in: path, required: true, schema: { type: string } }
+      responses:
+        "204": { description: 删除成功 }
+        "400": { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/schemas/Error" }
+  /v1/agent/sessions/{id}/messages/{mid}/regenerate:
+    post:
+      tags: [agent]
+      summary: 重新生成该轮回答（多版本保留，可切换）
+      description: |
+        以该轮之前的上下文重新生成回答。旧版本不删除（hidden，数据保留），
+        前端可调用 /version 切换展示哪个版本。该轮之后的消息暂隐藏，
+        切换版本时自动恢复对应后续轮次。
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: mid, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: 新生成回答
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegenerateResult" }
+        "404": { $ref: "#/components/schemas/Error" }
+  /v1/agent/sessions/{id}/messages/{mid}/version:
+    post:
+      tags: [agent]
+      summary: 切换该轮活跃版本
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: mid, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version]
+              properties:
+                version: { type: integer, description: 目标版本号（0=初始回答） }
+      responses:
+        "204": { description: 切换成功 }
+        "404": { $ref: "#/components/schemas/Error" }
+  /v1/agent/sessions/{id}/messages/{mid}/branch:
+    post:
+      tags: [agent]
+      summary: 基于该轮之前的上下文创建分支会话
+      description: |
+        复制到该轮（含）为止的可见历史到新会话，标题为原标题 + "（分支）"。
+        新会话可直接继续对话，不影响原会话。
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: mid, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: 新分支会话
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionResult" }
+        "404": { $ref: "#/components/schemas/Error" }
+  /v1/agent/sessions/{id}/chat:
+    post:
+      tags: [agent]
+      summary: 非流式对话（等待完整回答返回）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, description: 用户消息 }
+      responses:
+        "200":
+          description: 完整回答
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatResult" }
+        "404": { $ref: "#/components/schemas/Error" }
+  /v1/agent/sessions/{id}/chat/stream:
+    post:
+      tags: [agent]
+      summary: 流式对话（SSE 打字机）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string }
+      responses:
+        "200":
+          description: |
+            SSE 流。事件（data 均为 JSON 行）：
+            - `data: {"type":"delta","content":"..."}` 回答文本增量
+            - `data: {"type":"reasoning","content":"..."}` 思考增量（DeepSeek reasoning_content）
+            - `data: {"type":"tool_call","name":"...","arguments":"...","tool_call_id":"..."}` 工具调用开始（tool_call_id 供本地工具回填）
+            - `data: {"type":"tool_result","name":"...","content":"...","error":"...","tool_call_id":"..."}` 工具执行返回（error 非空=失败）
+            - `event: done` + `data: {"type":"done","rounds":1,...}` 结束统计
+            - `event: error` + `data: {"message":"..."}` 流中错误
+            - `: keepalive` 注释行（15s 心跳）
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                format: sse
+        "404": { $ref: "#/components/schemas/Error" }
+
+  /v1/agent/sessions/{id}/tool-results:
+    post:
+      tags: [agent]
+      summary: 回填外部工具执行结果（本地工具，阶段3）
+      description: |
+        agent 调用 external 本地工具（如 local_shell）后会挂起等待结果；
+        桌面端完成本机执行后调用本接口回填，唤醒会话继续推理。
+        tool_call_id 取自 SSE 流式对话的 tool_call 事件。
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tool_call_id]
+              properties:
+                tool_call_id: { type: string, description: SSE tool_call 事件下发的调用 ID }
+                content: { type: string, description: 执行结果文本（stdout+stderr+退出码） }
+                is_error: { type: boolean, default: false, description: 执行是否失败 }
+      responses:
+        "204":
+          description: 回填成功，会话已唤醒
+        "400": { $ref: "#/components/schemas/Error" }
+        "404":
+          description: 会话不存在/非本人/该工具调用未挂起或已超时
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }

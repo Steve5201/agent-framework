@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="100%" height="100%" font-family="'Microsoft YaHei','PingFang SC',sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrB" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    </marker>
+    <marker id="arrI" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6366f1"/>
+    </marker>
+  </defs>
+
+  <!-- 标题 -->
+  <text x="640" y="32" text-anchor="middle" font-size="24" font-weight="bold" fill="#0f172a">智能体框架 · 全栈系统总览</text>
+  <text x="640" y="56" text-anchor="middle" font-size="13" fill="#64748b">Monorepo：backend（Go 微服务）· framework（可复用 Agent 框架）· web（React）· desktop（Tauri）· deploy（编排）</text>
+
+  <!-- ============ 客户端层 ============ -->
+  <rect x="160" y="88" width="380" height="60" rx="10" fill="#eff6ff" stroke="#60a5fa" stroke-width="1.5"/>
+  <text x="350" y="112" text-anchor="middle" font-size="15" font-weight="bold" fill="#1d4ed8">Web 前端（React）</text>
+  <text x="350" y="134" text-anchor="middle" font-size="12" fill="#475569">管理端 / 聊天 / 知识库 / 大模型配置</text>
+
+  <rect x="740" y="88" width="380" height="60" rx="10" fill="#eff6ff" stroke="#60a5fa" stroke-width="1.5"/>
+  <text x="930" y="112" text-anchor="middle" font-size="15" font-weight="bold" fill="#1d4ed8">Desktop（Tauri 2）</text>
+  <text x="930" y="134" text-anchor="middle" font-size="12" fill="#475569">复用 web 构建产物 · 桌面壳 + 系统托盘</text>
+
+  <!-- 客户端 → gateway -->
+  <path d="M 350 148 L 350 170 L 560 170 L 560 186" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
+  <path d="M 930 148 L 930 170 L 720 170 L 720 186" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ============ 接入层 gateway ============ -->
+  <rect x="390" y="188" width="500" height="62" rx="10" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="640" y="214" text-anchor="middle" font-size="16" font-weight="bold" fill="#4338ca">Gateway · API 网关（对外唯一入口）</text>
+  <text x="640" y="238" text-anchor="middle" font-size="12" fill="#475569">:8080 · JWT 校验 · CORS 白名单 · 会话 / 文件 / 用量代理</text>
+
+  <!-- gateway → 微服务 -->
+  <path d="M 640 250 L 640 268" fill="none" stroke="#6366f1" stroke-width="1.5" marker-end="url(#arrI)"/>
+  <path d="M 640 268 L 168 268 L 168 296" fill="none" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arr)"/>
+  <path d="M 640 268 L 640 296" fill="none" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arr)"/>
+  <path d="M 640 268 L 640 268 L 1112 268 L 1112 296" fill="none" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arr)"/>
+
+  <!-- ============ 业务微服务层 ============ -->
+  <!-- auth -->
+  <rect x="56" y="298" width="224" height="188" rx="12" fill="#f5f3ff" stroke="#a78bfa"/>
+  <text x="168" y="322" text-anchor="middle" font-size="15" font-weight="bold" fill="#6d28d9">auth</text>
+  <text x="168" y="342" text-anchor="middle" font-size="11" fill="#64748b">:8081 gRPC</text>
+  <line x1="80" y1="354" x2="256" y2="354" stroke="#e9d5ff"/>
+  <text x="168" y="376" text-anchor="middle" font-size="12" fill="#374151">账号 / 登录注册</text>
+  <text x="168" y="396" text-anchor="middle" font-size="12" fill="#374151">JWT + RefreshToken</text>
+  <text x="168" y="416" text-anchor="middle" font-size="12" fill="#374151">RBAC 角色权限</text>
+  <text x="168" y="436" text-anchor="middle" font-size="12" fill="#374151">游客会话合并</text>
+  <text x="168" y="468" text-anchor="middle" font-size="11" fill="#7c3aed">详见 patterns-security.svg</text>
+
+  <!-- agent -->
+  <rect x="292" y="298" width="224" height="188" rx="12" fill="#eff6ff" stroke="#60a5fa" stroke-width="2"/>
+  <text x="404" y="322" text-anchor="middle" font-size="15" font-weight="bold" fill="#1d4ed8">agent</text>
+  <text x="404" y="342" text-anchor="middle" font-size="11" fill="#64748b">:8082 gRPC · :8182 /files</text>
+  <line x1="316" y1="354" x2="492" y2="354" stroke="#bfdbfe"/>
+  <text x="404" y="376" text-anchor="middle" font-size="12" fill="#374151">会话 / 消息版本与分支</text>
+  <text x="404" y="396" text-anchor="middle" font-size="12" fill="#374151">内置工具集 + 文档生成</text>
+  <text x="404" y="416" text-anchor="middle" font-size="12" fill="#374151">多智能体编排（角色池）</text>
+  <text x="404" y="436" text-anchor="middle" font-size="12" fill="#374151">本地媒体 / 技能 / MCP</text>
+  <text x="404" y="468" text-anchor="middle" font-size="11" fill="#1d4ed8">框架内核 → 见下 framework 层</text>
+
+  <!-- llm-gateway -->
+  <rect x="528" y="298" width="224" height="188" rx="12" fill="#ecfeff" stroke="#22d3ee"/>
+  <text x="640" y="322" text-anchor="middle" font-size="15" font-weight="bold" fill="#0e7490">llm-gateway</text>
+  <text x="640" y="342" text-anchor="middle" font-size="11" fill="#64748b">:8083</text>
+  <line x1="552" y1="354" x2="728" y2="354" stroke="#a5f3fc"/>
+  <text x="640" y="376" text-anchor="middle" font-size="12" fill="#374151">OpenAI 兼容统一协议</text>
+  <text x="640" y="396" text-anchor="middle" font-size="12" fill="#374151">模型注册表 / 多供应商</text>
+  <text x="640" y="416" text-anchor="middle" font-size="12" fill="#374151">token 用量统计与计价</text>
+  <text x="640" y="436" text-anchor="middle" font-size="12" fill="#374151">重试 / 超时 / 限流</text>
+  <text x="640" y="468" text-anchor="middle" font-size="11" fill="#0e7490">向上游大模型转发</text>
+
+  <!-- rag -->
+  <rect x="764" y="298" width="224" height="188" rx="12" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="876" y="322" text-anchor="middle" font-size="15" font-weight="bold" fill="#c2410c">rag</text>
+  <text x="876" y="342" text-anchor="middle" font-size="11" fill="#64748b">:8085 gRPC</text>
+  <line x1="788" y1="354" x2="964" y2="354" stroke="#fed7aa"/>
+  <text x="876" y="376" text-anchor="middle" font-size="12" fill="#374151">文档解析（docx/pdf/pptx）</text>
+  <text x="876" y="396" text-anchor="middle" font-size="12" fill="#374151">分块 / 向量化入库</text>
+  <text x="876" y="416" text-anchor="middle" font-size="12" fill="#374151">kb_search 检索注入</text>
+  <text x="876" y="436" text-anchor="middle" font-size="12" fill="#374151">媒体资源管理</text>
+  <text x="876" y="468" text-anchor="middle" font-size="11" fill="#c2410c">详见 rag-pipeline.svg</text>
+
+  <!-- sandbox -->
+  <rect x="1000" y="298" width="224" height="188" rx="12" fill="#fef2f2" stroke="#fca5a5"/>
+  <text x="1112" y="322" text-anchor="middle" font-size="15" font-weight="bold" fill="#b91c1c">sandbox</text>
+  <text x="1112" y="342" text-anchor="middle" font-size="11" fill="#64748b">:8087 内部</text>
+  <line x1="1024" y1="354" x2="1200" y2="354" stroke="#fecaca"/>
+  <text x="1112" y="376" text-anchor="middle" font-size="12" fill="#374151">代码执行（禁网+限额）</text>
+  <text x="1112" y="396" text-anchor="middle" font-size="12" fill="#374151">文档解析 / 渲染 profile</text>
+  <text x="1112" y="416" text-anchor="middle" font-size="12" fill="#374151">每用户独立 uid 工作区</text>
+  <text x="1112" y="436" text-anchor="middle" font-size="12" fill="#374151">不发布宿主端口</text>
+  <text x="1112" y="468" text-anchor="middle" font-size="11" fill="#b91c1c">详见 sandbox-security.svg</text>
+
+  <!-- 微服务 → framework 使用关系 -->
+  <path d="M 404 486 L 404 514" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- ============ framework 能力层 ============ -->
+  <rect x="56" y="516" width="1168" height="86" rx="12" fill="#f0fdf4" stroke="#4ade80"/>
+  <text x="640" y="540" text-anchor="middle" font-size="14" font-weight="bold" fill="#15803d">framework · 可复用 Agent 框架（agent 服务内核，独立模块可单独嵌入）</text>
+  <rect x="80" y="552" width="212" height="36" rx="6" fill="#ffffff" stroke="#86efac"/>
+  <text x="186" y="575" text-anchor="middle" font-size="12" fill="#14532d">llm · provider / 重试 / SSE</text>
+  <rect x="304" y="552" width="212" height="36" rx="6" fill="#ffffff" stroke="#86efac"/>
+  <text x="410" y="575" text-anchor="middle" font-size="12" fill="#14532d">memory · 短期 / 长期 / 压缩</text>
+  <rect x="528" y="552" width="212" height="36" rx="6" fill="#ffffff" stroke="#86efac"/>
+  <text x="634" y="575" text-anchor="middle" font-size="12" fill="#14532d">orchestrate · DAG / 编排</text>
+  <rect x="752" y="552" width="212" height="36" rx="6" fill="#ffffff" stroke="#86efac"/>
+  <text x="858" y="575" text-anchor="middle" font-size="12" fill="#14532d">schema · 消息 / 工具契约</text>
+  <rect x="976" y="552" width="212" height="36" rx="6" fill="#ffffff" stroke="#86efac"/>
+  <text x="1082" y="575" text-anchor="middle" font-size="12" fill="#14532d">tool · 注册表 / 审计</text>
+  <text x="640" y="596" text-anchor="middle" font-size="11" fill="#16a34a">详见 framework-agent-core.svg · framework-orchestration.svg · patterns-architecture.svg</text>
+
+  <!-- ============ 基础设施层 ============ -->
+  <path d="M 168 486 L 168 646" fill="none" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arr)"/>
+  <path d="M 640 486 L 640 632" fill="none" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arr)"/>
+  <path d="M 1112 486 L 1112 632" fill="none" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#arr)"/>
+
+  <rect x="56" y="640" width="360" height="92" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="236" y="664" text-anchor="middle" font-size="14" font-weight="bold" fill="#334155">PostgreSQL 16（pgvector）</text>
+  <text x="236" y="688" text-anchor="middle" font-size="12" fill="#475569">auth 库 · agent 库 · llm 库 · rag 库</text>
+  <text x="236" y="710" text-anchor="middle" font-size="11" fill="#94a3b8">多库隔离 · 迁移版本化 · 挂卷持久化</text>
+
+  <rect x="460" y="640" width="360" height="92" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="640" y="664" text-anchor="middle" font-size="14" font-weight="bold" fill="#334155">外部大模型（经 llm-gateway 转发）</text>
+  <text x="640" y="688" text-anchor="middle" font-size="12" fill="#475569">DeepSeek · 学校网关 · 智谱视觉</text>
+  <text x="640" y="710" text-anchor="middle" font-size="11" fill="#94a3b8">密钥走环境变量 · 用量计费透明</text>
+
+  <rect x="864" y="640" width="360" height="92" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="1044" y="664" text-anchor="middle" font-size="14" font-weight="bold" fill="#334155">Ollama（本地开发）</text>
+  <text x="1044" y="688" text-anchor="middle" font-size="12" fill="#475569">bge-m3 embedding · 开源免费</text>
+  <text x="1044" y="710" text-anchor="middle" font-size="11" fill="#94a3b8">云端 2G 内存改走硅基流动</text>
+
+  <!-- 底部注释 -->
+  <text x="640" y="774" text-anchor="middle" font-size="11" fill="#94a3b8">架构细节 → 子图：architecture-microservices.svg · framework-agent-core.svg · framework-orchestration.svg · rag-pipeline.svg · sandbox-security.svg · patterns-*.svg</text>
+</svg>

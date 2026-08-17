@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="100%" height="100%" font-family="'Microsoft YaHei','PingFang SC',sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <!-- 标题 -->
+  <text x="640" y="34" text-anchor="middle" font-size="22" font-weight="bold" fill="#0f172a">设计模式 · 消息存储：追加式日志 + 版本化 + 截断回滚</text>
+  <text x="640" y="58" text-anchor="middle" font-size="13" fill="#64748b">消息是不可变事实（append-only）· 轮次/版本承载分支语义 · 截断与恢复是事务操作</text>
+
+  <!-- ============ 1 追加式日志 ============ -->
+  <rect x="40" y="84" width="1200" height="180" rx="12" fill="#eff6ff" stroke="#60a5fa"/>
+  <text x="80" y="112" font-size="14" font-weight="bold" fill="#1d4ed8">① 追加式日志模型（AppendMessages · seq 连续分配）</text>
+
+  <rect x="80" y="130" width="150" height="110" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="155" y="156" text-anchor="middle" font-size="12" font-weight="bold" fill="#1d4ed8">round=1</text>
+  <text x="155" y="178" text-anchor="middle" font-size="11" fill="#475569">user 提问</text>
+  <text x="155" y="198" text-anchor="middle" font-size="11" fill="#475569">assistant v0</text>
+  <text x="155" y="218" text-anchor="middle" font-size="11" fill="#94a3b8">tool 结果</text>
+
+  <line x1="234" y1="185" x2="258" y2="185" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="260" y="130" width="150" height="110" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="335" y="156" text-anchor="middle" font-size="12" font-weight="bold" fill="#1d4ed8">round=2</text>
+  <text x="335" y="178" text-anchor="middle" font-size="11" fill="#475569">user 提问</text>
+  <text x="335" y="198" text-anchor="middle" font-size="11" fill="#475569">assistant v0</text>
+  <text x="335" y="218" text-anchor="middle" font-size="11" fill="#94a3b8">assistant v1（重生成）</text>
+
+  <line x1="414" y1="185" x2="438" y2="185" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="440" y="130" width="150" height="110" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="515" y="156" text-anchor="middle" font-size="12" font-weight="bold" fill="#1d4ed8">round=3</text>
+  <text x="515" y="178" text-anchor="middle" font-size="11" fill="#475569">user 提问</text>
+  <text x="515" y="198" text-anchor="middle" font-size="11" fill="#475569">assistant v0</text>
+  <text x="515" y="218" text-anchor="middle" font-size="11" fill="#94a3b8">…</text>
+
+  <line x1="594" y1="185" x2="618" y2="185" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="620" y="130" width="600" height="110" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="920" y="156" text-anchor="middle" font-size="12" font-weight="bold" fill="#1d4ed8">摘要 / 标记消息（system，不进模型上下文）</text>
+  <text x="920" y="178" text-anchor="middle" font-size="11" fill="#475569">__condense_v1__ 上下文压缩记录（dropped / count）</text>
+  <text x="920" y="198" text-anchor="middle" font-size="11" fill="#475569">__orch_v1__ 编排摘要（子任务状态 / 输出截断版）</text>
+  <text x="920" y="218" text-anchor="middle" font-size="11" fill="#94a3b8">历史回看渲染提示条 · 前端 parseCondenseSummary / parseOrchSummary</text>
+
+  <text x="80" y="254" font-size="11" fill="#1d4ed8">可见性 = hidden=false；隐藏即「截断」，不物理删除，回滚可恢复</text>
+
+  <!-- ============ 2 版本与分支 ============ -->
+  <rect x="40" y="282" width="1200" height="240" rx="12" fill="#f5f3ff" stroke="#a78bfa"/>
+  <text x="80" y="310" font-size="14" font-weight="bold" fill="#6d28d9">② 版本状态机（重新生成 / 分支 / 版本切换）</text>
+
+  <!-- 主链 -->
+  <rect x="80" y="336" width="200" height="60" rx="8" fill="#ffffff" stroke="#c4b5fd"/>
+  <text x="180" y="362" text-anchor="middle" font-size="12" fill="#6d28d9">round=N · v0</text>
+  <text x="180" y="382" text-anchor="middle" font-size="11" fill="#94a3b8">assistant · 活跃</text>
+
+  <path d="M 280 366 L 330 366" fill="none" stroke="#6d28d9" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="305" y="356" font-size="10" fill="#6d28d9">重新生成</text>
+
+  <rect x="332" y="336" width="200" height="60" rx="8" fill="#fdf4ff" stroke="#d946ef"/>
+  <text x="432" y="362" text-anchor="middle" font-size="12" fill="#a21caf">v1 · 活跃</text>
+  <text x="432" y="382" text-anchor="middle" font-size="11" fill="#94a3b8">v0 → hidden</text>
+
+  <path d="M 532 366 L 582 366" fill="none" stroke="#6d28d9" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="584" y="336" width="200" height="60" rx="8" fill="#ffffff" stroke="#c4b5fd"/>
+  <text x="684" y="362" text-anchor="middle" font-size="12" fill="#6d28d9">v2 · 活跃</text>
+  <text x="684" y="382" text-anchor="middle" font-size="11" fill="#94a3b8">v0/v1 → hidden</text>
+
+  <rect x="840" y="336" width="380" height="60" rx="8" fill="#fef2f2" stroke="#fca5a5"/>
+  <text x="1030" y="362" text-anchor="middle" font-size="12" font-weight="bold" fill="#b91c1c">生成失败 / 打断 → RestoreRoundAndAfter</text>
+  <text x="1030" y="382" text-anchor="middle" font-size="11" fill="#64748b">回滚截断恢复旧版本（context.WithoutCancel 防打断后失败）</text>
+
+  <rect x="80" y="420" width="540" height="84" rx="8" fill="#ffffff" stroke="#c4b5fd"/>
+  <text x="350" y="444" text-anchor="middle" font-size="12" font-weight="bold" fill="#6d28d9">分支 branch（另起路径）</text>
+  <text x="350" y="466" text-anchor="middle" font-size="11" fill="#475569">基于某版本另起分支 → 独立后续轮次</text>
+  <text x="350" y="486" text-anchor="middle" font-size="10" fill="#94a3b8">SetActiveVersion：显示该版本、隐藏其它版本并截断后续</text>
+
+  <rect x="640" y="420" width="580" height="84" rx="8" fill="#ffffff" stroke="#c4b5fd"/>
+  <text x="930" y="444" text-anchor="middle" font-size="12" font-weight="bold" fill="#6d28d9">前端同步（UI 状态一致）</text>
+  <text x="930" y="466" text-anchor="middle" font-size="11" fill="#475569">ChatMessage.status（streaming/done）· serverId 标识已落库</text>
+  <text x="930" y="486" text-anchor="middle" font-size="10" fill="#94a3b8">打断后重拉历史前缀匹配回填 serverId · 快照兜底防消失</text>
+
+  <!-- ============ 3 事务与降级 ============ -->
+  <rect x="40" y="540" width="1200" height="210" rx="12" fill="#f0fdf4" stroke="#4ade80"/>
+  <text x="80" y="568" font-size="14" font-weight="bold" fill="#15803d">③ 事务一致性与上下文降级</text>
+
+  <rect x="80" y="588" width="360" height="90" rx="8" fill="#ffffff" stroke="#86efac"/>
+  <text x="260" y="612" text-anchor="middle" font-size="12" font-weight="bold" fill="#14532d">截断 = 事务</text>
+  <text x="260" y="634" text-anchor="middle" font-size="11" fill="#475569">Hide / Restore / SetActive 单事务</text>
+  <text x="260" y="654" text-anchor="middle" font-size="11" fill="#475569">幂等（目标不存在视为成功）</text>
+  <text x="260" y="674" text-anchor="middle" font-size="10" fill="#94a3b8">写操作脱离请求 ctx，防打断中断</text>
+
+  <rect x="460" y="588" width="360" height="90" rx="8" fill="#ffffff" stroke="#86efac"/>
+  <text x="640" y="612" text-anchor="middle" font-size="12" font-weight="bold" fill="#14532d">部分结果持久化</text>
+  <text x="640" y="634" text-anchor="middle" font-size="11" fill="#475569">流错误/打断 → 已生成内容先落库</text>
+  <text x="640" y="654" text-anchor="middle" font-size="11" fill="#475569">persistPartialOnError · 轮次聚合</text>
+  <text x="640" y="674" text-anchor="middle" font-size="10" fill="#94a3b8">不让「整轮白干、消息凭空消失」</text>
+
+  <rect x="840" y="588" width="380" height="90" rx="8" fill="#ffffff" stroke="#86efac"/>
+  <text x="1030" y="612" text-anchor="middle" font-size="12" font-weight="bold" fill="#14532d">上下文有界</text>
+  <text x="1030" y="634" text-anchor="middle" font-size="11" fill="#475569">压缩：早期消息 → 摘要 system 消息</text>
+  <text x="1030" y="654" text-anchor="middle" font-size="11" fill="#475569">记忆窗口裁剪保护 assistant↔tool 配对</text>
+  <text x="1030" y="674" text-anchor="middle" font-size="10" fill="#94a3b8">sanitizeMessages 过滤无主 tool 消息</text>
+
+  <text x="640" y="740" text-anchor="middle" font-size="11" fill="#94a3b8">所属主图区块：agent 服务 · 返回 system-overview.svg</text>
+</svg>

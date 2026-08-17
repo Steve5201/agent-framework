@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="100%" height="100%" font-family="'Microsoft YaHei','PingFang SC',sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <marker id="arrB" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    </marker>
+    <marker id="arrG" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#16a34a"/>
+    </marker>
+  </defs>
+
+  <!-- 标题 -->
+  <text x="640" y="34" text-anchor="middle" font-size="22" font-weight="bold" fill="#0f172a">微服务拓扑与内部调用</text>
+  <text x="640" y="58" text-anchor="middle" font-size="13" fill="#64748b">gateway 对外唯一入口；服务间 gRPC / HTTP 白名单互访；sandbox 不发布宿主端口</text>
+
+  <!-- ============ 客户端 ============ -->
+  <rect x="120" y="96" width="200" height="52" rx="10" fill="#eff6ff" stroke="#60a5fa"/>
+  <text x="220" y="117" text-anchor="middle" font-size="14" font-weight="bold" fill="#1d4ed8">Web / Desktop</text>
+  <text x="220" y="137" text-anchor="middle" font-size="11" fill="#64748b">浏览器 + Tauri</text>
+
+  <!-- ============ gateway ============ -->
+  <path d="M 220 148 L 220 178" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="80" y="180" width="280" height="96" rx="12" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="220" y="208" text-anchor="middle" font-size="16" font-weight="bold" fill="#4338ca">gateway</text>
+  <text x="220" y="230" text-anchor="middle" font-size="12" fill="#475569">HTTP :8080 · SSE 流</text>
+  <text x="220" y="250" text-anchor="middle" font-size="11" fill="#64748b">JWT 校验 / CORS / 文件与用量代理</text>
+  <text x="220" y="268" text-anchor="middle" font-size="11" fill="#64748b">openapi.yaml 契约驱动</text>
+
+  <!-- ============ 左侧服务列 ============ -->
+  <rect x="480" y="96" width="300" height="86" rx="10" fill="#f5f3ff" stroke="#a78bfa"/>
+  <text x="630" y="122" text-anchor="middle" font-size="15" font-weight="bold" fill="#6d28d9">auth · 认证服务</text>
+  <text x="630" y="146" text-anchor="middle" font-size="12" fill="#475569">gRPC :8081 · auth.v1.proto</text>
+  <text x="630" y="166" text-anchor="middle" font-size="11" fill="#94a3b8">登录注册 / JWT / RBAC / 游客合并</text>
+
+  <rect x="480" y="206" width="300" height="86" rx="10" fill="#eff6ff" stroke="#60a5fa" stroke-width="2"/>
+  <text x="630" y="232" text-anchor="middle" font-size="15" font-weight="bold" fill="#1d4ed8">agent · 智能体服务</text>
+  <text x="630" y="256" text-anchor="middle" font-size="12" fill="#475569">gRPC :8082 + HTTP :8182 /files</text>
+  <text x="630" y="276" text-anchor="middle" font-size="11" fill="#94a3b8">会话 / 工具 / 文档 / 编排（framework 内核）</text>
+
+  <rect x="480" y="316" width="300" height="86" rx="10" fill="#ecfeff" stroke="#22d3ee"/>
+  <text x="630" y="342" text-anchor="middle" font-size="15" font-weight="bold" fill="#0e7490">llm-gateway · 模型网关</text>
+  <text x="630" y="366" text-anchor="middle" font-size="12" fill="#475569">HTTP :8083 · OpenAI 兼容</text>
+  <text x="630" y="386" text-anchor="middle" font-size="11" fill="#94a3b8">模型注册表 / 用量统计 / 重试</text>
+
+  <rect x="480" y="426" width="300" height="86" rx="10" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="630" y="452" text-anchor="middle" font-size="15" font-weight="bold" fill="#c2410c">rag · 知识库服务</text>
+  <text x="630" y="476" text-anchor="middle" font-size="12" fill="#475569">gRPC :8085 + HTTP :8185 health</text>
+  <text x="630" y="496" text-anchor="middle" font-size="11" fill="#94a3b8">解析 / 分块 / 向量化 / kb_search</text>
+
+  <!-- ============ 右侧依赖列 ============ -->
+  <rect x="920" y="96" width="300" height="86" rx="10" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="1070" y="122" text-anchor="middle" font-size="15" font-weight="bold" fill="#334155">PostgreSQL 16</text>
+  <text x="1070" y="146" text-anchor="middle" font-size="12" fill="#475569">:5432 · pgvector</text>
+  <text x="1070" y="166" text-anchor="middle" font-size="11" fill="#94a3b8">auth / agent / llm / rag 四库</text>
+
+  <rect x="920" y="206" width="300" height="86" rx="10" fill="#fef2f2" stroke="#fca5a5"/>
+  <text x="1070" y="232" text-anchor="middle" font-size="15" font-weight="bold" fill="#b91c1c">sandbox · 执行沙盒</text>
+  <text x="1070" y="256" text-anchor="middle" font-size="12" fill="#475569">HTTP :8087（仅容器内）</text>
+  <text x="1070" y="276" text-anchor="middle" font-size="11" fill="#94a3b8">代码执行 / 文档解析渲染 profile</text>
+
+  <rect x="920" y="316" width="300" height="86" rx="10" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="1070" y="342" text-anchor="middle" font-size="15" font-weight="bold" fill="#334155">Ollama（本地）</text>
+  <text x="1070" y="366" text-anchor="middle" font-size="12" fill="#475569">HTTP :11434</text>
+  <text x="1070" y="386" text-anchor="middle" font-size="11" fill="#94a3b8">bge-m3 embedding</text>
+
+  <rect x="920" y="426" width="300" height="86" rx="10" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="1070" y="452" text-anchor="middle" font-size="15" font-weight="bold" fill="#334155">外部大模型</text>
+  <text x="1070" y="476" text-anchor="middle" font-size="12" fill="#475569">HTTPS 443</text>
+  <text x="1070" y="496" text-anchor="middle" font-size="11" fill="#94a3b8">DeepSeek / 学校网关 / 智谱视觉</text>
+
+  <!-- ============ 调用箭头 ============ -->
+  <!-- gateway → auth/agent/rag -->
+  <path d="M 360 200 L 480 130" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="400" y="156" font-size="11" fill="#64748b">gRPC 校验/会话</text>
+  <path d="M 360 230 L 480 242" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="400" y="232" font-size="11" fill="#64748b">gRPC agent.v1</text>
+  <path d="M 360 262 L 480 470" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="390" y="420" font-size="11" fill="#64748b">gRPC rag.v1</text>
+
+  <!-- agent → llm-gateway / sandbox / rag -->
+  <path d="M 630 292 L 630 316" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrB)"/>
+  <text x="645" y="308" font-size="11" fill="#2563eb">HTTP /v1/chat/completions</text>
+  <path d="M 780 249 L 920 249" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrB)"/>
+  <text x="850" y="241" font-size="11" fill="#2563eb">HTTP /v1/exec</text>
+  <path d="M 780 268 L 900 460 L 920 460" fill="none" stroke="#2563eb" stroke-width="1.3" marker-end="url(#arrB)"/>
+  <text x="840" y="360" font-size="11" fill="#2563eb">gRPC kb_search</text>
+
+  <!-- rag → sandbox / ollama -->
+  <path d="M 780 480 L 900 480 L 900 260 L 920 260" fill="none" stroke="#c2410c" stroke-width="1.3" marker-end="url(#arr)"/>
+  <text x="900" y="400" font-size="11" fill="#c2410c" text-anchor="end">HTTP /v1/exec profile 解析</text>
+  <path d="M 780 496 L 900 496 L 900 360 L 920 360" fill="none" stroke="#c2410c" stroke-width="1.3" marker-end="url(#arr)"/>
+  <text x="900" y="440" font-size="11" fill="#c2410c" text-anchor="end">HTTP /v1/embeddings</text>
+
+  <!-- llm-gateway → 外部 -->
+  <path d="M 780 370 L 920 370" fill="none" stroke="#0e7490" stroke-width="1.3" marker-end="url(#arr)"/>
+  <text x="850" y="362" font-size="11" fill="#0e7490">HTTP 转发</text>
+
+  <!-- DB 连线 -->
+  <path d="M 630 182 L 630 560 L 920 560" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,4"/>
+  <path d="M 630 560 L 780 560 L 780 176 L 920 176" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,4"/>
+  <text x="790" y="560" font-size="11" fill="#94a3b8">SQL · pgx 连接池</text>
+
+  <!-- ============ 图例 ============ -->
+  <rect x="80" y="620" width="1120" height="130" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="120" y="648" font-size="14" font-weight="bold" fill="#334155">调用契约要点</text>
+  <text x="120" y="674" font-size="12" fill="#475569">· proto 契约（agent/auth/rag v1）由 protoc 生成，改动必须同步升级所有调用方，禁止 breaking change</text>
+  <text x="120" y="696" font-size="12" fill="#475569">· gateway 只经 gRPC 调后端；agent 经 llm-gateway 统一出口访问外部模型（密钥不落到 agent）</text>
+  <text x="120" y="718" font-size="12" fill="#475569">· sandbox 不发布宿主端口，仅容器内网可达；文件卷 ./data/agent 由 agent / sandbox / rag 共享</text>
+  <text x="120" y="740" font-size="12" fill="#475569">· 服务保持「薄」：联调统一走 docker compose；健康检查 /healthz 每服务暴露</text>
+
+  <text x="640" y="778" text-anchor="middle" font-size="11" fill="#94a3b8">所属主图区块：业务微服务层 · 返回 system-overview.svg</text>
+</svg>

@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 880" width="100%" height="100%" font-family="'Microsoft YaHei','PingFang SC',sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <marker id="arrB" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+  <!-- 标题 -->
+  <text x="600" y="30" text-anchor="middle" font-size="21" font-weight="bold" fill="#0f172a">
+    文档生成新方案 · HTML 中间层（业界标准管线）
+  </text>
+  <text x="600" y="54" text-anchor="middle" font-size="12" fill="#64748b">
+    LLM 产出 HTML 作为唯一事实源 → 浏览器渲染 → 多格式导出：一份源，预览即成品
+  </text>
+
+  <!-- ==================== 三列头 ==================== -->
+  <rect x="40" y="84" width="290" height="32" rx="8" fill="#334155"/>
+  <text x="185" y="105" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">① 产出源</text>
+
+  <rect x="350" y="84" width="500" height="32" rx="8" fill="#2563eb"/>
+  <text x="600" y="105" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">② HTML 中间层（唯一事实源）</text>
+
+  <rect x="870" y="84" width="290" height="32" rx="8" fill="#16a34a"/>
+  <text x="1015" y="105" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">③ 导出链路</text>
+
+  <!-- ==================== ① 产出源卡片 ==================== -->
+  <rect x="40" y="124" width="290" height="280" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="56" y="152" font-size="13" font-weight="bold" fill="#1e293b">智能体 / 编排产物</text>
+  <text x="56" y="174" font-size="11.5" fill="#475569">Markdown 或 DocumentSpec 语义块</text>
+
+  <line x1="185" y1="188" x2="185" y2="206" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <text x="56" y="228" font-size="13" font-weight="bold" fill="#2563eb">↓ LLM 生成单文件 HTML</text>
+  <text x="56" y="252" font-size="11.5" fill="#475569">· 智能体擅长 HTML/SVG，一次产出</text>
+  <text x="56" y="272" font-size="11.5" fill="#475569">· 无需手排引擎，天然精美排版</text>
+  <text x="56" y="292" font-size="11.5" fill="#475569">· 自包含：CSS / SVG / 公式 / 图片</text>
+  <text x="56" y="312" font-size="11.5" fill="#475569">· 内联资源（dataURL / 内联 SVG）</text>
+  <text x="56" y="336" font-size="11" fill="#64748b">可复用现有「编排自动产出」模板链路</text>
+  <text x="56" y="356" font-size="11" fill="#64748b">（当前 DocumentSpec 直写引擎作为</text>
+  <text x="56" y="374" font-size="11" fill="#64748b">备用，效果满意后逐步退役）</text>
+
+  <line x1="332" y1="264" x2="348" y2="264" stroke="#2563eb" stroke-width="2" marker-end="url(#arrB)"/>
+
+  <!-- ==================== ② HTML 中间层卡片 ==================== -->
+  <rect x="350" y="124" width="500" height="280" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="366" y="152" font-size="14" font-weight="bold" fill="#1d4ed8">一份 HTML = 文档本身，预览即成品</text>
+  <text x="366" y="174" font-size="11.5" fill="#1e3a8a">浏览器渲染效果 = 最终文档效果，全格式共用同一样式</text>
+
+  <rect x="366" y="190" width="468" height="150" rx="6" fill="#ffffff" stroke="#bfdbfe"/>
+  <text x="380" y="212" font-size="12" font-weight="bold" fill="#1d4ed8">HTML 模板规范（系统提示词约束）</text>
+  <text x="380" y="234" font-size="11.5" fill="#475569">· 打印优先：@page A4 边距 + 页眉页脚 + page-break 控制</text>
+  <text x="380" y="254" font-size="11.5" fill="#475569">· 语义化：h1-h3 / p / figure / pre / table，不用 div 堆</text>
+  <text x="380" y="274" font-size="11.5" fill="#475569">· 图表：内联 SVG（矢量，放大打印锐利）</text>
+  <text x="380" y="294" font-size="11.5" fill="#475569">· 公式：LaTeX → 服务端预渲染为内联 SVG（中文不乱码）</text>
+  <text x="380" y="314" font-size="11.5" fill="#475569">· 图片：dataURL 内联，或知识库媒体 rag-media/&lt;docID&gt;</text>
+  <text x="380" y="334" font-size="11.5" fill="#475569">· 渲染前统一注入打印样式，一份 HTML 三端复用</text>
+
+  <line x1="848" y1="264" x2="868" y2="264" stroke="#16a34a" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- ==================== ③ 导出链路卡片 ==================== -->
+  <rect x="870" y="132" width="290" height="64" rx="8" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="886" y="152" font-size="12" font-weight="bold" fill="#166534">① 实时预览（主力体验）</text>
+  <text x="886" y="172" font-size="11" fill="#14532d">iframe + sandbox 禁脚本 · 零后端成本</text>
+
+  <rect x="870" y="206" width="290" height="64" rx="8" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="886" y="226" font-size="12" font-weight="bold" fill="#166534">② PDF 导出（分享）</text>
+  <text x="886" y="246" font-size="11" fill="#14532d">Chromium headless page.pdf()</text>
+  <text x="886" y="262" font-size="11" fill="#14532d">A4 / 页眉页脚 / print CSS</text>
+
+  <rect x="870" y="280" width="290" height="64" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="886" y="300" font-size="12" font-weight="bold" fill="#334155">③ docx / pptx（近似转换）</text>
+  <text x="886" y="320" font-size="11" fill="#475569">docx=pandoc；pptx=按页切分</text>
+  <text x="886" y="336" font-size="11" fill="#64748b">样式以 HTML 为准，标注保真度</text>
+
+  <text x="1015" y="380" text-anchor="middle" font-size="11" fill="#16a34a" font-weight="bold">HTML 本身就是可下载产物（.html）</text>
+  <text x="1015" y="396" text-anchor="middle" font-size="11" fill="#16a34a" font-weight="bold">PDF/word/ppt 全部由它派生</text>
+
+  <!-- ==================== 技术栈 ==================== -->
+  <text x="600" y="438" text-anchor="middle" font-size="14" font-weight="bold" fill="#0f172a">技术栈选型（业界成熟标准）</text>
+
+  <rect x="40" y="452" width="224" height="150" rx="8" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="152" y="478" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">HTML 渲染引擎</text>
+  <text x="152" y="500" text-anchor="middle" font-size="11" fill="#475569">Playwright / Puppeteer</text>
+  <text x="152" y="518" text-anchor="middle" font-size="11" fill="#475569">+ Chromium headless</text>
+  <text x="152" y="536" text-anchor="middle" font-size="11" fill="#475569">page.pdf() 像素级保真</text>
+  <text x="152" y="556" text-anchor="middle" font-size="10.5" fill="#16a34a">业界 2026 标准（★）</text>
+  <text x="152" y="574" text-anchor="middle" font-size="10" fill="#94a3b8">备选：WeasyPrint / wkhtmltopdf</text>
+  <text x="152" y="590" text-anchor="middle" font-size="10" fill="#94a3b8">（CSS 支持弱于浏览器）</text>
+
+  <rect x="272" y="452" width="224" height="150" rx="8" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="384" y="478" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">实时预览</text>
+  <text x="384" y="500" text-anchor="middle" font-size="11" fill="#475569">iframe sandbox 属性</text>
+  <text x="384" y="518" text-anchor="middle" font-size="11" fill="#475569">禁脚本 / 禁外链</text>
+  <text x="384" y="536" text-anchor="middle" font-size="11" fill="#475569">同源 blob: URL 加载</text>
+  <text x="384" y="556" text-anchor="middle" font-size="10.5" fill="#16a34a">零后端成本</text>
+  <text x="384" y="574" text-anchor="middle" font-size="10" fill="#94a3b8">复用前端现有富媒体</text>
+  <text x="384" y="590" text-anchor="middle" font-size="10" fill="#94a3b8">渲染（HTML/SVG 支持）</text>
+
+  <rect x="504" y="452" width="224" height="150" rx="8" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="616" y="478" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">docx 转换</text>
+  <text x="616" y="500" text-anchor="middle" font-size="11" fill="#475569">pandoc（45.7k★）</text>
+  <text x="616" y="518" text-anchor="middle" font-size="11" fill="#475569">HTML→docx 语义保留</text>
+  <text x="616" y="536" text-anchor="middle" font-size="11" fill="#475569">reference.docx 定制样式</text>
+  <text x="616" y="556" text-anchor="middle" font-size="10.5" fill="#16a34a">业界唯一标准转换器</text>
+  <text x="616" y="574" text-anchor="middle" font-size="10" fill="#94a3b8">CI / 沙盒容器可跑</text>
+
+  <rect x="736" y="452" width="224" height="150" rx="8" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="848" y="478" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">公式渲染</text>
+  <text x="848" y="500" text-anchor="middle" font-size="11" fill="#475569">LaTeX → KaTeX</text>
+  <text x="848" y="518" text-anchor="middle" font-size="11" fill="#475569">服务端预渲染为内联 SVG</text>
+  <text x="848" y="536" text-anchor="middle" font-size="11" fill="#475569">预览/PDF/word 三端一致</text>
+  <text x="848" y="556" text-anchor="middle" font-size="10.5" fill="#16a34a">避免打印/转换乱码</text>
+  <text x="848" y="574" text-anchor="middle" font-size="10" fill="#94a3b8">复用现有 formula 链路</text>
+
+  <rect x="968" y="452" width="192" height="150" rx="8" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="1064" y="478" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">字体与分页</text>
+  <text x="1064" y="500" text-anchor="middle" font-size="11" fill="#475569">Noto CJK / 微软雅黑</text>
+  <text x="1064" y="518" text-anchor="middle" font-size="11" fill="#475569">@page A4 边距 12–20mm</text>
+  <text x="1064" y="536" text-anchor="middle" font-size="11" fill="#475569">page-break 避孤行孤表</text>
+  <text x="1064" y="556" text-anchor="middle" font-size="10.5" fill="#16a34a">中文排版友好</text>
+  <text x="1064" y="574" text-anchor="middle" font-size="10" fill="#94a3b8">沙盒容器内置字体</text>
+
+  <!-- ==================== 安全设计 ==================== -->
+  <rect x="40" y="618" width="1120" height="66" rx="8" fill="#fffbeb" stroke="#f59e0b"/>
+  <text x="600" y="642" text-anchor="middle" font-size="13" font-weight="bold" fill="#92400e">
+    安全设计（LLM 产出的 HTML 是「不可信输入」，必须设防线）
+  </text>
+  <text x="600" y="666" text-anchor="middle" font-size="11.5" fill="#92400e">
+    无头浏览器渲染时禁 JS（page.setJavaScriptEnabled(false)）· 渲染容器禁网 · 前端预览 iframe sandbox 禁脚本 · HTML 转义输出 —— 业界对 AI 生成 HTML 的标准做法
+  </text>
+
+  <!-- ==================== 与现方案衔接 ==================== -->
+  <text x="600" y="716" text-anchor="middle" font-size="14" font-weight="bold" fill="#0f172a">与现有 docgen 的衔接</text>
+
+  <rect x="40" y="728" width="560" height="92" rx="8" fill="#ecfdf5" stroke="#6ee7b7"/>
+  <text x="56" y="752" font-size="12" font-weight="bold" fill="#047857">复用现有（零改动）</text>
+  <text x="56" y="774" font-size="11" fill="#065f46">render_document 工具壳（新增 format=html 分支）</text>
+  <text x="56" y="794" font-size="11" fill="#065f46">/files 落盘下载 · autoRenderDocument 编排联动</text>
+  <text x="56" y="812" font-size="11" fill="#065f46">docgen 能力开关 · 前端 DocDownloadCard 下载卡片</text>
+
+  <rect x="620" y="728" width="540" height="92" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="636" y="752" font-size="12" font-weight="bold" fill="#1d4ed8">需新增</text>
+  <text x="636" y="774" font-size="11" fill="#1e3a8a">渲染容器装 Chromium + 中文字体（部署变更）</text>
+  <text x="636" y="794" font-size="11" fill="#1e3a8a">前端 HtmlPreview 预览组件（iframe sandbox）</text>
+  <text x="636" y="812" font-size="11" fill="#1e3a8a">HTML 模板规范 + 生成系统提示词（约束 @page/语义化）</text>
+
+  <!-- 注脚 -->
+  <text x="600" y="854" text-anchor="middle" font-size="11.5" fill="#64748b">
+    决策点：HTML 作为主力产物（.html 可下载 + 实时预览），PDF 按需导出，docx/pptx 标注近似保真 —— 效果满意后现有直写引擎逐步退役
+  </text>
+</svg>

@@ -1,0 +1,12 @@
+# 依赖与构建产物
+node_modules/
+src-tauri/target/
+src-tauri/gen/
+
+# 图标源文件（生成中间产物）
+app-icon.png
+
+# 编辑器
+.vscode/
+.idea/
+*.suo

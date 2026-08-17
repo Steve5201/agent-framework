@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="100%" height="100%" font-family="'Microsoft YaHei','PingFang SC',sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <!-- 标题 -->
+  <text x="640" y="34" text-anchor="middle" font-size="22" font-weight="bold" fill="#0f172a">设计模式 · 认证 / 授权 / 工具权限 / 审计</text>
+  <text x="640" y="58" text-anchor="middle" font-size="13" fill="#64748b">JWT 双 token · RBAC 角色 · L0-L3 工具分级 · 审计双通道 · 密钥环境变量注入</text>
+
+  <!-- ============ 认证流（左） ============ -->
+  <rect x="40" y="84" width="600" height="300" rx="12" fill="#eef2ff" stroke="#6366f1"/>
+  <text x="340" y="112" text-anchor="middle" font-size="15" font-weight="bold" fill="#4338ca">① 认证：JWT 短过期 + RefreshToken</text>
+
+  <rect x="80" y="132" width="160" height="52" rx="8" fill="#ffffff" stroke="#c7d2fe"/>
+  <text x="160" y="156" text-anchor="middle" font-size="12" fill="#4338ca">登录（账号/游客）</text>
+  <text x="160" y="174" text-anchor="middle" font-size="10" fill="#94a3b8">auth 服务签发</text>
+
+  <path d="M 240 158 L 288 158" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="290" y="132" width="320" height="52" rx="8" fill="#ffffff" stroke="#c7d2fe"/>
+  <text x="450" y="156" text-anchor="middle" font-size="12" fill="#4338ca">双 token：Access（短） + Refresh（长）</text>
+  <text x="450" y="174" text-anchor="middle" font-size="10" fill="#94a3b8">Refresh 过期 → 重新登录</text>
+
+  <path d="M 450 184 L 450 210" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="290" y="212" width="320" height="52" rx="8" fill="#ffffff" stroke="#c7d2fe"/>
+  <text x="450" y="236" text-anchor="middle" font-size="12" fill="#4338ca">请求链路：gateway 校验 JWT</text>
+  <text x="450" y="254" text-anchor="middle" font-size="10" fill="#94a3b8">auth.v1 gRPC 校验 · 过期自动刷新</text>
+
+  <path d="M 450 264 L 450 290" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="80" y="292" width="530" height="52" rx="8" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="345" y="316" text-anchor="middle" font-size="12" fill="#14532d">游客模式（guestUserID&lt;0）→ 登录后 MergeGuestSessions 会话归并</text>
+  <text x="345" y="334" text-anchor="middle" font-size="10" fill="#94a3b8">游客会话自动迁移到真实账号 · 数据不丢失</text>
+
+  <text x="80" y="368" font-size="11" fill="#4338ca">JWT_SECRET 由环境变量注入 · 生产 openssl rand -hex 32 生成 · auth/agent/gateway 一致</text>
+
+  <!-- ============ 授权 RBAC（右） ============ -->
+  <rect x="660" y="84" width="580" height="300" rx="12" fill="#f5f3ff" stroke="#a78bfa"/>
+  <text x="950" y="112" text-anchor="middle" font-size="15" font-weight="bold" fill="#6d28d9">② 授权：RBAC + 智能体域隔离</text>
+
+  <rect x="700" y="132" width="250" height="110" rx="8" fill="#ffffff" stroke="#c4b5fd"/>
+  <text x="825" y="158" text-anchor="middle" font-size="13" font-weight="bold" fill="#6d28d9">角色（RBAC）</text>
+  <text x="825" y="184" text-anchor="middle" font-size="12" fill="#475569">admin：管理端全部模块</text>
+  <text x="825" y="206" text-anchor="middle" font-size="12" fill="#475569">user：普通对话 / 自己的会话</text>
+  <text x="825" y="228" text-anchor="middle" font-size="11" fill="#94a3b8">admin 路由由 AdminGuard 守卫</text>
+
+  <rect x="970" y="132" width="250" height="110" rx="8" fill="#ffffff" stroke="#c4b5fd"/>
+  <text x="1095" y="158" text-anchor="middle" font-size="13" font-weight="bold" fill="#6d28d9">智能体域（scope）</text>
+  <text x="1095" y="184" text-anchor="middle" font-size="12" fill="#475569">会话归属 agentID 域</text>
+  <text x="1095" y="206" text-anchor="middle" font-size="12" fill="#475569">跨域不可见（列表/消息隔离）</text>
+  <text x="1095" y="228" text-anchor="middle" font-size="11" fill="#94a3b8">管理端可跨域总览</text>
+
+  <path d="M 825 242 L 825 262 L 1095 262 L 1095 248" fill="none" stroke="#6d28d9" stroke-width="1.2"/>
+  <rect x="700" y="290" width="520" height="56" rx="8" fill="#ffffff" stroke="#c4b5fd"/>
+  <text x="960" y="314" text-anchor="middle" font-size="12" fill="#6d28d9">默认配置：AUTH_ADMIN_USERNAME / AUTH_ADMIN_PASSWORD 播种，生产必须改强密码</text>
+  <text x="960" y="336" text-anchor="middle" font-size="10" fill="#94a3b8">admin 端文件态配置：技能 / MCP / 模型 由管理端读写</text>
+
+  <!-- ============ 工具权限（左） ============ -->
+  <rect x="40" y="404" width="600" height="220" rx="12" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="340" y="432" text-anchor="middle" font-size="15" font-weight="bold" fill="#c2410c">③ 工具权限分级（framework schema.PermissionLevel）</text>
+
+  <rect x="80" y="452" width="125" height="86" rx="8" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="142" y="478" text-anchor="middle" font-size="13" font-weight="bold" fill="#15803d">L0 纯</text>
+  <text x="142" y="500" text-anchor="middle" font-size="11" fill="#475569">计算器 / 展示</text>
+  <text x="142" y="520" text-anchor="middle" font-size="10" fill="#94a3b8">无需确认</text>
+
+  <rect x="215" y="452" width="125" height="86" rx="8" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="277" y="478" text-anchor="middle" font-size="13" font-weight="bold" fill="#15803d">L1 只读</text>
+  <text x="277" y="500" text-anchor="middle" font-size="11" fill="#475569">kb_search / web_search</text>
+  <text x="277" y="520" text-anchor="middle" font-size="10" fill="#94a3b8">无需确认</text>
+
+  <rect x="350" y="452" width="125" height="86" rx="8" fill="#fffbeb" stroke="#f59e0b"/>
+  <text x="412" y="478" text-anchor="middle" font-size="13" font-weight="bold" fill="#b45309">L2 写</text>
+  <text x="412" y="500" text-anchor="middle" font-size="11" fill="#475569">file_ops / render_doc</text>
+  <text x="412" y="524" text-anchor="middle" font-size="10" fill="#b45309">需用户确认</text>
+
+  <rect x="485" y="452" width="125" height="86" rx="8" fill="#fef2f2" stroke="#fca5a5"/>
+  <text x="547" y="478" text-anchor="middle" font-size="13" font-weight="bold" fill="#b91c1c">L3 高危</text>
+  <text x="547" y="500" text-anchor="middle" font-size="11" fill="#475569">code_executor / shell</text>
+  <text x="547" y="524" text-anchor="middle" font-size="10" fill="#b91c1c">需确认 + 禁网沙盒</text>
+
+  <rect x="80" y="556" width="530" height="52" rx="8" fill="#ffffff" stroke="#fdba74"/>
+  <text x="345" y="578" text-anchor="middle" font-size="12" fill="#475569">autoApprove 可对 L2/L3 自动放行（个人部署 · 记审计日志）</text>
+  <text x="345" y="598" text-anchor="middle" font-size="10" fill="#94a3b8">Approval 回调注入 Session · 用户确认在前端弹窗完成</text>
+
+  <!-- ============ 审计（右） ============ -->
+  <rect x="660" y="404" width="580" height="220" rx="12" fill="#f0fdf4" stroke="#4ade80"/>
+  <text x="950" y="432" text-anchor="middle" font-size="15" font-weight="bold" fill="#15803d">④ 审计双通道 + 密钥管理</text>
+
+  <rect x="700" y="452" width="250" height="96" rx="8" fill="#ffffff" stroke="#86efac"/>
+  <text x="825" y="478" text-anchor="middle" font-size="12" font-weight="bold" fill="#14532d">工具审计（DB）</text>
+  <text x="825" y="500" text-anchor="middle" font-size="11" fill="#475569">audit_tool_calls 表</text>
+  <text x="825" y="520" text-anchor="middle" font-size="11" fill="#475569">调用是否成功都记录</text>
+  <text x="825" y="540" text-anchor="middle" font-size="10" fill="#94a3b8">按会话/用户统计工具用量</text>
+
+  <rect x="970" y="452" width="250" height="96" rx="8" fill="#ffffff" stroke="#86efac"/>
+  <text x="1095" y="478" text-anchor="middle" font-size="12" font-weight="bold" fill="#14532d">操作审计（日志文件）</text>
+  <text x="1095" y="500" text-anchor="middle" font-size="11" fill="#475569">admin-logs/&lt;agentID&gt;/audit.jsonl</text>
+  <text x="1095" y="520" text-anchor="middle" font-size="11" fill="#475569">管理端操作留痕</text>
+  <text x="1095" y="540" text-anchor="middle" font-size="10" fill="#94a3b8">写失败降级记日志不阻塞</text>
+
+  <rect x="700" y="562" width="520" height="48" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="960" y="582" text-anchor="middle" font-size="11" fill="#475569">密钥管理：DEEPSEEK_API_KEY / JWT_SECRET / LLM_ADMIN_TOKEN / VISION_API_KEY 全部环境变量注入</text>
+  <text x="960" y="600" text-anchor="middle" font-size="10" fill="#94a3b8">.env 不入 git · 仓库只提交 .env.example 模板</text>
+
+  <!-- ============ 底部 ============ -->
+  <rect x="40" y="640" width="1200" height="110" rx="12" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="80" y="670" font-size="14" font-weight="bold" fill="#334155">纵深防御要点</text>
+  <text x="80" y="696" font-size="12" fill="#475569">· 传输：CORS 白名单（gateway）· 上传类型/大小限制 · 密钥不落盘到代码</text>
+  <text x="80" y="718" font-size="12" fill="#475569">· 执行：代码/解析统一进沙盒（uid 降权 + 禁网 + prlimit，见 sandbox-security.svg）</text>
+  <text x="80" y="740" font-size="12" fill="#475569">· 数据：多库隔离（auth/agent/llm/rag）· 用户工作区 other=0 强隔离 · 生产收紧端口暴露</text>
+
+  <text x="640" y="776" text-anchor="middle" font-size="11" fill="#94a3b8">所属主图区块：auth / agent 服务 · 返回 system-overview.svg</text>
+</svg>

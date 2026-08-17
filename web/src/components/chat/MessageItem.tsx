@@ -1,0 +1,100 @@
+import type { ChatMessage } from '@/types/api'
+import MessageActions from './MessageActions'
+import ThinkingBlock from './ThinkingBlock'
+import OrchestrationBlock from './OrchestrationBlock'
+import CondenseNotice from './CondenseNotice'
+import RichContent from './RichContent'
+import ChatDocCard from './ChatDocCard'
+import ImageMessageCard from './ImageMessageCard'
+import { isDocMarker, isImageMarker } from './docMarker'
+
+/** 单条消息渲染（用户气泡 / 助手文本+工具过程 / 工具结果）。
+ *  操作区（复制/删除本轮/重新生成/分支/版本切换）位于气泡下方，用户与助手共用。
+ *  助手文本走 RichContent（Markdown 富文本 + 图表/SVG/媒体协议渲染，需求 9）。
+ *  [文档] / [图片] 注入消息（模块二·上传文件）渲染为引用卡片。
+ *  attachments：与文本同一气泡合并渲染的文件/图片标记消息（需求 3·气泡合并），
+ *  由 MessageList 把「上传文件注入消息 + 紧随其后的用户文本」归并后传入。 */
+export default function MessageItem({
+  message,
+  attachments = [],
+}: {
+  message: ChatMessage
+  attachments?: ChatMessage[]
+}) {
+  if (message.role === 'tool') {
+    return (
+      <div className="px-4 py-1.5">
+        <div className="mx-auto max-w-3xl">
+          <div className="flex items-start gap-2 rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+            <span className="shrink-0 font-medium">工具结果</span>
+            <code className="min-w-0 flex-1 break-all">{message.content}</code>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (message.role === 'user') {
+    const isDoc = isDocMarker(message.content)
+    const isImage = isImageMarker(message.content)
+    const hasText = message.content.trim().length > 0
+    return (
+      <div className="flex justify-end px-4 py-2">
+        <div className="flex max-w-[75%] flex-col items-end gap-1.5">
+          {/* 合并气泡的附件部分：上传文件/图片注入消息渲染为卡片（需求 3） */}
+          {attachments.map((a) =>
+            isDocMarker(a.content) ? (
+              <ChatDocCard key={a.id} content={a.content} />
+            ) : (
+              <ImageMessageCard key={a.id} content={a.content} />
+            ),
+          )}
+          {isDoc ? (
+            <ChatDocCard content={message.content} />
+          ) : isImage ? (
+            <ImageMessageCard content={message.content} />
+          ) : hasText ? (
+            <div className="rounded-lg bg-primary px-3.5 py-2 text-sm text-primary-foreground whitespace-pre-wrap break-words">
+              {message.content}
+            </div>
+          ) : null}
+          <MessageActions message={message} align="right" />
+        </div>
+      </div>
+    )
+  }
+
+  // assistant
+  return (
+    <div className="flex justify-start px-4 py-2">
+      <div className="flex max-w-[85%] min-w-0 flex-col">
+        {/* 思考过程折叠块：思考文本 + 工具调用/返回可视化（需求 9）。
+         *  工具调没调、返回什么，由真实执行事件渲染，一眼可辨，杜绝幻觉。
+         *  编排模式（tasks 非空）改渲染子任务进度轨迹，与思考过程互斥。 */}
+        {message.tasks ? (
+          <OrchestrationBlock tasks={message.tasks} streaming={message.status === 'streaming'} />
+        ) : (
+          <ThinkingBlock segments={message.thinking ?? []} streaming={message.status === 'streaming'} />
+        )}
+        {/* 上下文压缩提示条：历史回看该轮压缩过的节点（__condense_v1__ 记录） */}
+        {message.condensed && <CondenseNotice info={message.condensed} />}
+        <div className="text-sm leading-relaxed break-words">
+          {message.content ? (
+            <RichContent content={message.content} streaming={message.status === 'streaming'} />
+          ) : message.thinking && message.thinking.length > 0 ? null : (
+            <span className="text-muted-foreground">
+              {message.status === 'streaming' ? '正在思考…' : '(空)'}
+            </span>
+          )}
+          {message.status === 'streaming' && (
+            <span
+              className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse rounded-sm bg-primary align-middle"
+              aria-hidden
+            />
+          )}
+        </div>
+        <MessageActions message={message} align="left" />
+      </div>
+    </div>
+  )
+}

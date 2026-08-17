@@ -1,0 +1,169 @@
+// rag.proto —— RAG 检索与知识库管理服务契约（P3-A）
+//
+// 本文件是 RAG 域的唯一事实来源：
+//   - rag-service 实现它（backend/internal/rag/server.go）；
+//   - 智能体经 kb_search 工具（L1 只读）调用 Search，结果注入对话并带引用；
+//   - 管理端（gateway adminsvc kb 模块）调用 CRUD / 摄取 RPC，再包成 REST。
+//
+// 设计要点（对外黑盒）：
+//   - Search 走混合检索（向量 hnsw + pg_trgm 关键词双路召回 + RRF 融合），
+//     内部实现可整体替换（EmbeddingProvider/Chunker/Retriever 均为插拔接口）；
+//   - 阶段3·多租户：Search 按 agent_id 限定资源域——智能体调用方（kb_search 工具）
+//     必须携带自身 agent_id，越出本域的 kb_ids 一律 404，防跨域检索泄露；
+//   - Rerank 精排二期接入，Search 返回的 score 字段已预留语义（一期=融合分）。
+syntax = "proto3";
+
+package rag.v1;
+
+option go_package = "github.com/Steve5201/agent-backend/internal/proto/rag/v1;ragv1";
+
+// RagService RAG 检索与知识库管理服务。
+service RagService {
+  // Search 混合检索：向量 + 关键词双路召回，返回带来源引用的 chunk 列表。
+  // kb_ids 为空 = 搜索全部知识库。
+  rpc Search(SearchRequest) returns (SearchResponse);
+
+  // CreateKnowledgeBase 创建知识库。
+  rpc CreateKnowledgeBase(CreateKBRequest) returns (KnowledgeBase);
+  // ListKnowledgeBases 列出全部知识库（含文档统计）。
+  rpc ListKnowledgeBases(ListKBRequest) returns (ListKBResponse);
+  // UpdateKnowledgeBase 更新知识库名称/描述。
+  rpc UpdateKnowledgeBase(UpdateKBRequest) returns (KnowledgeBase);
+  // DeleteKnowledgeBase 删除知识库（连带文档与全部 chunk）。
+  rpc DeleteKnowledgeBase(DeleteKBRequest) returns (DeleteKBResponse);
+
+  // UpsertDocument 提交文档（原始字节落库待摄取）。同文件重传按 content_hash
+  // 增量去重：内容未变则幂等跳过，变了则替换文档并重建其 chunk。
+  rpc UpsertDocument(UpsertDocumentRequest) returns (UpsertDocumentResponse);
+  // ListDocuments 列出知识库文档（含摄取状态，分页）。
+  rpc ListDocuments(ListDocumentsRequest) returns (ListDocumentsResponse);
+  // RetryDocument 手动重试摄取失败/已就绪的文档（重置 attempt 与退避，重新入队）。
+  rpc RetryDocument(RetryDocumentRequest) returns (DocumentStatus);
+  // DeleteDocument 删除文档（连带全部 chunk）。
+  rpc DeleteDocument(DeleteDocumentRequest) returns (DeleteDocumentResponse);
+  // GetDocumentStatus 查询单个文档摄取状态。
+  rpc GetDocumentStatus(GetDocumentStatusRequest) returns (DocumentStatus);
+}
+
+// Chunk 检索命中的内容片段（带来源引用）。
+message Chunk {
+  string chunk_id = 1;
+  string doc_id = 2;
+  string kb_id = 3;
+  string kb_name = 4;      // 冗余便于展示
+  string content = 5;      // 片段文本
+  string source = 6;       // 引用溯源：文件名（可含页码/章节）
+  double score = 7;        // 融合分（一期=RRF 融合后分）
+  map<string, string> metadata = 8; // 文档元数据（标题/作者/章节等）
+}
+
+message SearchRequest {
+  string query = 1;              // 检索语句
+  repeated string kb_ids = 2;    // 空 = 按 agent_id 域内全部知识库
+  int32 top_k = 3;               // 返回条数（默认 5，上限 20）
+  double min_score = 4;          // 相似度阈值（0~1，默认 0 不过滤）
+  string agent_id = 5;           // 调用方资源域（阶段3·多租户隔离）：
+                                 // 空 = 检索全部知识库（旧行为，仅供内部使用）；
+                                 // 非空 = 仅检索该智能体域内的知识库，且请求的
+                                 // kb_ids 越出本域一律返回 404（不泄露存在性）。
+}
+
+message SearchResponse {
+  repeated Chunk chunks = 1;
+}
+
+message KnowledgeBase {
+  string id = 1;             // 形如 kb_xxx
+  string name = 2;
+  string description = 3;
+  int32 doc_count = 4;       // 文档数（含失败）
+  int64 created_at = 5;      // unix 秒
+  int64 updated_at = 6;
+  string agent_id = 7;       // 所属智能体域（阶段3·多租户）
+  bool enabled = 8;          // 启用状态（false = 停用，不可被会话/普通用户检索引用）
+}
+
+message CreateKBRequest {
+  string name = 1;           // 1~50 字符
+  string description = 2;    // ≤200 字符
+  string agent_id = 3;       // 所属智能体域（阶段3；空 = 按调用方默认）
+}
+
+// ListKBRequest 列表知识库。
+// agent_id 空 = 全部；非空 = 仅该智能体域。
+message ListKBRequest {
+  string agent_id = 1;
+}
+
+message ListKBResponse {
+  repeated KnowledgeBase bases = 1;
+}
+
+message UpdateKBRequest {
+  string id = 1;           // 知识库 ID
+  string name = 2;         // 新名称（1~50 字符）
+  string description = 3;  // 新描述（≤200 字符）
+  optional bool enabled = 4; // 新启用状态（不传 = 保持原状，避免旧客户端误停用）
+}
+
+message DeleteKBRequest {
+  string id = 1;
+}
+
+message DeleteKBResponse {}
+
+// IngestStatus 文档摄取状态机（queued → processing → succeeded|failed）。
+enum IngestStatus {
+  INGEST_STATUS_UNSPECIFIED = 0;
+  QUEUED = 1;
+  PROCESSING = 2;
+  SUCCEEDED = 3;
+  FAILED = 4;
+}
+
+message DocumentStatus {
+  string doc_id = 1;
+  string kb_id = 2;
+  string file_name = 3;
+  IngestStatus status = 4;
+  int32 chunk_count = 5;
+  string error = 6;          // failed 时原因
+  int64 created_at = 7;
+  int64 updated_at = 8;
+}
+
+message UpsertDocumentRequest {
+  string kb_id = 1;
+  string file_name = 2;      // 含扩展名（唯一索引 (kb_id, file_name)）
+  bytes content = 3;         // 原始文件字节
+  string file_type = 4;      // md | txt | html | pdf | docx（空 = 按扩展名推断）
+}
+
+message UpsertDocumentResponse {
+  DocumentStatus status = 1;
+}
+
+message ListDocumentsRequest {
+  string kb_id = 1;
+  int32 page = 2;            // 从 1 开始
+  int32 page_size = 3;       // 默认 20，上限 100
+}
+
+message ListDocumentsResponse {
+  repeated DocumentStatus documents = 1;
+  int32 total = 2;
+}
+
+message DeleteDocumentRequest {
+  string id = 1;
+}
+
+message DeleteDocumentResponse {}
+
+message RetryDocumentRequest {
+  string id = 1; // 文档 ID
+}
+
+message GetDocumentStatusRequest {
+  string id = 1;
+}

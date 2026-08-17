@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 790" width="100%" height="100%" font-family="'Microsoft YaHei','PingFang SC',sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrB" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+  <!-- 标题 -->
+  <text x="600" y="32" text-anchor="middle" font-size="21" font-weight="bold" fill="#0f172a">
+    冰麒麟智能体框架 · 剩余待办工作规划
+  </text>
+  <text x="600" y="54" text-anchor="middle" font-size="12" fill="#64748b">
+    monorepo：backend / web / desktop / framework —— 按优先级分四档，含依赖关系与建议执行顺序
+  </text>
+
+  <!-- 已交付回顾 -->
+  <rect x="40" y="72" width="1120" height="52" rx="10" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="1.5"/>
+  <text x="600" y="94" text-anchor="middle" font-size="13" font-weight="bold" fill="#047857">
+    ✓ 已交付主线
+  </text>
+  <text x="600" y="112" text-anchor="middle" font-size="11.5" fill="#065f46">
+    上下文压缩可见性（提示条+落库+参数配置） / 动态编排 ErrNoPlan 降级 / 流式对话 / 工具黑名单回归 / P3 RAG / P4 编排主线 / 本地工具三段式
+  </text>
+
+  <!-- ==================== 列头 ==================== -->
+  <!-- P0 安全 -->
+  <rect x="40" y="140" width="270" height="32" rx="8" fill="#dc2626"/>
+  <text x="175" y="161" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">P0 · 上线前必做（安全）</text>
+
+  <!-- P1 功能 -->
+  <rect x="322" y="140" width="270" height="32" rx="8" fill="#2563eb"/>
+  <text x="457" y="161" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">P1 · 近期产品功能</text>
+
+  <!-- P2 延后 -->
+  <rect x="604" y="140" width="270" height="32" rx="8" fill="#64748b"/>
+  <text x="739" y="161" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">P2 · 可延后 / 需用户终端</text>
+
+  <!-- P3 工程化 -->
+  <rect x="886" y="140" width="270" height="32" rx="8" fill="#16a34a"/>
+  <text x="1021" y="161" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">P3 · 工程化与发布</text>
+
+  <!-- ==================== P0 卡片 ==================== -->
+  <rect x="40" y="186" width="270" height="88" rx="8" fill="#fef2f2" stroke="#fca5a5"/>
+  <text x="56" y="210" font-size="13" font-weight="bold" fill="#991b1b">/files 静态端点鉴权</text>
+  <text x="56" y="232" font-size="11" fill="#7f1d1d">风险2：静态文件当前无鉴权</text>
+  <text x="56" y="250" font-size="11" fill="#7f1d1d">gatewaysvc files_proxy + 中间件</text>
+  <text x="56" y="266" font-size="10.5" fill="#dc2626">个人部署可暂缓，上线必做</text>
+
+  <rect x="40" y="286" width="270" height="88" rx="8" fill="#fef2f2" stroke="#fca5a5"/>
+  <text x="56" y="310" font-size="13" font-weight="bold" fill="#991b1b">沙盒命令白名单收紧</text>
+  <text x="56" y="332" font-size="11" fill="#7f1d1d">风险4：禁网 + 资源限制之外再收口</text>
+  <text x="56" y="350" font-size="11" fill="#7f1d1d">sandboxsvc/profiles.go</text>
+  <text x="56" y="366" font-size="10.5" fill="#dc2626">与本地工具黑名单策略对齐</text>
+
+  <!-- ==================== P1 卡片 ==================== -->
+  <rect x="322" y="186" width="270" height="88" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="338" y="210" font-size="13" font-weight="bold" fill="#1d4ed8">文档生成落地</text>
+  <text x="338" y="232" font-size="11" fill="#1e3a8a">HTML → docx / xlsx / pptx / pdf</text>
+  <text x="338" y="250" font-size="11" fill="#1e3a8a">render_document 工具 + 沙盒 Python 渲染</text>
+  <text x="338" y="266" font-size="10.5" fill="#d97706">⚠ 落盘走 /files → 依赖 P0 鉴权先做</text>
+
+  <rect x="322" y="286" width="270" height="88" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="338" y="310" font-size="13" font-weight="bold" fill="#1d4ed8">智能体授权配置</text>
+  <text x="338" y="332" font-size="11" fill="#1e3a8a">skill / mcp / tool 按智能体授权</text>
+  <text x="338" y="350" font-size="11" fill="#1e3a8a">adminsvc agent_scope + 管理端三步接入</text>
+  <text x="338" y="366" font-size="10.5" fill="#64748b">复用已有智能体 CRUD / AgentSwitcher</text>
+
+  <rect x="322" y="386" width="270" height="88" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="338" y="410" font-size="13" font-weight="bold" fill="#1d4ed8">输入区剩余动作</text>
+  <text x="338" y="432" font-size="11" fill="#1e3a8a">skill / mcp / 知识库选择</text>
+  <text x="338" y="450" font-size="11" fill="#1e3a8a">ChatInput InputAction 骨架已就绪</text>
+  <text x="338" y="466" font-size="10.5" fill="#64748b">上传文件已完成，剩余按注册扩展</text>
+
+  <rect x="322" y="486" width="270" height="88" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="338" y="510" font-size="13" font-weight="bold" fill="#1d4ed8">KaTeX 公式渲染</text>
+  <text x="338" y="532" font-size="11" fill="#1e3a8a">模型输出 $$ 公式时按业界标准渲染</text>
+  <text x="338" y="550" font-size="11" fill="#1e3a8a">web RichContent 扩展（KaTeX 依赖已装）</text>
+  <text x="338" y="566" font-size="10.5" fill="#64748b">富媒体渲染（图表/SVG）已实现，补公式</text>
+
+  <!-- ==================== P2 卡片 ==================== -->
+  <rect x="604" y="186" width="270" height="88" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="620" y="210" font-size="13" font-weight="bold" fill="#334155">桌面打包 + GUI 验证</text>
+  <text x="620" y="232" font-size="11" fill="#475569">tauri build（NSIS/MSI）+ 托盘/退出</text>
+  <text x="620" y="250" font-size="11" fill="#475569">desktop/src-tauri</text>
+  <text x="620" y="266" font-size="10.5" fill="#dc2626">需用户自己终端（沙箱拦 %APPDATA%）</text>
+
+  <rect x="604" y="286" width="270" height="88" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="620" y="310" font-size="13" font-weight="bold" fill="#334155">MCP 本地代码上传</text>
+  <text x="620" y="332" font-size="11" fill="#475569">上传即解压，不自动装依赖</text>
+  <text x="620" y="350" font-size="11" fill="#475569">adminsvc/mcp + sandboxsvc</text>
+  <text x="620" y="366" font-size="10.5" fill="#64748b">需沙盒方案支持（暂缓）</text>
+
+  <rect x="604" y="386" width="270" height="88" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="620" y="410" font-size="13" font-weight="bold" fill="#334155">WS 双向通道</text>
+  <text x="620" y="432" font-size="11" fill="#475569">当前 REST 上行已满足本地工具场景</text>
+  <text x="620" y="450" font-size="11" fill="#475569">多用户并发外部工具时按需加</text>
+  <text x="620" y="466" font-size="10.5" fill="#64748b">兼容性预留，不急</text>
+
+  <rect x="604" y="486" width="270" height="88" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="620" y="510" font-size="13" font-weight="bold" fill="#334155">登录态升级 keyring</text>
+  <text x="620" y="532" font-size="11" fill="#475569">Windows Credential Manager 存储</text>
+  <text x="620" y="550" font-size="11" fill="#475569">desktop 防本机进程读取明文</text>
+  <text x="620" y="566" font-size="10.5" fill="#64748b">当前 tauri-plugin-store 等价威胁模型</text>
+
+  <!-- ==================== P3 卡片 ==================== -->
+  <rect x="886" y="186" width="270" height="88" rx="8" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="902" y="210" font-size="13" font-weight="bold" fill="#166534">测试覆盖提升</text>
+  <text x="902" y="232" font-size="11" fill="#14532d">服务层 + 框架层补齐单测</text>
+  <text x="902" y="250" font-size="11" fill="#14532d">framework / backend / web</text>
+  <text x="902" y="266" font-size="10.5" fill="#64748b">关键路径优先</text>
+
+  <rect x="886" y="286" width="270" height="88" rx="8" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="902" y="310" font-size="13" font-weight="bold" fill="#166534">监控与可观测</text>
+  <text x="902" y="332" font-size="11" fill="#14532d">Prometheus / Grafana</text>
+  <text x="902" y="350" font-size="11" fill="#14532d">限流 + 链路追踪</text>
+  <text x="902" y="366" font-size="10.5" fill="#64748b">backend 多服务接入</text>
+
+  <rect x="886" y="386" width="270" height="88" rx="8" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="902" y="410" font-size="13" font-weight="bold" fill="#166534">文档补齐</text>
+  <text x="902" y="432" font-size="11" fill="#14532d">框架使用 / 接口契约 / 架构说明</text>
+  <text x="902" y="450" font-size="11" fill="#14532d">docs/ 补全 + api 契约对齐</text>
+  <text x="902" y="466" font-size="10.5" fill="#64748b">framework.md / backend.md 已有基础</text>
+
+  <rect x="886" y="486" width="270" height="88" rx="8" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="902" y="510" font-size="13" font-weight="bold" fill="#166534">GitHub 开源发布</text>
+  <text x="902" y="532" font-size="11" fill="#14532d">README / LICENSE / demo</text>
+  <text x="902" y="550" font-size="11" fill="#14532d">交接指引 + 一键起栈脚本</text>
+  <text x="902" y="566" font-size="10.5" fill="#64748b">个人开源智能体框架目标</text>
+
+  <!-- ==================== 建议执行顺序 ==================== -->
+  <text x="600" y="606" text-anchor="middle" font-size="14" font-weight="bold" fill="#0f172a">
+    建议执行顺序（依赖驱动）
+  </text>
+
+  <rect x="40" y="620" width="172" height="58" rx="8" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="126" y="642" text-anchor="middle" font-size="12" font-weight="bold" fill="#991b1b">1 · P0 安全</text>
+  <text x="126" y="660" text-anchor="middle" font-size="10.5" fill="#7f1d1d">/files 鉴权 + 白名单</text>
+  <line x1="212" y1="649" x2="228" y2="649" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="232" y="620" width="172" height="58" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="318" y="642" text-anchor="middle" font-size="12" font-weight="bold" fill="#1d4ed8">2 · 文档生成</text>
+  <text x="318" y="660" text-anchor="middle" font-size="10.5" fill="#1e3a8a">依赖 P0（/files 落盘）</text>
+  <line x1="404" y1="649" x2="420" y2="649" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="424" y="620" width="172" height="58" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="510" y="642" text-anchor="middle" font-size="12" font-weight="bold" fill="#1d4ed8">3 · 输入区 + KaTeX</text>
+  <text x="510" y="660" text-anchor="middle" font-size="10.5" fill="#1e3a8a">独立无依赖</text>
+  <line x1="596" y1="649" x2="612" y2="649" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="616" y="620" width="172" height="58" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="702" y="642" text-anchor="middle" font-size="12" font-weight="bold" fill="#1d4ed8">4 · 智能体授权</text>
+  <text x="702" y="660" text-anchor="middle" font-size="10.5" fill="#1e3a8a">复用 agent_scope</text>
+  <line x1="788" y1="649" x2="804" y2="649" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="808" y="620" width="172" height="58" rx="8" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="894" y="642" text-anchor="middle" font-size="12" font-weight="bold" fill="#334155">5 · 桌面打包</text>
+  <text x="894" y="660" text-anchor="middle" font-size="10.5" fill="#475569">需用户自己终端</text>
+  <line x1="980" y1="649" x2="996" y2="649" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="1000" y="620" width="160" height="58" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="1080" y="642" text-anchor="middle" font-size="12" font-weight="bold" fill="#166534">6 · P3 工程化</text>
+  <text x="1080" y="660" text-anchor="middle" font-size="10.5" fill="#14532d">测试 / 监控 / 开源</text>
+
+  <!-- 依赖说明 -->
+  <text x="600" y="712" text-anchor="middle" font-size="13" font-weight="bold" fill="#334155">关键依赖</text>
+  <text x="600" y="734" text-anchor="middle" font-size="11.5" fill="#475569">
+    文档生成落盘走 /files → 必须先完成 P0 鉴权；MCP 本地上传 → 需沙盒方案；智能体授权 → 复用 adminsvc agent_scope 与「管理端三步接入」标准
+  </text>
+  <text x="600" y="762" text-anchor="middle" font-size="11" fill="#94a3b8">
+    小项（未上图）：上下文压缩参数注释补全（deploy/.env）；沙盒 whoami unknown uid 外观问题 —— 可随时顺手消化
+  </text>
+</svg>

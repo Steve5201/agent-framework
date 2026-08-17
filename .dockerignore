@@ -1,0 +1,5 @@
+# 构建上下文排除（Dockerfile 只 COPY backend/ 与 framework/，其余仅减小传输量）
+.git/
+deploy/data/
+web/node_modules/
+desktop/node_modules/

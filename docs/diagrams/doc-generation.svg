@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" width="100%" height="100%" font-family="'Microsoft YaHei','PingFang SC',sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrB" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+  <!-- 标题 -->
+  <text x="600" y="34" text-anchor="middle" font-size="22" font-weight="bold" fill="#0f172a">
+    P4+ 文档生成能力 · 整体方案框架
+  </text>
+  <text x="600" y="56" text-anchor="middle" font-size="13" fill="#64748b">
+    内容与渲染分离：编排器产出结构化文档模型 → 沙盒 Python 渲染成文件（复用 Session / 工具 / 沙盒 / /files 链路）
+  </text>
+
+  <!-- ============ 1. 编排层：用户 → 编排器（多智能体 DAG） ============ -->
+  <rect x="40" y="110" width="150" height="50" rx="8" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="115" y="132" text-anchor="middle" font-size="14" fill="#334155">前端 ChatPage</text>
+  <text x="115" y="150" text-anchor="middle" font-size="11" fill="#64748b">mode=orchestrate</text>
+
+  <line x1="194" y1="135" x2="246" y2="135" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="250" y="88" width="760" height="120" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+  <text x="630" y="112" text-anchor="middle" font-size="15" font-weight="bold" fill="#1d4ed8">编排器 Orchestrator —— 复用 agent.Session 循环</text>
+  <text x="270" y="140" font-size="12" fill="#475569">固定 DAG 角色池（教研模板）</text>
+  <rect x="270" y="152" width="150" height="40" rx="6" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="345" y="176" text-anchor="middle" font-size="13" fill="#334155">研究</text>
+  <line x1="420" y1="172" x2="436" y2="172" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="440" y="152" width="150" height="40" rx="6" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="515" y="176" text-anchor="middle" font-size="13" fill="#334155">大纲</text>
+  <line x1="590" y1="172" x2="606" y2="172" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="610" y="152" width="150" height="40" rx="6" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="685" y="176" text-anchor="middle" font-size="13" fill="#334155">内容</text>
+  <line x1="760" y1="172" x2="776" y2="172" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="780" y="152" width="150" height="40" rx="6" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="855" y="176" text-anchor="middle" font-size="13" fill="#334155">审核</text>
+  <text x="630" y="200" text-anchor="middle" font-size="11" fill="#94a3b8">并行调度入度0节点 / 完成解锁下游 / 失败降级</text>
+
+  <!-- ============ 2. 中间层：DocumentSpec ============ -->
+  <line x1="630" y1="208" x2="630" y2="246" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="250" y="250" width="760" height="64" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="630" y="276" text-anchor="middle" font-size="15" font-weight="bold" fill="#334155">DocumentSpec —— 结构化文档模型（JSON 中间层）</text>
+  <text x="630" y="298" text-anchor="middle" font-size="12" fill="#64748b">{ title, sections[], tables[], slides[] } · 内容与格式隔离：编排器不碰文件格式</text>
+
+  <!-- ============ 3. 渲染层：render_document → 沙盒 Python ============ -->
+  <line x1="630" y1="314" x2="630" y2="336" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="250" y="340" width="300" height="80" rx="10" fill="#fff7ed" stroke="#f97316"/>
+  <text x="400" y="368" text-anchor="middle" font-size="15" font-weight="bold" fill="#9a3412">render_document 工具</text>
+  <text x="400" y="390" text-anchor="middle" font-size="12" fill="#78716c">能力 doc_gen · 走注册+审计+能力开关</text>
+  <text x="400" y="408" text-anchor="middle" font-size="11" fill="#a8a29e">L2 写操作需用户确认</text>
+
+  <line x1="554" y1="380" x2="596" y2="380" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrB)"/>
+  <rect x="600" y="330" width="560" height="110" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="2"/>
+  <text x="880" y="356" text-anchor="middle" font-size="15" font-weight="bold" fill="#15803d">沙盒 Python 渲染器（禁网 + 资源限制）</text>
+  <text x="880" y="380" text-anchor="middle" font-size="12" fill="#4b5563">预装依赖：python-docx / python-pptx / openpyxl / reportlab</text>
+  <text x="880" y="400" text-anchor="middle" font-size="12" fill="#4b5563">预置脚本目录 SANDBOX_DOCGEN_DIR（与 ingest 沙盒对称）</text>
+  <text x="880" y="420" text-anchor="middle" font-size="11" fill="#94a3b8">中文字体统一注册层（系统字体），防方块字</text>
+
+  <!-- ============ 4. 输出格式 ============ -->
+  <path d="M 880 440 L 880 462 L 190 462 L 190 486" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
+  <path d="M 880 440 L 880 462 L 470 462 L 470 486" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
+  <path d="M 880 440 L 880 462 L 750 462 L 750 486" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
+  <path d="M 880 440 L 880 462 L 1030 462 L 1030 486" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="60" y="490" width="260" height="110" rx="10" fill="#eef2ff" stroke="#6366f1"/>
+  <text x="190" y="520" text-anchor="middle" font-size="15" font-weight="bold" fill="#4338ca">Word .docx（优先）</text>
+  <text x="190" y="546" text-anchor="middle" font-size="12" fill="#4b5563">python-docx</text>
+  <text x="190" y="568" text-anchor="middle" font-size="11" fill="#94a3b8">段落 / 标题 / 表格 / 图片</text>
+
+  <rect x="340" y="490" width="260" height="110" rx="10" fill="#ecfdf5" stroke="#10b981"/>
+  <text x="470" y="520" text-anchor="middle" font-size="15" font-weight="bold" fill="#047857">Excel .xlsx（优先）</text>
+  <text x="470" y="546" text-anchor="middle" font-size="12" fill="#4b5563">openpyxl</text>
+  <text x="470" y="568" text-anchor="middle" font-size="11" fill="#94a3b8">多工作表 / 样式 / 公式</text>
+
+  <rect x="620" y="490" width="260" height="110" rx="10" fill="#fdf4ff" stroke="#d946ef"/>
+  <text x="750" y="520" text-anchor="middle" font-size="15" font-weight="bold" fill="#a21caf">PPT .pptx（第二梯队）</text>
+  <text x="750" y="546" text-anchor="middle" font-size="12" fill="#4b5563">python-pptx</text>
+  <text x="750" y="568" text-anchor="middle" font-size="11" fill="#94a3b8">版式 / 主题 / 占位符</text>
+
+  <rect x="900" y="490" width="260" height="110" rx="10" fill="#fef3c7" stroke="#f59e0b"/>
+  <text x="1030" y="520" text-anchor="middle" font-size="15" font-weight="bold" fill="#b45309">PDF .pdf（转换链）</text>
+  <text x="1030" y="546" text-anchor="middle" font-size="12" fill="#4b5563">LibreOffice headless</text>
+  <text x="1030" y="568" text-anchor="middle" font-size="11" fill="#94a3b8">docx / pptx → pdf（不直接写）</text>
+  <text x="1030" y="590" text-anchor="middle" font-size="10" fill="#94a3b8">绕开 reportlab 中文排版坑</text>
+
+  <!-- ============ 5. 落盘与预览 ============ -->
+  <path d="M 190 600 L 190 622" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+  <path d="M 470 600 L 470 622" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+  <path d="M 750 600 L 750 622" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+  <path d="M 1030 600 L 1030 622" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+  <path d="M 190 622 L 630 622 L 630 646" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="250" y="650" width="760" height="60" rx="10" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="630" y="678" text-anchor="middle" font-size="14" font-weight="bold" fill="#334155">落盘 users/&lt;uid&gt;/output/xxx.docx</text>
+  <text x="630" y="698" text-anchor="middle" font-size="12" fill="#64748b">/files 静态端点 → 前端预览 + 下载（复用现有媒体链路）</text>
+
+  <text x="600" y="740" text-anchor="middle" font-size="11" fill="#94a3b8">与 P4 衔接：文档生成 = 一条固定 DAG 模板，渲染作为收尾节点（研究→大纲→内容→审核→渲染）</text>
+</svg>

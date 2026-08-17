@@ -1,0 +1,24 @@
+# 本地开发覆盖文件（P6-B）：在「生产基础编排」之上恢复开发便利性。
+#
+# 与 docker-compose.yml 叠加使用（项目名继承 agent-stack，卷/网络不变）：
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.dev.yml \
+#       --profile dev up -d
+#
+# 或直接用一键脚本：.\scripts\dev-up.ps1 [-Rebuild]
+#
+# 生产部署**只**用基础编排（不带本文件、不带 --profile dev）：
+#   docker compose -f deploy/docker-compose.yml up -d
+# 云端不跑 ollama（2G 内存限制），embedding 走硅基流动（见 .env.prod 差异点④）。
+#
+# 注：base 文件已给 ollama 声明 profiles: ["dev"]，这里只补端口，无需重复声明。
+
+services:
+  # 恢复 PostgreSQL 宿主端口 5432（本地 psql / pgAdmin 直连）。
+  postgres:
+    ports:
+      - "5432:5432"
+
+  # 恢复 ollama 宿主端口 11434（本地 curl / 可视化工具直连测试 embedding）。
+  ollama:
+    ports:
+      - "11434:11434"

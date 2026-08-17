@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="100%" height="100%" font-family="'Microsoft YaHei','PingFang SC',sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <marker id="arrO" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#c2410c"/>
+    </marker>
+  </defs>
+
+  <!-- 标题 -->
+  <text x="640" y="34" text-anchor="middle" font-size="22" font-weight="bold" fill="#0f172a">RAG 知识库链路（rag 服务 + pgvector + embedding）</text>
+  <text x="640" y="58" text-anchor="middle" font-size="13" fill="#64748b">内容与检索分离：文档解析 → 向量化入库；检索结果经 kb_search 工具注入 agent 上下文</text>
+
+  <!-- ============ 文档来源 ============ -->
+  <rect x="80" y="84" width="360" height="66" rx="10" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="260" y="110" text-anchor="middle" font-size="14" font-weight="bold" fill="#c2410c">文档来源</text>
+  <text x="260" y="132" text-anchor="middle" font-size="12" fill="#475569">管理端 KB 上传 · 批量导入</text>
+
+  <rect x="460" y="84" width="360" height="66" rx="10" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="640" y="110" text-anchor="middle" font-size="14" font-weight="bold" fill="#c2410c">文件类型</text>
+  <text x="640" y="132" text-anchor="middle" font-size="12" fill="#475569">pdf / docx / pptx（沙盒解析）· md / txt / html / xlsx（直读）</text>
+
+  <rect x="840" y="84" width="360" height="66" rx="10" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="1020" y="110" text-anchor="middle" font-size="14" font-weight="bold" fill="#c2410c">大小限制</text>
+  <text x="1020" y="132" text-anchor="middle" font-size="12" fill="#475569">RAG_MAX_DOC_MB=20 · 入队校验</text>
+
+  <!-- ============ 入库链路（上） ============ -->
+  <path d="M 640 150 L 640 176" fill="none" stroke="#c2410c" stroke-width="1.5" marker-end="url(#arrO)"/>
+
+  <rect x="80" y="178" width="1120" height="250" rx="12" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="120" y="206" font-size="14" font-weight="bold" fill="#c2410c">① 摄取入库（ingest pipeline）</text>
+
+  <rect x="120" y="224" width="240" height="90" rx="10" fill="#ffffff" stroke="#fdba74"/>
+  <text x="240" y="252" text-anchor="middle" font-size="14" fill="#c2410c">解析 Parser</text>
+  <text x="240" y="276" text-anchor="middle" font-size="11" fill="#64748b">docx（python-docx）/ pdf / pptx</text>
+  <text x="240" y="294" text-anchor="middle" font-size="11" fill="#64748b">委托 sandbox profile 执行（uid 降权）</text>
+
+  <path d="M 360 270 L 398 270" fill="none" stroke="#c2410c" stroke-width="1.5" marker-end="url(#arrO)"/>
+  <rect x="400" y="224" width="240" height="90" rx="10" fill="#ffffff" stroke="#fdba74"/>
+  <text x="520" y="252" text-anchor="middle" font-size="14" fill="#c2410c">分块 Chunker</text>
+  <text x="520" y="276" text-anchor="middle" font-size="11" fill="#64748b">标题/正文结构感知</text>
+  <text x="520" y="294" text-anchor="middle" font-size="11" fill="#64748b">媒体抽取（图 / 表格）</text>
+
+  <path d="M 640 270 L 678 270" fill="none" stroke="#c2410c" stroke-width="1.5" marker-end="url(#arrO)"/>
+  <rect x="680" y="224" width="240" height="90" rx="10" fill="#ffffff" stroke="#fdba74"/>
+  <text x="800" y="252" text-anchor="middle" font-size="14" fill="#c2410c">向量化 Embedding</text>
+  <text x="800" y="276" text-anchor="middle" font-size="11" fill="#64748b">本地 Ollama bge-m3（1024 维）</text>
+  <text x="800" y="294" text-anchor="middle" font-size="11" fill="#64748b">或云端硅基流动（可选）</text>
+
+  <path d="M 920 270 L 958 270" fill="none" stroke="#c2410c" stroke-width="1.5" marker-end="url(#arrO)"/>
+  <rect x="960" y="224" width="220" height="90" rx="10" fill="#ffffff" stroke="#fdba74"/>
+  <text x="1070" y="252" text-anchor="middle" font-size="14" fill="#c2410c">入库 pgvector</text>
+  <text x="1070" y="276" text-anchor="middle" font-size="11" fill="#64748b">rag 库 · 向量索引</text>
+  <text x="1070" y="294" text-anchor="middle" font-size="11" fill="#64748b">元数据：文档 / 来源 / 媒体</text>
+
+  <text x="120" y="412" font-size="11" fill="#c2410c">ingest worker 轮询 · 并发摄取 · 媒体落 rag-media/ 目录</text>
+
+  <!-- ============ 检索链路（下） ============ -->
+  <path d="M 640 430 L 640 456" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="80" y="458" width="1120" height="250" rx="12" fill="#eff6ff" stroke="#60a5fa"/>
+  <text x="120" y="486" font-size="14" font-weight="bold" fill="#1d4ed8">② 检索注入（retrieval → kb_search）</text>
+
+  <rect x="120" y="504" width="260" height="92" rx="10" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="250" y="532" text-anchor="middle" font-size="14" fill="#1d4ed8">kb_search 工具</text>
+  <text x="250" y="556" text-anchor="middle" font-size="11" fill="#64748b">agent 会话内装配（L1 只读）</text>
+  <text x="250" y="574" text-anchor="middle" font-size="11" fill="#64748b">rag 软依赖：拨号失败仅降级</text>
+
+  <path d="M 380 550 L 418 550" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="420" y="504" width="260" height="92" rx="10" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="550" y="532" text-anchor="middle" font-size="14" fill="#1d4ed8">问题向量化</text>
+  <text x="550" y="556" text-anchor="middle" font-size="11" fill="#64748b">同一 embedding 模型</text>
+  <text x="550" y="574" text-anchor="middle" font-size="11" fill="#64748b">保持向量空间一致</text>
+
+  <path d="M 680 550 L 718 550" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="720" y="504" width="260" height="92" rx="10" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="850" y="532" text-anchor="middle" font-size="14" fill="#1d4ed8">相似度检索</text>
+  <text x="850" y="556" text-anchor="middle" font-size="11" fill="#64748b">top-K 命中 · 阈值过滤</text>
+  <text x="850" y="574" text-anchor="middle" font-size="11" fill="#64748b">返回文本 + 媒体引用</text>
+
+  <path d="M 980 550 L 1018 550" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="1020" y="504" width="160" height="92" rx="10" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="1100" y="532" text-anchor="middle" font-size="14" fill="#1d4ed8">注入上下文</text>
+  <text x="1100" y="556" text-anchor="middle" font-size="11" fill="#64748b">作为 tool 结果回填</text>
+  <text x="1100" y="574" text-anchor="middle" font-size="11" fill="#64748b">模型基于引用作答</text>
+
+  <text x="120" y="684" font-size="11" fill="#1d4ed8">媒体引用 → resolveDocMedia 解析为容器内 /work 绝对路径（文档生成图片块双通道之一）</text>
+
+  <!-- ============ 底部 ============ -->
+  <rect x="80" y="728" width="1120" height="56" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="120" y="752" font-size="12" fill="#475569">清理机制：无主 rag-media 目录宽限期兜底删除（RAG_MEDIA_CLEANUP_TTL_HOURS=168）· 文档删除级联清理</text>
+  <text x="120" y="774" font-size="11" fill="#94a3b8">所属主图区块：rag 服务 · 返回 system-overview.svg</text>
+</svg>

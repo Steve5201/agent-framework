@@ -1,0 +1,259 @@
+@import "tailwindcss";
+
+/* dark 模式通过 .dark 类切换（shadcn 约定） */
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------------------
+ * shadcn/ui 主题变量（neutral 基础色，OKLCH 色彩空间）
+ * 极简高信息密度：低对比度背景 + 高对比文本 + 克制的高亮色
+ * ------------------------------------------------------------------------- */
+:root {
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.96 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.55 0 0);
+  --accent: oklch(0.95 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+}
+
+/* 把 CSS 变量映射为 Tailwind 主题令牌（Tailwind v4 的 @theme inline 语法） */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* 全局基础样式 */
+* {
+  border-color: var(--border);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'PingFang SC',
+    'Microsoft YaHei',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 工具调用代码块等预格式文本 */
+pre,
+code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+/* 消息内容里的代码块样式 */
+.msg-code {
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  font-size: 0.85rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * Mac 风格代码块容器：顶部"交通灯"栏（红黄绿）+ 语言标签 + 复制按钮。
+ * 代码块作为独立容器，固定浅色渲染，不随全局亮/暗主题切换。
+ * ------------------------------------------------------------------------- */
+.msg-code-mac {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 1px 1px rgba(15, 23, 42, 0.03);
+}
+.msg-code-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.45rem 0.75rem;
+  background: #f6f7f9;
+  border-bottom: 1px solid var(--border);
+}
+.msg-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+.msg-dot-red    { background: #ff5f57; }
+.msg-dot-yellow { background: #febc2e; }
+.msg-dot-green  { background: #28c840; }
+.msg-code-lang {
+  margin-left: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--muted-foreground);
+}
+/* 容器内代码体：去掉自身边框/圆角，固定浅色文字（暗色主题下也保持浅色块） */
+.msg-code-mac .msg-code {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: #fafafa;
+  color: #383a42;
+}
+/* 复制按钮从右上角绝对定位改为入栏（右侧） */
+.msg-code-bar .msg-code-copy {
+  position: static;
+  background: transparent;
+  border: none;
+  opacity: 0.55;
+}
+
+/* 代码块右上角复制按钮：hover 常显、默认半透明（不抢正文焦点） */
+.msg-code-copy {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.5rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem;
+  border-radius: 4px;
+  color: var(--muted-foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
+  opacity: 0.55;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+.msg-code-copy:hover {
+  opacity: 1;
+  color: var(--foreground);
+}
+
+/* 复制成功对勾 pop 动画：缩放弹入，给用户明确反馈 */
+@keyframes msg-copy-pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.msg-copy-pop {
+  animation: msg-copy-pop 0.25s ease-out;
+}
+
+.msg-code-inline {
+  background: var(--muted);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+  font-size: 0.85em;
+}
+
+/* Markdown 富文本（需求 9）：消息内容里的标准排版样式 */
+.rich-content h1,
+.rich-content h2,
+.rich-content h3,
+.rich-content h4,
+.rich-content h5,
+.rich-content h6 {
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0.75em 0 0.4em;
+}
+.rich-content h1 { font-size: 1.35em; }
+.rich-content h2 { font-size: 1.2em; }
+.rich-content h3 { font-size: 1.08em; }
+.rich-content p { margin: 0.4em 0; }
+.rich-content ul,
+.rich-content ol { margin: 0.4em 0; padding-left: 1.4em; }
+.rich-content ul { list-style: disc; }
+.rich-content ol { list-style: decimal; }
+.rich-content blockquote {
+  margin: 0.5em 0;
+  padding-left: 0.75em;
+  border-left: 3px solid var(--border);
+  color: var(--muted-foreground);
+}
+.rich-content table {
+  border-collapse: collapse;
+  margin: 0.5em 0;
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  font-size: 0.9em;
+}
+.rich-content th,
+.rich-content td {
+  border: 1px solid var(--border);
+  padding: 0.3em 0.6em;
+}
+.rich-content th { background: var(--muted); font-weight: 600; }
+.rich-content a { color: var(--primary); text-decoration: underline; }
+.rich-content hr { border: none; border-top: 1px solid var(--border); margin: 0.75em 0; }
+.rich-content img,
+.rich-content video { border-radius: var(--radius-sm); }

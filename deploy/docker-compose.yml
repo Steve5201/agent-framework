@@ -428,11 +428,35 @@ services:
         condition: service_healthy
       agent:
         condition: service_healthy
+      # 卷权限初始化先完成，保证 /app 属主正确后才启动对外入口
+      init-volume:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
       interval: 5s
       timeout: 3s
       retries: 12
+    logging: *default-logging
+
+  # 卷权限初始化（P6-G）：gateway/agent 以非 root 的 app(uid=100) 运行，而 Linux 上
+  # bind mount 会覆盖镜像内 /app 的属主（以宿主机目录为准，首次由 docker 以 root
+  # 创建），容器内 app 用户无写权限 → 上传技能/写审计日志报 permission denied
+  # （"创建技能根目录失败"）。本服务以 root 预置 /app 属主与运行时目录，幂等可
+  # 重复执行；一次性的完成型容器，每次 compose up -d 自动重跑，无需手动 mkdir/chown。
+  init-volume:
+    image: agent-stack-gateway:latest
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args: { SERVICE: gateway }
+    user: root
+    # chown 在 Docker Desktop（Windows）bind mount 上无意义且会失败：
+    # 加 `|| true` 保证退出码 0（Windows 权限由 Docker Desktop 映射处理），
+    # 不影响 gateway 的 service_completed_successfully 等待。
+    entrypoint: ["sh", "-c", "mkdir -p /app/skills /app/mcp-servers /app/admin-logs; chown -R 100:101 /app 2>/dev/null || true"]
+    volumes:
+      - ./data/agent:/app
+    restart: "no"
     logging: *default-logging
 
 volumes:

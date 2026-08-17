@@ -81,6 +81,11 @@ cp deploy/.env.example deploy/.env
 
 # 构建并启动
 docker compose -f deploy/docker-compose.yml up -d --build
+
+# 数据卷权限无需手动处理：compose 内置 init-volume 一次性服务会在每次 up -d
+# 时以 root 自动预置数据卷属主与 skills/mcp-servers/admin-logs 目录（幂等）。
+# 原因：gateway/agent 容器内以非 root 的 app 用户运行，而 Linux 下 bind mount
+# 目录首次由 docker 以 root 创建，app 无写权限会报"创建技能根目录失败"。
 ```
 
 ### 3. 访问

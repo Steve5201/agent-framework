@@ -48,8 +48,8 @@ export default function MessageItem({
 }) {
   if (message.role === 'tool') {
     return (
-      <div className="msg-in px-4 py-1.5">
-        <div className="mx-auto max-w-3xl xl:max-w-4xl">
+      <div className="msg-in px-4 py-1.5 sm:px-12">
+        <div className="w-full max-w-[85%] sm:max-w-[65%]">
           <div className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
             <span className="shrink-0 font-medium">工具结果</span>
             <code className="min-w-0 flex-1 break-all">{message.content}</code>
@@ -64,8 +64,8 @@ export default function MessageItem({
     const isImage = isImageMarker(message.content)
     const hasText = message.content.trim().length > 0
     return (
-      <div className="msg-in flex justify-end gap-3 px-4 py-2">
-        <div className="flex max-w-[75%] flex-col items-end gap-1.5">
+      <div className="msg-in flex justify-end gap-3 px-4 py-2 sm:px-12">
+        <div className="flex max-w-[85%] flex-col items-end gap-1.5 sm:max-w-[65%]">
           {/* 合并气泡的附件部分：上传文件/图片注入消息渲染为卡片（需求 3） */}
           {attachments.map((a) =>
             isDocMarker(a.content) ? (
@@ -92,9 +92,9 @@ export default function MessageItem({
 
   // assistant
   return (
-    <div className="msg-in flex justify-start gap-3 px-4 py-2">
+    <div className="msg-in flex justify-start gap-3 px-4 py-2 sm:px-12">
       <AiAvatar />
-      <div className="flex max-w-[80%] min-w-0 flex-col">
+      <div className="flex max-w-[85%] min-w-0 flex-col sm:max-w-[65%]">
         {/* 思考过程折叠块：思考文本 + 工具调用/返回可视化（需求 9）。
          *  工具调没调、返回什么，由真实执行事件渲染，一眼可辨，杜绝幻觉。
          *  编排模式（tasks 非空）改渲染子任务进度轨迹，与思考过程互斥。 */}

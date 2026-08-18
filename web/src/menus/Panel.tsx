@@ -100,7 +100,6 @@ export default function MenuPanel({ onClose }: { onClose: () => void }) {
                       onClick={() => (item.renderPanel ? setActiveKey(item.key) : void runAction(item))}
                       className={cn(
                         'flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent',
-                        item.group === 'danger' && 'text-destructive hover:bg-destructive/10',
                       )}
                     >
                       {Icon && <Icon className="size-4 shrink-0" />}

@@ -63,7 +63,7 @@ export default function MessageList() {
   for (const a of pending) items.push(<MessageItem key={a.id} message={a} />)
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col pb-4 xl:max-w-4xl">
+    <div className="flex w-full flex-col pb-4">
       {items}
       <div ref={bottomRef} />
     </div>

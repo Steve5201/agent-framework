@@ -173,9 +173,9 @@ export default function ChatInput({ canConfigure = true }: { canConfigure?: bool
   const busy = sending || uploading || regenerating
 
   return (
-    <div className="border-t p-3">
+    <div className="border-t px-4 py-3 sm:px-12">
       <div
-        className="mx-auto max-w-3xl xl:max-w-4xl"
+        className="mx-auto w-full max-w-[800px]"
         onDragOver={(e) => {
           e.preventDefault()
           if (!busy) setDragging(true)

@@ -131,6 +131,36 @@ describe('ChatPage · 超管专属门户游客拦截', () => {
     expect(screen.queryByText(/该门户仅供最高超管登录使用/)).not.toBeInTheDocument()
     expect(screen.getByTestId('chat-input')).toBeInTheDocument()
   })
+
+  it('已登录超管访问 /agent/* 无记忆：自动落位默认门户并拉取其会话', async () => {
+    useAuthStore.setState({
+      user: {
+        id: '1',
+        username: 'root',
+        role: 'super_admin',
+        tags: [{ key: 'agent', value: '*' }],
+      } as never,
+      status: 'authed',
+    })
+    renderAt('/agent/*')
+    // 自动触发"选择当前智能体"：无记忆 → 默认门户 tutor，拉取该域会话列表
+    await waitFor(() => expect(apiMocks.listSessions).toHaveBeenCalledWith(1, 50, 'tutor'))
+  })
+
+  it('已登录超管访问 /agent/* 有记忆：自动落位记住的智能体并拉取其会话', async () => {
+    localStorage.setItem('agent.last_agent', 'math')
+    useAuthStore.setState({
+      user: {
+        id: '1',
+        username: 'root',
+        role: 'super_admin',
+        tags: [{ key: 'agent', value: '*' }],
+      } as never,
+      status: 'authed',
+    })
+    renderAt('/agent/*')
+    await waitFor(() => expect(apiMocks.listSessions).toHaveBeenCalledWith(1, 50, 'math'))
+  })
 })
 
 describe('ChatPage · 管理端对话会话域回退', () => {

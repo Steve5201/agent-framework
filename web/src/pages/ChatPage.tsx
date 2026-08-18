@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Bot, LogIn, Menu, ShieldAlert } from 'lucide-react'
 import { useChatStore } from '@/stores/chat'
@@ -11,6 +11,7 @@ import {
   getUserAgentId,
   isSuperAdmin,
   loadRememberedAgent,
+  rememberAgent,
   getHomeScope,
 } from '@/lib/roles'
 import SessionSidebar from '@/components/chat/SessionSidebar'
@@ -107,6 +108,21 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
       cancelled = true
     }
   }, [mode, scope, user, isGuest, status, navigate])
+
+  // 超管专属门户自动落位：'*' 是聚合展示域而非真实智能体域，登录后落在
+  // /agent/* 时没有可加载的具体对话列表。这里自动触发一次"选择当前智能体"
+  // （与切换器语义一致：记住选中 + 跳转其门户），让聊天界面把当前选择
+  // 智能体的对应会话拉下来。已落位（redirected ref）或已离开 '*' 不再触发。
+  const superAutoRedirected = useRef(false)
+  useEffect(() => {
+    if (superAutoRedirected.current) return
+    if (mode !== 'agent' || scope !== ALL_AGENT_ID || !isSuperAdmin(user?.role) || status !== 'authed') return
+    const target = loadRememberedAgent() || DEFAULT_AGENT_ID
+    if (!target || target === ALL_AGENT_ID || target === 'admin') return
+    superAutoRedirected.current = true
+    rememberAgent(target)
+    navigate(`/agent/${target}`, { replace: true })
+  }, [mode, scope, user, status, navigate])
 
   useEffect(() => {
     // 超管域游客被拦截：不加载会话列表（避免拉跨域列表 / 触发后端拒绝）

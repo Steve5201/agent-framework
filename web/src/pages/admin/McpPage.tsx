@@ -65,7 +65,7 @@ function Modal({
         aria-modal="true"
       >
         <div className="border-b px-5 py-3.5">
-          <div className="text-sm font-semibold">{title}</div>
+          <div className="text-[15px] font-semibold">{title}</div>
           {subtitle && <div className="mt-0.5 text-xs text-muted-foreground">{subtitle}</div>}
         </div>
         <div className="flex-1 overflow-y-auto p-5">{children}</div>
@@ -498,20 +498,19 @@ export default function McpPage({ fixedAgentId }: { fixedAgentId?: string } = {}
   }
 
   return (
-    <div className="mx-auto max-w-5xl p-6">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6 xl:p-8">
       {/* 页头 */}
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
               <Server className="size-4.5" />
             </div>
-            <h1 className="text-lg font-semibold tracking-tight">MCP Server 管理</h1>
+            <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
+              接入外部 MCP Server，保存后 agent 热加载生效。启用是真实动作——会实际连接并发现工具，连不上会报错。
+              支持表单 / JSON / 标准 <code className="font-mono">mcpServers</code> 格式，也可上传本地 MCP 代码包。
+            </p>
           </div>
-          <p className="mt-1.5 max-w-xl text-xs leading-relaxed text-muted-foreground">
-            接入外部 MCP Server，保存后 agent 热加载生效。启用是真实动作——会实际连接并发现工具，连不上会报错。
-            支持表单 / JSON / 标准 <code className="font-mono">mcpServers</code> 格式，也可上传本地 MCP 代码包。
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <AgentScopeSelect agentId={agentId} agents={agents} onChange={setAgentId} />
@@ -587,7 +586,7 @@ export default function McpPage({ fixedAgentId }: { fixedAgentId?: string } = {}
                     <Badge
                       variant="outline"
                       className={cn(
-                        'font-mono text-[10px]',
+                        'font-mono text-[11px]',
                         (s.transport || 'stdio') === 'http'
                           ? 'border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-300'
                           : 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-300',
@@ -601,7 +600,7 @@ export default function McpPage({ fixedAgentId }: { fixedAgentId?: string } = {}
                   </td>
                   <td className="px-3 py-2.5">
                     {s.discovery_error ? (
-                      <Badge variant="destructive" className="gap-1 text-[10px]" title={s.discovery_error}>
+                      <Badge variant="destructive" className="gap-1 text-[11px]" title={s.discovery_error}>
                         <AlertTriangle className="size-3" /> 连接失败
                       </Badge>
                     ) : s.discovered_tools?.length ? (

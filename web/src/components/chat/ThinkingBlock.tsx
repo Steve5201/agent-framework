@@ -28,7 +28,7 @@ function Segment({ seg, active }: { seg: ThinkingSegment; active: boolean }) {
     return (
       <div className="rounded border border-amber-200 bg-amber-50 px-2.5 py-1.5">
         <div className="flex items-center gap-1 text-xs font-medium text-amber-800">
-          <span className="rounded bg-amber-200/70 px-1.5 py-0.5 text-[10px] leading-4">工具调用</span>
+          <span className="rounded bg-amber-200/70 px-1.5 py-0.5 text-[11px] leading-4">工具调用</span>
           {seg.name}
         </div>
         {seg.arguments && (
@@ -43,7 +43,7 @@ function Segment({ seg, active }: { seg: ThinkingSegment; active: boolean }) {
     return (
       <div className="rounded border border-emerald-200 bg-emerald-50 px-2.5 py-1.5">
         <div className="flex items-center gap-1 text-xs font-medium text-emerald-800">
-          <span className="rounded bg-emerald-200/70 px-1.5 py-0.5 text-[10px] leading-4">工具返回</span>
+          <span className="rounded bg-emerald-200/70 px-1.5 py-0.5 text-[11px] leading-4">工具返回</span>
           {seg.name}
           {seg.error && <span className="text-red-600">（失败）</span>}
         </div>

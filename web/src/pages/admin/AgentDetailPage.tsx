@@ -652,7 +652,7 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
   }
   if (!agent) {
     return (
-      <div className="mx-auto max-w-5xl p-6">
+      <div className="mx-auto max-w-6xl p-4 sm:p-6 xl:p-8">
         <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error || '智能体不存在'}</div>
         <Button variant="outline" className="mt-4" onClick={() => navigate('/admin/agents')}>
           <ArrowLeft className="size-4" /> 返回列表
@@ -678,7 +678,7 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
   const skillNone = skillExplicit && selSkills.size === 0
 
   return (
-    <div className="mx-auto max-w-6xl p-6">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6 xl:p-8">
       {/* 页头 */}
       <div className="mb-5">
         <Button variant="ghost" size="sm" className="-ml-2 mb-2 text-muted-foreground" onClick={() => navigate('/admin/agents')}>
@@ -695,7 +695,7 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-xl font-semibold tracking-tight">{agent.name}</h1>
-                <Badge variant="outline" className={cn('text-[10px]', st.cls)}>
+                <Badge variant="outline" className={cn('text-[11px]', st.cls)}>
                   {st.label}
                 </Badge>
               </div>
@@ -766,7 +766,7 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
             {saveError && <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{saveError}</div>}
             <div className="mb-4 flex items-center gap-1.5">
               <Pencil className="size-4 text-blue-500" />
-              <h2 className="text-sm font-semibold">编辑基本信息</h2>
+              <h2 className="text-[15px] font-semibold">编辑基本信息</h2>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ad-avatar">形象（emoji，可选；空 = 首字兜底）</Label>
@@ -796,7 +796,7 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
         ) : (
           <div className="max-w-4xl space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">基本信息</h2>
+              <h2 className="text-[15px] font-semibold">基本信息</h2>
               <Button variant="outline" size="sm" onClick={() => { setEditing(true); setSaveError('') }}>
                 <Pencil className="size-3.5" /> 编辑
               </Button>
@@ -856,7 +856,7 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
         <div className="max-w-2xl space-y-4">
           <div className="rounded-xl border bg-card p-5">
             <div className="mb-4">
-              <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+              <h2 className="flex items-center gap-1.5 text-[15px] font-semibold">
                 <Settings2 className="size-4 text-blue-500" /> 默认会话配置
               </h2>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
@@ -958,7 +958,7 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
                         </span>
                         <span className="truncate font-medium">{selectedModelObj.name}</span>
                         {selectedModelObj.is_default && (
-                          <span className="flex shrink-0 items-center gap-0.5 text-[10px] text-amber-600 dark:text-amber-300">
+                          <span className="flex shrink-0 items-center gap-0.5 text-[11px] text-amber-600 dark:text-amber-300">
                             <Star className="size-2.5 fill-current" /> 系统默认
                           </span>
                         )}
@@ -1007,7 +1007,7 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
                                     <span className="flex items-center gap-1.5 font-medium">
                                       <span className="truncate">{m.name}</span>
                                       {m.is_default && (
-                                        <span className="shrink-0 text-[10px] text-amber-600 dark:text-amber-300">系统默认</span>
+                                        <span className="shrink-0 text-[11px] text-amber-600 dark:text-amber-300">系统默认</span>
                                       )}
                                     </span>
                                     {m.provider_name && (
@@ -1343,7 +1343,7 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="flex w-full max-w-md flex-col overflow-hidden rounded-xl border bg-background shadow-2xl" role="dialog" aria-modal="true">
             <div className="border-b px-5 py-3.5">
-              <div className="text-sm font-semibold">绑定 / 更换超管</div>
+              <div className="text-[15px] font-semibold">绑定 / 更换超管</div>
               <div className="mt-0.5 text-xs text-muted-foreground">
                 绑定后该用户被授予 agent_admin 并归属此智能体；原超管的 agent_admin 与归属被自动回收。
               </div>
@@ -1394,7 +1394,7 @@ function StatCard({ icon, label, value, tone = 'text-foreground' }: { icon: Reac
         <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-md border bg-muted/40', tone)}>{icon}</span>
         {label}
       </div>
-      <div className="mt-2 text-lg font-semibold tabular-nums">{value}</div>
+      <div className="mt-2 text-xl font-semibold tabular-nums">{value}</div>
     </div>
   )
 }

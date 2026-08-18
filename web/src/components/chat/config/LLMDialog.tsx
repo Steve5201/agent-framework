@@ -239,7 +239,7 @@ export default function LLMDialog({ sessionConfig, agentId, onClose }: Props) {
                     <span className="flex items-center gap-1.5 font-medium">
                       <span className="truncate">{selectedModel.name}</span>
                       {selectedModel.is_default && (
-                        <span className="flex shrink-0 items-center gap-0.5 text-[10px] text-amber-600 dark:text-amber-300">
+                        <span className="flex shrink-0 items-center gap-0.5 text-[11px] text-amber-600 dark:text-amber-300">
                           <Star className="size-2.5 fill-current" /> 系统默认
                         </span>
                       )}
@@ -293,7 +293,7 @@ export default function LLMDialog({ sessionConfig, agentId, onClose }: Props) {
                               <span className="flex items-center gap-1.5 font-medium">
                                 <span className="truncate">{m.name}</span>
                                 {m.is_default && (
-                                  <span className="shrink-0 text-[10px] text-amber-600 dark:text-amber-300">默认</span>
+                                  <span className="shrink-0 text-[11px] text-amber-600 dark:text-amber-300">默认</span>
                                 )}
                               </span>
                               {m.provider_name && (

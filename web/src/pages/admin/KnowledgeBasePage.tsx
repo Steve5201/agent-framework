@@ -88,7 +88,7 @@ function Modal({
         aria-modal="true"
       >
         <div className="border-b px-5 py-3.5">
-          <div className="text-sm font-semibold">{title}</div>
+          <div className="text-[15px] font-semibold">{title}</div>
           {subtitle && <div className="mt-0.5 text-xs text-muted-foreground">{subtitle}</div>}
         </div>
         <div className="flex-1 overflow-y-auto p-5">{children}</div>
@@ -388,7 +388,7 @@ export default function KnowledgeBasePage({ fixedAgentId }: { fixedAgentId?: str
       {/* 顶栏：标题 + 操作 */}
       <div className="flex items-center justify-between border-b px-5 py-3">
         <div>
-          <h1 className="text-sm font-semibold">知识库管理</h1>
+          <h1 className="text-base font-semibold">知识库管理</h1>
           <p className="text-xs text-muted-foreground">上传课程文档，自动切分并向量化，供智能体检索引用</p>
         </div>
         <div className="flex items-center gap-2">
@@ -446,11 +446,11 @@ export default function KnowledgeBasePage({ fixedAgentId }: { fixedAgentId?: str
                 <span className="truncate text-sm font-medium">{kb.name}</span>
                 <div className="flex shrink-0 items-center gap-1.5">
                   {!kb.enabled && (
-                    <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                    <Badge variant="outline" className="text-[11px] text-muted-foreground">
                       已停用
                     </Badge>
                   )}
-                  <Badge variant="secondary" className="shrink-0 text-[10px]">
+                  <Badge variant="secondary" className="shrink-0 text-[11px]">
                     {kb.doc_count} 文档
                   </Badge>
                 </div>
@@ -614,7 +614,7 @@ export default function KnowledgeBasePage({ fixedAgentId }: { fixedAgentId?: str
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <span className="truncate text-sm font-medium">{doc.file_name}</span>
-                              <Badge variant="secondary" className={cn('shrink-0 text-[10px]', st.cls)}>
+                              <Badge variant="secondary" className={cn('shrink-0 text-[11px]', st.cls)}>
                                 {st.label}
                               </Badge>
                             </div>
@@ -845,7 +845,7 @@ export default function KnowledgeBasePage({ fixedAgentId }: { fixedAgentId?: str
                       <span className="truncate text-xs font-medium text-muted-foreground">
                         #{i + 1} · {hit.source || '未知来源'}
                       </span>
-                      <Badge variant="secondary" className="shrink-0 text-[10px]">
+                      <Badge variant="secondary" className="shrink-0 text-[11px]">
                         相似度 {(hit.score * 100).toFixed(1)}%
                       </Badge>
                     </div>

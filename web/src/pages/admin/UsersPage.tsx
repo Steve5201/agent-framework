@@ -38,7 +38,7 @@ function Modal({
         aria-modal="true"
       >
         <div className="border-b px-5 py-3.5">
-          <div className="text-sm font-semibold">{title}</div>
+          <div className="text-[15px] font-semibold">{title}</div>
           {subtitle && <div className="mt-0.5 text-xs text-muted-foreground">{subtitle}</div>}
         </div>
         <div className="flex-1 overflow-y-auto p-5">{children}</div>
@@ -331,21 +331,20 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl p-6">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6 xl:p-8">
       {/* 页头 */}
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
               <Users className="size-4.5" />
             </div>
-            <h1 className="text-lg font-semibold tracking-tight">用户管理</h1>
+            <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
+              {superAdmin
+                ? '全局用户：可创建任意角色并指定智能体归属（含各智能体的超管 / 普通管理员 / 普通用户）。'
+                : `本智能体「${myAgent}」的用户组：只能创建普通用户与普通管理员。`}
+            </p>
           </div>
-          <p className="mt-1.5 max-w-xl text-xs leading-relaxed text-muted-foreground">
-            {superAdmin
-              ? '全局用户：可创建任意角色并指定智能体归属（含各智能体的超管 / 普通管理员 / 普通用户）。'
-              : `本智能体「${myAgent}」的用户组：只能创建普通用户与普通管理员。`}
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => { setLoading(true); void load() }} disabled={loading}>
@@ -429,7 +428,7 @@ export default function UsersPage() {
                   <td className="px-3 py-2.5">
                     <Badge
                       variant="outline"
-                      className={cn('text-[10px]', ROLE_STYLE[u.role ?? 'user'] ?? ROLE_STYLE.user)}
+                      className={cn('text-[11px]', ROLE_STYLE[u.role ?? 'user'] ?? ROLE_STYLE.user)}
                     >
                       {ROLE_LABELS[u.role ?? 'user'] ?? u.role}
                     </Badge>

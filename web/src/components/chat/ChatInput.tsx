@@ -175,7 +175,7 @@ export default function ChatInput({ canConfigure = true }: { canConfigure?: bool
   return (
     <div className="border-t p-3">
       <div
-        className="mx-auto max-w-3xl"
+        className="mx-auto max-w-3xl xl:max-w-4xl"
         onDragOver={(e) => {
           e.preventDefault()
           if (!busy) setDragging(true)

@@ -199,7 +199,7 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
   return (
     <div className="flex h-full overflow-hidden">
       {/* 桌面侧栏 */}
-      <aside className="hidden w-64 shrink-0 border-r bg-card md:block">
+      <aside className="hidden w-64 shrink-0 border-r bg-card md:block xl:w-72">
         <SessionSidebar />
       </aside>
 
@@ -230,7 +230,7 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
           </Button>
           <span className="ml-1 flex min-w-0 items-center gap-1.5">
             <Bot className="size-3.5 shrink-0 text-primary" />
-            <span className="truncate text-sm font-medium">{scopeTitle}</span>
+            <span className="truncate text-base font-medium">{scopeTitle}</span>
           </span>
           {isGuest && mode === 'agent' ? (
             <Link
@@ -253,7 +253,7 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
               <Bot className="size-4.5" />
             </div>
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold">{scopeTitle}</div>
+              <div className="truncate text-base font-semibold">{scopeTitle}</div>
               <div className="flex items-center gap-1.5 text-xs text-emerald-600">
                 <span className="relative flex size-1.5">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />

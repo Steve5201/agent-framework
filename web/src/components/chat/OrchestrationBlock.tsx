@@ -103,7 +103,7 @@ export default function OrchestrationBlock({ tasks, streaming = false }: Orchest
                 <span className="text-muted-foreground">{STATUS_TEXT[t.status]}</span>
                 {/* P4-N 工具调用状态：当前工具 + 已完成工具履历 */}
                 {(t.activeTool || (t.toolHistory && t.toolHistory.length > 0)) && (
-                  <span className="flex shrink-0 items-center gap-1 text-[10px] text-amber-600">
+                  <span className="flex shrink-0 items-center gap-1 text-[11px] text-amber-600">
                     {t.toolHistory?.map((name) => (
                       <span key={name} className="inline-flex items-center gap-0.5 rounded-sm bg-amber-500/10 px-1 py-0.5">
                         <Braces className="h-2.5 w-2.5" />
@@ -119,7 +119,7 @@ export default function OrchestrationBlock({ tasks, streaming = false }: Orchest
                   </span>
                 )}
                 {t.totalTokens ? (
-                  <span className="ml-auto text-[10px] text-muted-foreground">{t.totalTokens} tok</span>
+                  <span className="ml-auto text-[11px] text-muted-foreground">{t.totalTokens} tok</span>
                 ) : null}
               </div>
               {/* P4-N 思考区：子任务"思考中"打字机（灰色斜体，独立于正文区块） */}

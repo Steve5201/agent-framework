@@ -76,7 +76,7 @@ function StatCard({
           <span className="truncate text-xs text-muted-foreground">{label}</span>
           {icon}
         </div>
-        <div className="mt-1.5 truncate text-xl font-semibold tabular-nums">{value}</div>
+        <div className="mt-1.5 truncate text-2xl font-semibold tabular-nums">{value}</div>
         {hint && <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{hint}</div>}
       </CardContent>
     </Card>
@@ -311,20 +311,19 @@ export default function DataPage() {
   const sortKeys = Object.keys(sortLabels) as ('sessions' | 'calls' | 'cost')[]
 
   return (
-    <div className="mx-auto max-w-6xl p-6">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6 xl:p-8">
       {/* 页头 */}
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
               <TrendingUp className="size-4.5" />
             </div>
-            <h1 className="text-lg font-semibold tracking-tight">数据管理</h1>
+            <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
+              平台运营分析台（只读）：会话活跃度、智能体域反馈与用量成本速览。
+              数据来自 agent-service / llm-gateway / auth-service 三端聚合，仅最高超管可见。
+            </p>
           </div>
-          <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-            平台运营分析台（只读）：会话活跃度、智能体域反馈与用量成本速览。
-            数据来自 agent-service / llm-gateway / auth-service 三端聚合，仅最高超管可见。
-          </p>
         </div>
         <div className="flex items-center gap-2">
           {/* 窗口切换 */}
@@ -469,7 +468,7 @@ export default function DataPage() {
                                 <td className="px-3 py-2 text-xs text-muted-foreground">{i + 1}</td>
                                 <td className="px-3 py-2">
                                   <span className="font-medium">{name ?? `#${u.user_id}`}</span>
-                                  {name && <span className="ml-1.5 font-mono text-[10px] text-muted-foreground">#{u.user_id}</span>}
+                                  {name && <span className="ml-1.5 font-mono text-[11px] text-muted-foreground">#{u.user_id}</span>}
                                 </td>
                                 <td className="px-3 py-2 text-right font-mono text-xs tabular-nums">
                                   {formatNum(u.calls)}
@@ -538,7 +537,7 @@ export default function DataPage() {
                             {agentRows.map((r) => (
                               <tr key={r.agent_id} className="border-b transition-colors last:border-0 hover:bg-accent/40">
                                 <td className="px-3 py-2">
-                                  <Badge variant="outline" className="font-mono text-[10px]">
+                                  <Badge variant="outline" className="font-mono text-[11px]">
                                     {agentLabel(r.agent_id)}
                                   </Badge>
                                 </td>

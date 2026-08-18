@@ -49,7 +49,7 @@ function Modal({
         aria-modal="true"
       >
         <div className="border-b px-5 py-3.5">
-          <div className="text-sm font-semibold">{title}</div>
+          <div className="text-[15px] font-semibold">{title}</div>
           {subtitle && <div className="mt-0.5 text-xs text-muted-foreground">{subtitle}</div>}
         </div>
         <div className="flex-1 overflow-y-auto p-5">{children}</div>
@@ -249,21 +249,20 @@ export default function ModelsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl p-6">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6 xl:p-8">
       {/* 页头 */}
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
               <Cpu className="size-4.5" />
             </div>
-            <h1 className="text-lg font-semibold tracking-tight">大模型管理</h1>
+            <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
+              接入 OpenAI 兼容的大模型（云端 API / 本地推理服务），保存后 agent 请求按模型名路由。
+              API Key 只存储在 llm-gateway，此处仅显示打码值；本地模型可不填密钥。
+              默认模型唯一且不可删除/禁用（始终有且仅有一个兜底实例），可随时转移默认位。
+            </p>
           </div>
-          <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-            接入 OpenAI 兼容的大模型（云端 API / 本地推理服务），保存后 agent 请求按模型名路由。
-            API Key 只存储在 llm-gateway，此处仅显示打码值；本地模型可不填密钥。
-            默认模型唯一且不可删除/禁用（始终有且仅有一个兜底实例），可随时转移默认位。
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => { setLoading(true); void load() }} disabled={loading}>
@@ -326,7 +325,7 @@ export default function ModelsPage() {
                         <div className="flex items-center gap-1.5">
                           <span className="font-medium">{m.name}</span>
                           {m.upstream_model && m.upstream_model !== m.name && (
-                            <Badge variant="outline" className="max-w-[140px] truncate font-mono text-[10px] text-muted-foreground" title={`实际上游模型：${m.upstream_model}`}>
+                            <Badge variant="outline" className="max-w-[140px] truncate font-mono text-[11px] text-muted-foreground" title={`实际上游模型：${m.upstream_model}`}>
                               → {m.upstream_model}
                             </Badge>
                           )}
@@ -350,7 +349,7 @@ export default function ModelsPage() {
                         <KeyRound className="size-3" /> {m.api_key}
                       </span>
                     ) : (
-                      <Badge variant="outline" className="text-[10px]">
+                      <Badge variant="outline" className="text-[11px]">
                         本地 / 无密钥
                       </Badge>
                     )}
@@ -367,7 +366,7 @@ export default function ModelsPage() {
                   </td>
                   <td className="px-3 py-2.5">
                     {m.is_default ? (
-                      <Badge className="gap-1 bg-amber-500/15 text-[10px] text-amber-600 dark:text-amber-300">
+                      <Badge className="gap-1 bg-amber-500/15 text-[11px] text-amber-600 dark:text-amber-300">
                         <Star className="size-3 fill-current" /> 默认
                       </Badge>
                     ) : (

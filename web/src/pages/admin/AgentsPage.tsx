@@ -30,7 +30,7 @@ function Modal({
         aria-modal="true"
       >
         <div className="border-b px-5 py-3.5">
-          <div className="text-sm font-semibold">{title}</div>
+          <div className="text-[15px] font-semibold">{title}</div>
           {subtitle && <div className="mt-0.5 text-xs text-muted-foreground">{subtitle}</div>}
         </div>
         <div className="flex-1 overflow-y-auto p-5">{children}</div>
@@ -168,20 +168,19 @@ export default function AgentsPage() {
   const disabledCount = agents.length - enabledCount
 
   return (
-    <div className="mx-auto max-w-6xl p-6">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6 xl:p-8">
       {/* 页头 */}
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
               <ShieldCheck className="size-4.5" />
             </div>
-            <h1 className="text-lg font-semibold tracking-tight">智能体管理</h1>
+            <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
+              智能体注册表：每个智能体拥有独立的资源域（技能 / MCP / 知识库），彼此不感知。
+              可指定 owner_user_id 将某用户授予 agent_admin 并绑定为该智能体的超管。
+            </p>
           </div>
-          <p className="mt-1.5 max-w-xl text-xs leading-relaxed text-muted-foreground">
-            智能体注册表：每个智能体拥有独立的资源域（技能 / MCP / 知识库），彼此不感知。
-            可指定 owner_user_id 将某用户授予 agent_admin 并绑定为该智能体的超管。
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => { setLoading(true); void load() }} disabled={loading}>
@@ -262,7 +261,7 @@ export default function AgentsPage() {
                         </div>
                       </td>
                       <td className="px-3 py-2.5">
-                        <Badge variant="outline" className={cn('text-[10px]', st.cls)}>
+                        <Badge variant="outline" className={cn('text-[11px]', st.cls)}>
                           <span
                             className={cn('mr-1.5 inline-block size-1.5 rounded-full', a.status === 1 ? 'bg-emerald-500' : 'bg-muted-foreground/50')}
                           />

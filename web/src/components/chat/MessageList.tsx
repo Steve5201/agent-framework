@@ -30,7 +30,7 @@ export default function MessageList() {
         <div className="flex size-14 items-center justify-center rounded-full bg-accent text-primary">
           <Sparkles className="size-6" />
         </div>
-        <div className="text-xl font-semibold">开始一段新对话</div>
+        <div className="text-2xl font-semibold">开始一段新对话</div>
         <div className="max-w-sm text-sm text-muted-foreground">
           在下方输入问题，智能体将调用工具为你解答（如计算器、回显）。
         </div>
@@ -63,7 +63,7 @@ export default function MessageList() {
   for (const a of pending) items.push(<MessageItem key={a.id} message={a} />)
 
   return (
-    <div className="flex flex-col pb-4">
+    <div className="mx-auto flex w-full max-w-3xl flex-col pb-4 xl:max-w-4xl">
       {items}
       <div ref={bottomRef} />
     </div>

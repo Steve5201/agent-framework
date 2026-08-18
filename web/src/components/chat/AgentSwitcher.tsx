@@ -155,7 +155,7 @@ export default function AgentSwitcherDialog({ onClose }: Props) {
           >
             <span className={cn('flex min-w-0 items-center gap-2', !selected && 'text-muted-foreground')}>
               {selected && (
-                <span className="flex size-5 shrink-0 items-center justify-center rounded bg-muted text-[10px] font-semibold text-muted-foreground">
+                <span className="flex size-5 shrink-0 items-center justify-center rounded bg-muted text-[11px] font-semibold text-muted-foreground">
                   {selected.name.charAt(0).toUpperCase()}
                 </span>
               )}
@@ -208,7 +208,7 @@ export default function AgentSwitcherDialog({ onClose }: Props) {
                         title={disabled ? '已停用，不可进入' : undefined}
                       >
                         <span className="flex min-w-0 items-center gap-2">
-                          <span className="flex size-5 shrink-0 items-center justify-center rounded bg-muted text-[10px] font-semibold text-muted-foreground">
+                          <span className="flex size-5 shrink-0 items-center justify-center rounded bg-muted text-[11px] font-semibold text-muted-foreground">
                             {a.name.charAt(0).toUpperCase()}
                           </span>
                           <span className="min-w-0">
@@ -217,7 +217,7 @@ export default function AgentSwitcherDialog({ onClose }: Props) {
                           </span>
                         </span>
                         {disabled && (
-                          <Badge variant="outline" className="shrink-0 text-[10px] text-muted-foreground">
+                          <Badge variant="outline" className="shrink-0 text-[11px] text-muted-foreground">
                             已停用
                           </Badge>
                         )}

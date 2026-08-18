@@ -124,20 +124,19 @@ export default function LogsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl p-6">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6 xl:p-8">
       {/* 页头 */}
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
               <ScrollText className="size-4.5" />
             </div>
-            <h1 className="text-lg font-semibold tracking-tight">操作日志</h1>
+            <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
+              审计管理端写操作（技能 / MCP / 知识库 / 用户 / 智能体）：谁在何时对哪个智能体做了什么。
+              日志按智能体域隔离——{superAdmin ? '最高超管可查看全部域' : '本账号仅能查看所属智能体组'}。
+            </p>
           </div>
-          <p className="mt-1.5 max-w-xl text-xs leading-relaxed text-muted-foreground">
-            审计管理端写操作（技能 / MCP / 知识库 / 用户 / 智能体）：谁在何时对哪个智能体做了什么。
-            日志按智能体域隔离——{superAdmin ? '最高超管可查看全部域' : '本账号仅能查看所属智能体组'}。
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => { setLoading(true); void load() }} disabled={loading}>
@@ -240,21 +239,21 @@ export default function LogsPage() {
                   <td className="px-3 py-2">
                     <Badge
                       variant="outline"
-                      className={cn('text-[10px]', ROLE_STYLE[e.role] ?? 'bg-muted text-muted-foreground')}
+                      className={cn('text-[11px]', ROLE_STYLE[e.role] ?? 'bg-muted text-muted-foreground')}
                     >
                       {ROLE_LABELS[e.role] ?? e.role}
                     </Badge>
                   </td>
                   <td className="px-3 py-2">
                     <div className="text-xs font-medium">{formatAction(e.action)}</div>
-                    <div className="font-mono text-[10px] text-muted-foreground">{e.action}</div>
+                    <div className="font-mono text-[11px] text-muted-foreground">{e.action}</div>
                   </td>
                   <td className="px-3 py-2 font-mono text-xs">{e.target_agent}</td>
-                  <td className="max-w-[220px] truncate px-3 py-2 font-mono text-[10px] text-muted-foreground" title={`${e.method} ${e.path}`}>
+                  <td className="max-w-[220px] truncate px-3 py-2 font-mono text-[11px] text-muted-foreground" title={`${e.method} ${e.path}`}>
                     {e.method} {e.path}
                   </td>
                   <td className="px-3 py-2">
-                    <Badge variant="outline" className={cn('text-[10px]', statusStyle(e.status))}>
+                    <Badge variant="outline" className={cn('text-[11px]', statusStyle(e.status))}>
                       {e.status}
                     </Badge>
                   </td>

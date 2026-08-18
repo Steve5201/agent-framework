@@ -72,7 +72,7 @@ function Modal({
         aria-modal="true"
       >
         <div className="border-b px-5 py-3.5">
-          <div className="text-sm font-semibold">{title}</div>
+          <div className="text-[15px] font-semibold">{title}</div>
           {subtitle && <div className="mt-0.5 text-xs text-muted-foreground">{subtitle}</div>}
         </div>
         <div className="flex-1 overflow-y-auto p-5">{children}</div>
@@ -377,20 +377,19 @@ export default function SkillsPage({ fixedAgentId }: { fixedAgentId?: string } =
   ]
 
   return (
-    <div className="mx-auto max-w-5xl p-6">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6 xl:p-8">
       {/* 页头 */}
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
               <Wrench className="size-4.5" />
             </div>
-            <h1 className="text-lg font-semibold tracking-tight">技能管理</h1>
+            <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
+              Anthropic Agent Skills 格式（目录 + SKILL.md）。保存后 agent 热加载生效，无需重启。
+              上传 zip 自动提取技能名与版本号；支持中文名与多文件目录结构。
+            </p>
           </div>
-          <p className="mt-1.5 max-w-xl text-xs leading-relaxed text-muted-foreground">
-            Anthropic Agent Skills 格式（目录 + SKILL.md）。保存后 agent 热加载生效，无需重启。
-            上传 zip 自动提取技能名与版本号；支持中文名与多文件目录结构。
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <AgentScopeSelect agentId={agentId} agents={agents} onChange={setAgentId} />
@@ -517,7 +516,7 @@ export default function SkillsPage({ fixedAgentId }: { fixedAgentId?: string } =
                       </span>
                       <div className="min-w-0">
                         <div className="truncate font-medium">{sk.name}</div>
-                        <div className="truncate font-mono text-[10px] text-muted-foreground" title={sk.tool_name}>
+                        <div className="truncate font-mono text-[11px] text-muted-foreground" title={sk.tool_name}>
                           {sk.tool_name}
                         </div>
                       </div>
@@ -725,7 +724,7 @@ export default function SkillsPage({ fixedAgentId }: { fixedAgentId?: string } =
                   {editing.versions?.map((v) => (
                     <li key={v.semver} className="flex items-center justify-between text-xs">
                       <span className="font-mono">
-                        <span className="rounded bg-blue-500/10 px-1 py-px text-[10px] text-blue-600 dark:text-blue-300">
+                        <span className="rounded bg-blue-500/10 px-1 py-px text-[11px] text-blue-600 dark:text-blue-300">
                           {v.semver}
                         </span>
                         <span className="ml-2 text-muted-foreground">
@@ -838,7 +837,7 @@ function StatCard({
     <div className="stat-hover flex items-center gap-3 rounded-xl border bg-card px-4 py-3">
       <div className={cn('flex size-9 items-center justify-center rounded-lg bg-muted', accent)}>{icon}</div>
       <div>
-        <div className="text-lg font-semibold leading-tight tabular-nums">{value}</div>
+        <div className="text-xl font-semibold leading-tight tabular-nums">{value}</div>
         <div className="text-xs text-muted-foreground">{label}</div>
       </div>
     </div>

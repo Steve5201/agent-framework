@@ -13,10 +13,10 @@ import { isDocMarker, isImageMarker } from './docMarker'
 function AiAvatar() {
   return (
     <div
-      className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-sm"
+      className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-sm"
       aria-hidden
     >
-      <Bot className="size-4" />
+      <Bot className="size-4.5" />
     </div>
   )
 }
@@ -25,10 +25,10 @@ function AiAvatar() {
 function UserAvatar() {
   return (
     <div
-      className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"
+      className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"
       aria-hidden
     >
-      <User className="size-4" />
+      <User className="size-4.5" />
     </div>
   )
 }
@@ -49,7 +49,7 @@ export default function MessageItem({
   if (message.role === 'tool') {
     return (
       <div className="msg-in px-4 py-1.5">
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-3xl xl:max-w-4xl">
           <div className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
             <span className="shrink-0 font-medium">工具结果</span>
             <code className="min-w-0 flex-1 break-all">{message.content}</code>

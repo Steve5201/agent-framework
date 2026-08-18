@@ -79,6 +79,16 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* 断点固定为视口 px（Tailwind 默认用 rem，会随 html 根字号缩放而漂移，
+ * 与下方"全站流式缩放"的 px 断点错位；统一按实际视口宽度触发）。 */
+@theme {
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
 /* 全局基础样式 */
 * {
   border-color: var(--border);
@@ -104,6 +114,25 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* ---------------------------------------------------------------------------
+ * 全站流式缩放（窗口自适应）：随窗口变宽，基础字号逐步放大。
+ * 所有 rem 单位的文字/间距/控件（按钮、输入、头像、侧栏）等比缩放，
+ * 大屏（全屏/加宽窗口）保持整体视觉统一；断点本身用 px 判断不受影响。
+ * ------------------------------------------------------------------------- */
+html {
+  font-size: 16px;
+}
+@media (min-width: 1280px) {
+  html {
+    font-size: 16.5px;
+  }
+}
+@media (min-width: 1536px) {
+  html {
+    font-size: 17.25px;
+  }
 }
 
 /* 文本选区：柔和品牌蓝 */

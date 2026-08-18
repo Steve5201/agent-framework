@@ -82,8 +82,8 @@ function SidebarContent({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold leading-tight">管理端</span>
-              <Badge variant="outline" className="shrink-0 bg-blue-500/10 px-1.5 py-0 text-[10px] text-blue-600 dark:text-blue-300">
+              <span className="text-[15px] font-semibold leading-tight">管理端</span>
+              <Badge variant="outline" className="shrink-0 bg-blue-500/10 px-1.5 py-0 text-[11px] text-blue-600 dark:text-blue-300">
                 {ROLE_LABELS[me?.role ?? ''] ?? me?.role ?? '管理员'}
               </Badge>
             </div>
@@ -133,7 +133,7 @@ function SidebarContent({
                       <Badge
                         variant={m.implemented ? 'default' : 'secondary'}
                         className={cn(
-                          'shrink-0 text-[10px]',
+                          'shrink-0 text-[11px]',
                           m.implemented &&
                             'bg-blue-500/10 text-blue-600 hover:bg-blue-500/10 dark:text-blue-300',
                         )}
@@ -194,7 +194,7 @@ export default function AdminLayout() {
   return (
     <div className="flex h-screen bg-muted/30 md:flex-row">
       {/* 桌面侧边栏（md 以上常驻） */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r bg-card md:flex">
+      <aside className="hidden w-60 shrink-0 flex-col border-r bg-card md:flex xl:w-64">
         <SidebarContent me={me} modules={modules} error={error} />
       </aside>
 
@@ -219,7 +219,7 @@ export default function AdminLayout() {
 
       {/* 主区：sticky 顶栏（标题+面包屑，右侧返回对话）+ 内容 */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center justify-between border-b bg-card px-4 md:px-6">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b bg-card px-4 md:px-6 xl:h-16">
           <div className="flex min-w-0 items-center gap-2.5">
             <Button
               type="button"
@@ -232,7 +232,7 @@ export default function AdminLayout() {
               <Menu className="size-4.5" />
             </Button>
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold md:text-base">{currentTitle}</div>
+              <div className="truncate text-base font-semibold xl:text-lg">{currentTitle}</div>
               <div className="hidden items-center gap-1.5 text-xs text-muted-foreground md:flex">
                 <span>管理后台</span>
                 <span className="text-muted-foreground/50">/</span>

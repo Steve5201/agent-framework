@@ -78,7 +78,7 @@ export default function MessageItem({
         )}
         {/* 上下文压缩提示条：历史回看该轮压缩过的节点（__condense_v1__ 记录） */}
         {message.condensed && <CondenseNotice info={message.condensed} />}
-        <div className="text-sm leading-relaxed break-words">
+        <div className="text-sm leading-relaxed break-words" aria-live="polite">
           {message.content ? (
             <RichContent content={message.content} streaming={message.status === 'streaming'} />
           ) : message.thinking && message.thinking.length > 0 ? null : (

@@ -1,0 +1,1382 @@
+	<!DOCTYPE html>
+	<html lang="zh-CN">
+	<head>
+	    <meta charset="UTF-8">
+	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	    <title>智能体管理平台</title>
+	    <!-- 字体 -->
+	    <link rel="preconnect" href="https://fonts.googleapis.com">
+	    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+	    <!-- Tailwind -->
+	    <script src="https://cdn.tailwindcss.com"></script>
+	    <!-- Iconify -->
+	    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+	    <style>
+	        /* ==================== 全局设计令牌 ==================== */
+	        :root {
+	            /* 配色系统 */
+	            --bg-base: #F8F9FA;              /* 页面基础背景 */
+	            --bg-card: #FFFFFF;              /* 卡片背景 */
+	            --bg-elevated: #FFFFFF;          /* 弹出层背景 */
+	            --bg-hover: #F1F3F5;             /* 悬停背景 */
+	            --bg-active: #E9ECEF;            /* 激活/选中背景 */
+	            --bg-input: #F8F9FA;             /* 输入框背景 */
+	            --bg-sidebar: #FFFFFF;           /* 侧边栏背景 */
+	            /* 文字层级 */
+	            --text-primary: #1A1A2E;         /* 主文字 H1-H3 */
+	            --text-secondary: #495057;       /* 正文文字 */
+	            --text-tertiary: #868E96;        /* 辅助说明 */
+	            --text-quaternary: #ADB5BD;      /* 占位符/禁用 */
+	            --text-inverse: #FFFFFF;         /* 反色文字 */
+	            --text-link: #0D9488;            /* 链接色 */
+	            /* 功能色 */
+	            --accent: #0D9488;               /* 主品牌色 */
+	            --accent-light: #CCFBF1;         /* 浅品牌色 */
+	            --accent-dark: #0F766E;          /* 深品牌色 */
+	            --success: #059669;              /* 成功 */
+	            --success-light: #D1FAE5;        /* 成功浅底 */
+	            --warning: #D97706;              /* 警告 */
+	            --warning-light: #FEF3C7;        /* 警告浅底 */
+	            --error: #DC2626;                /* 错误 */
+	            --error-light: #FEE2E2;          /* 错误浅底 */
+	            --info: #2563EB;                 /* 信息 */
+	            --info-light: #DBEAFE;           /* 信息浅底 */
+	            /* 边框 */
+	            --border-subtle: #F1F3F5;        /* 微弱边框 */
+	            --border-default: #DEE2E6;       /* 默认边框 */
+	            --border-strong: #CED4DA;        /* 强边框 */
+	            /* 间距 */
+	            --space-1: 4px;
+	            --space-2: 8px;
+	            --space-3: 12px;
+	            --space-4: 16px;
+	            --space-5: 20px;
+	            --space-6: 24px;
+	            --space-8: 32px;
+	            --space-10: 40px;
+	            --space-12: 48px;
+	            /* 圆角 */
+	            --radius-sm: 6px;
+	            --radius-md: 8px;
+	            --radius-lg: 12px;
+	            --radius-xl: 16px;
+	            --radius-full: 9999px;
+	            /* 阴影 */
+	            --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+	            --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+	            --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+	            --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+	            /* 过渡 */
+	            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+	            --duration-fast: 150ms;
+	            --duration-normal: 250ms;
+	        }
+	        * {
+	            margin: 0;
+	            padding: 0;
+	            box-sizing: border-box;
+	        }
+	        body {
+	            font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+	            background: var(--bg-base);
+	            color: var(--text-primary);
+	            line-height: 1.5;
+	            -webkit-font-smoothing: antialiased;
+	        }
+	        /* ==================== 整体布局框架 ==================== */
+	        .app-layout {
+	            display: flex;
+	            min-height: 100vh;
+	        }
+	        /* ==================== 侧边导航栏 ==================== */
+	        .sidebar {
+	            width: 260px;
+	            min-width: 260px;
+	            background: var(--bg-sidebar);
+	            border-right: 1px solid var(--border-subtle);
+	            display: flex;
+	            flex-direction: column;
+	            position: fixed;
+	            top: 0;
+	            left: 0;
+	            bottom: 0;
+	            z-index: 100;
+	        }
+	        /* Logo区域 */
+	        .sidebar-brand {
+	            padding: var(--space-6);
+	            border-bottom: 1px solid var(--border-subtle);
+	            display: flex;
+	            align-items: center;
+	            gap: 12px;
+	        }
+	        .brand-logo {
+	            width: 36px;
+	            height: 36px;
+	            background: linear-gradient(135deg, var(--accent), #14B8A6);
+	            border-radius: var(--radius-md);
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            color: white;
+	            font-weight: 700;
+	            font-size: 16px;
+	        }
+	        .brand-text {
+	            font-size: 17px;
+	            font-weight: 600;
+	            color: var(--text-primary);
+	            letter-spacing: -0.02em;
+	        }
+	        /* 导航菜单 */
+	        .nav-menu {
+	            flex: 1;
+	            padding: var(--space-4) var(--space-3);
+	            overflow-y: auto;
+	        }
+	        .nav-section {
+	            margin-bottom: var(--space-6);
+	        }
+	        .nav-section-title {
+	            font-size: 11px;
+	            font-weight: 600;
+	            color: var(--text-quaternary);
+	            text-transform: uppercase;
+	            letter-spacing: 0.05em;
+	            padding: 0 var(--space-3);
+	            margin-bottom: var(--space-2);
+	        }
+	        .nav-item {
+	            display: flex;
+	            align-items: center;
+	            gap: 10px;
+	            padding: 10px 12px;
+	            border-radius: var(--radius-md);
+	            color: var(--text-secondary);
+	            font-size: 14px;
+	            font-weight: 500;
+	            cursor: pointer;
+	            transition: all var(--duration-fast) ease;
+	            margin-bottom: 2px;
+	        }
+	        .nav-item:hover {
+	            background: var(--bg-hover);
+	            color: var(--text-primary);
+	        }
+	        .nav-item.active {
+	            background: var(--accent-light);
+	            color: var(--accent-dark);
+	            font-weight: 600;
+	        }
+	        .nav-item iconify-icon {
+	            width: 19px;
+	            height: 19px;
+	            flex-shrink: 0;
+	        }
+	        .nav-badge {
+	            margin-left: auto;
+	            background: var(--accent);
+	            color: white;
+	            font-size: 11px;
+	            font-weight: 600;
+	            padding: 2px 8px;
+	            border-radius: var(--radius-full);
+	        }
+	        /* 侧边栏底部 */
+	        .sidebar-footer {
+	            padding: var(--space-4) var(--space-4) var(--space-6);
+	            border-top: 1px solid var(--border-subtle);
+	        }
+	        .user-profile {
+	            display: flex;
+	            align-items: center;
+	            gap: 12px;
+	            padding: 10px;
+	            border-radius: var(--radius-md);
+	            cursor: pointer;
+	            transition: var(--duration-fast);
+	        }
+	        .user-profile:hover {
+	            background: var(--bg-hover);
+	        }
+	        .user-avatar {
+	            width: 38px;
+	            height: 38px;
+	            border-radius: var(--radius-md);
+	            background: linear-gradient(135deg, #667EEA, #764BA2);
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            color: white;
+	            font-weight: 600;
+	            font-size: 14px;
+	        }
+	        .user-info {
+	            flex: 1;
+	            min-width: 0;
+	        }
+	        .user-name {
+	            font-size: 14px;
+	            font-weight: 600;
+	            color: var(--text-primary);
+	        }
+	        .user-role {
+	            font-size: 12px;
+	            color: var(--text-tertiary);
+	        }
+	        /* ==================== 主内容区域 ==================== */
+	        .main-content {
+	            flex: 1;
+	            margin-left: 260px;
+	            display: flex;
+	            flex-direction: column;
+	            min-height: 100vh;
+	        }
+	        /* 顶部栏 */
+	        .topbar {
+	            height: 64px;
+	            background: var(--bg-card);
+	            border-bottom: 1px solid var(--border-subtle);
+	            display: flex;
+	            align-items: center;
+	            justify-content: space-between;
+	            padding: 0 var(--space-8);
+	            position: sticky;
+	            top: 0;
+	            z-index: 50;
+	        }
+	        .topbar-left {
+	            display: flex;
+	            align-items: center;
+	            gap: var(--space-4);
+	        }
+	        .page-title {
+	            font-size: 18px;
+	            font-weight: 600;
+	            color: var(--text-primary);
+	        }
+	        .breadcrumb {
+	            display: flex;
+	            align-items: center;
+	            gap: 6px;
+	            font-size: 13px;
+	            color: var(--text-tertiary);
+	        }
+	        .breadcrumb-separator {
+	            color: var(--text-quaternary);
+	        }
+	        .breadcrumb-current {
+	            color: var(--text-secondary);
+	            font-weight: 500;
+	        }
+	        .topbar-right {
+	            display: flex;
+	            align-items: center;
+	            gap: var(--space-2);
+	        }
+	        .topbar-btn {
+	            width: 38px;
+	            height: 38px;
+	            border-radius: var(--radius-md);
+	            border: 1px solid var(--border-default);
+	            background: transparent;
+	            cursor: pointer;
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            color: var(--text-secondary);
+	            transition: var(--duration-fast);
+	            position: relative;
+	        }
+	        .topbar-btn:hover {
+	            background: var(--bg-hover);
+	            border-color: var(--border-strong);
+	            color: var(--text-primary);
+	        }
+	        .notification-dot {
+	            position: absolute;
+	            top: 8px;
+	            right: 8px;
+	            width: 8px;
+	            height: 8px;
+	            background: var(--error);
+	            border-radius: 50%;
+	            border: 2px solid var(--bg-card);
+	        }
+	        /* 内容区 */
+	        .content-area {
+	            flex: 1;
+	            padding: var(--space-8);
+	        }
+	        /* ==================== 卡片组件 ==================== */
+	        .card {
+	            background: var(--bg-card);
+	            border: 1px solid var(--border-subtle);
+	            border-radius: var(--radius-lg);
+	            box-shadow: var(--shadow-xs);
+	            overflow: hidden;
+	        }
+	        .card-header {
+	            padding: var(--space-5) var(--space-6);
+	            border-bottom: 1px solid var(--border-subtle);
+	            display: flex;
+	            align-items: center;
+	            justify-content: space-between;
+	        }
+	        .card-title {
+	            font-size: 16px;
+	            font-weight: 600;
+	            color: var(--text-primary);
+	        }
+	        .card-body {
+	            padding: var(--space-6);
+	        }
+	        /* ==================== 统计卡片网格 ==================== */
+	        .stats-grid {
+	            display: grid;
+	            grid-template-columns: repeat(4, 1fr);
+	            gap: var(--space-6);
+	            margin-bottom: var(--space-8);
+	        }
+	        .stat-card {
+	            background: var(--bg-card);
+	            border: 1px solid var(--border-subtle);
+	            border-radius: var(--radius-lg);
+	            padding: var(--space-6);
+	            transition: var(--duration-normal);
+	        }
+	        .stat-card:hover {
+	            box-shadow: var(--shadow-sm);
+	            transform: translateY(-2px);
+	        }
+	        .stat-header {
+	            display: flex;
+	            align-items: center;
+	            justify-content: space-between;
+	            margin-bottom: var(--space-4);
+	        }
+	        .stat-icon {
+	            width: 44px;
+	            height: 44px;
+	            border-radius: var(--radius-md);
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            font-size: 20px;
+	        }
+	        .stat-icon.blue { background: var(--info-light); color: var(--info); }
+	        .stat-icon.green { background: var(--success-light); color: var(--success); }
+	        .stat-icon.orange { background: var(--warning-light); color: var(--warning); }
+	        .stat-icon.teal { background: var(--accent-light); color: var(--accent); }
+	        .stat-trend {
+	            display: flex;
+	            align-items: center;
+	            gap: 4px;
+	            font-size: 12px;
+	            font-weight: 600;
+	        }
+	        .stat-trend.up { color: var(--success); }
+	        .stat-trend.down { color: var(--error); }
+	        .stat-value {
+	            font-size: 28px;
+	            font-weight: 700;
+	            color: var(--text-primary);
+	            letter-spacing: -0.02em;
+	            line-height: 1.2;
+	        }
+	        .stat-label {
+	            font-size: 13px;
+	            color: var(--text-tertiary);
+	            margin-top: var(--space-2);
+	        }
+	        /* ==================== 数据表格 ==================== */
+	        .table-toolbar {
+	            display: flex;
+	            align-items: center;
+	            justify-content: space-between;
+	            margin-bottom: var(--space-5);
+	            flex-wrap: wrap;
+	            gap: var(--space-4);
+	        }
+	        .search-box {
+	            display: flex;
+	            align-items: center;
+	            gap: 10px;
+	            background: var(--bg-input);
+	            border: 1px solid var(--border-default);
+	            border-radius: var(--radius-md);
+	            padding: 0 14px;
+	            width: 320px;
+	            transition: var(--duration-fast);
+	        }
+	        .search-box:focus-within {
+	            border-color: var(--accent);
+	            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+	        }
+	        .search-box iconify-icon {
+	            color: var(--text-quaternary);
+	        }
+	        .search-box input {
+	            flex: 1;
+	            border: none;
+	            outline: none;
+	            background: transparent;
+	            padding: 10px 0;
+	            font-size: 14px;
+	            color: var(--text-primary);
+	        }
+	        .search-box input::placeholder {
+	            color: var(--text-quaternary);
+	        }
+	        .toolbar-actions {
+	            display: flex;
+	            align-items: center;
+	            gap: var(--space-3);
+	        }
+	        /* 按钮组件 */
+	        .btn {
+	            display: inline-flex;
+	            align-items: center;
+	            justify-content: center;
+	            gap: 8px;
+	            padding: 10px 18px;
+	            font-size: 14px;
+	            font-weight: 500;
+	            border-radius: var(--radius-md);
+	            border: 1px solid transparent;
+	            cursor: pointer;
+	            transition: all var(--duration-fast) ease;
+	            white-space: nowrap;
+	        }
+	        .btn:focus-visible {
+	            outline: 2px solid var(--accent);
+	            outline-offset: 2px;
+	        }
+	        .btn-primary {
+	            background: var(--accent);
+	            color: var(--text-inverse);
+	            border-color: var(--accent);
+	        }
+	        .btn-primary:hover {
+	            background: var(--accent-dark);
+	            transform: translateY(-1px);
+	            box-shadow: var(--shadow-sm);
+	        }
+	        .btn-secondary {
+	            background: var(--bg-card);
+	            color: var(--text-secondary);
+	            border-color: var(--border-default);
+	        }
+	        .btn-secondary:hover {
+	            background: var(--bg-hover);
+	            border-color: var(--border-strong);
+	            color: var(--text-primary);
+	        }
+	        .btn-ghost {
+	            background: transparent;
+	            color: var(--text-secondary);
+	        }
+	        .btn-ghost:hover {
+	            background: var(--bg-hover);
+	            color: var(--text-primary);
+	        }
+	        .btn-sm {
+	            padding: 6px 12px;
+	            font-size: 13px;
+	        }
+	        .btn-icon {
+	            width: 34px;
+	            height: 34px;
+	            padding: 0;
+	        }
+	        /* 表格样式 */
+	        .data-table {
+	            width: 100%;
+	            border-collapse: collapse;
+	        }
+	        .data-table th {
+	            text-align: left;
+	            padding: 12px 16px;
+	            font-size: 12px;
+	            font-weight: 600;
+	            color: var(--text-tertiary);
+	            text-transform: uppercase;
+	            letter-spacing: 0.04em;
+	            background: var(--bg-base);
+	            border-bottom: 1px solid var(--border-default);
+	        }
+	        .data-table td {
+	            padding: 16px;
+	            font-size: 14px;
+	            color: var(--text-secondary);
+	            border-bottom: 1px solid var(--border-subtle);
+	            vertical-align: middle;
+	        }
+	        .data-table tbody tr {
+	            transition: var(--duration-fast);
+	        }
+	        .data-table tbody tr:hover {
+	            background: var(--bg-hover);
+	        }
+	        .data-table tbody tr:last-child td {
+	            border-bottom: none;
+	        }
+	        /* 用户单元格 */
+	        .user-cell {
+	            display: flex;
+	            align-items: center;
+	            gap: 12px;
+	        }
+	        .user-cell-avatar {
+	            width: 38px;
+	            height: 38px;
+	            border-radius: var(--radius-md);
+	            object-fit: cover;
+	        }
+	        .user-cell-name {
+	            font-weight: 500;
+	            color: var(--text-primary);
+	        }
+	        .user-cell-email {
+	            font-size: 12px;
+	            color: var(--text-tertiary);
+	        }
+	        /* 状态标签 */
+	        .status-tag {
+	            display: inline-flex;
+	            align-items: center;
+	            gap: 6px;
+	            padding: 5px 12px;
+	            font-size: 12px;
+	            font-weight: 600;
+	            border-radius: var(--radius-full);
+	        }
+	        .status-tag::before {
+	            content: '';
+	            width: 6px;
+	            height: 6px;
+	            border-radius: 50%;
+	        }
+	        .status-active {
+	            background: var(--success-light);
+	            color: var(--success);
+	        }
+	        .status-active::before {
+	            background: var(--success);
+	        }
+	        .status-inactive {
+	            background: #F3F4F6;
+	            color: var(--text-tertiary);
+	        }
+	        .status-inactive::before {
+	            background: var(--text-quaternary);
+	        }
+	        .status-pending {
+	            background: var(--warning-light);
+	            color: var(--warning);
+	        }
+	        .status-pending::before {
+	            background: var(--warning);
+	        }
+	        /* 操作按钮组 */
+	        .action-group {
+	            display: flex;
+	            align-items: center;
+	            gap: 4px;
+	        }
+	        .action-btn {
+	            width: 32px;
+	            height: 32px;
+	            border-radius: var(--radius-sm);
+	            border: none;
+	            background: transparent;
+	            cursor: pointer;
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            color: var(--text-tertiary);
+	            transition: var(--duration-fast);
+	        }
+	        .action-btn:hover {
+	            background: var(--bg-active);
+	            color: var(--text-primary);
+	        }
+	        .action-btn.danger:hover {
+	            background: var(--error-light);
+	            color: var(--error);
+	        }
+	        /* 分页 */
+	        .table-footer {
+	            display: flex;
+	            align-items: center;
+	            justify-content: space-between;
+	            padding: var(--space-5) var(--space-6);
+	            border-top: 1px solid var(--border-subtle);
+	        }
+	        .pagination-info {
+	            font-size: 13px;
+	            color: var(--text-tertiary);
+	        }
+	        .pagination {
+	            display: flex;
+	            align-items: center;
+	            gap: 4px;
+	        }
+	        .page-btn {
+	            min-width: 34px;
+	            height: 34px;
+	            padding: 0 10px;
+	            border-radius: var(--radius-sm);
+	            border: 1px solid var(--border-default);
+	            background: transparent;
+	            font-size: 13px;
+	            font-weight: 500;
+	            color: var(--text-secondary);
+	            cursor: pointer;
+	            transition: var(--duration-fast);
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	        }
+	        .page-btn:hover:not(:disabled) {
+	            background: var(--bg-hover);
+	            border-color: var(--border-strong);
+	        }
+	        .page-btn.active {
+	            background: var(--accent);
+	            border-color: var(--accent);
+	            color: white;
+	        }
+	        .page-btn:disabled {
+	            opacity: 0.5;
+	            cursor: not-allowed;
+	        }
+	        /* ==================== 表单面板（工具配置示例）==================== */
+	        .form-grid {
+	            display: grid;
+	            grid-template-columns: 1fr 1fr;
+	            gap: var(--space-6);
+	        }
+	        .form-group {
+	            margin-bottom: var(--space-5);
+	        }
+	        .form-group.full-width {
+	            grid-column: 1 / -1;
+	        }
+	        .form-label {
+	            display: block;
+	            font-size: 13px;
+	            font-weight: 600;
+	            color: var(--text-primary);
+	            margin-bottom: var(--space-2);
+	        }
+	        .form-label .required {
+	            color: var(--error);
+	            margin-left: 2px;
+	        }
+	        .form-hint {
+	            font-size: 12px;
+	            color: var(--text-tertiary);
+	            margin-top: var(--space-1);
+	        }
+	        .form-input,
+	        .form-select,
+	        .form-textarea {
+	            width: 100%;
+	            padding: 10px 14px;
+	            font-size: 14px;
+	            color: var(--text-primary);
+	            background: var(--bg-input);
+	            border: 1px solid var(--border-default);
+	            border-radius: var(--radius-md);
+	            transition: var(--duration-fast);
+	            font-family: inherit;
+	        }
+	        .form-input:focus,
+	        .form-select:focus,
+	        .form-textarea:focus {
+	            outline: none;
+	            border-color: var(--accent);
+	            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+	        }
+	        .form-select {
+	            appearance: none;
+	            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23868E96' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+	            background-repeat: no-repeat;
+	            background-position: right 12px center;
+	            padding-right: 36px;
+	        }
+	        .form-textarea {
+	            min-height: 100px;
+	            resize: vertical;
+	        }
+	        /* 开关组件 */
+	        .switch-wrapper {
+	            display: flex;
+	            align-items: center;
+	            justify-content: space-between;
+	            padding: var(--space-4) var(--space-5);
+	            background: var(--bg-base);
+	            border-radius: var(--radius-md);
+	            border: 1px solid var(--border-subtle);
+	        }
+	        .switch-info h4 {
+	            font-size: 14px;
+	            font-weight: 500;
+	            color: var(--text-primary);
+	        }
+	        .switch-info p {
+	            font-size: 12px;
+	            color: var(--text-tertiary);
+	            margin-top: 2px;
+	        }
+	        .switch {
+	            position: relative;
+	            width: 44px;
+	            height: 24px;
+	        }
+	        .switch input {
+	            opacity: 0;
+	            width: 0;
+	            height: 0;
+	        }
+	        .switch-slider {
+	            position: absolute;
+	            cursor: pointer;
+	            top: 0;
+	            left: 0;
+	            right: 0;
+	            bottom: 0;
+	            background: var(--border-strong);
+	            border-radius: var(--radius-full);
+	            transition: var(--duration-fast);
+	        }
+	        .switch-slider::before {
+	            content: '';
+	            position: absolute;
+	            height: 18px;
+	            width: 18px;
+	            left: 3px;
+	            bottom: 3px;
+	            background: white;
+	            border-radius: 50%;
+	            transition: var(--duration-fast);
+	            box-shadow: var(--shadow-xs);
+	        }
+	        .switch input:checked + .switch-slider {
+	            background: var(--accent);
+	        }
+	        .switch input:checked + .switch-slider::before {
+	            transform: translateX(20px);
+	        }
+	        /* 标签输入 */
+	        .tags-input {
+	            display: flex;
+	            flex-wrap: wrap;
+	            gap: 6px;
+	            padding: 8px 12px;
+	            background: var(--bg-input);
+	            border: 1px solid var(--border-default);
+	            border-radius: var(--radius-md);
+	            min-height: 44px;
+	            align-items: center;
+	        }
+	        .tag-item {
+	            display: inline-flex;
+	            align-items: center;
+	            gap: 6px;
+	            padding: 4px 10px;
+	            background: var(--accent-light);
+	            color: var(--accent-dark);
+	            font-size: 12px;
+	            font-weight: 500;
+	            border-radius: var(--radius-sm);
+	        }
+	        .tag-remove {
+	            cursor: pointer;
+	            opacity: 0.7;
+	            transition: var(--duration-fast);
+	        }
+	        .tag-remove:hover {
+	            opacity: 1;
+	        }
+	        .tags-input input {
+	            flex: 1;
+	            min-width: 100px;
+	            border: none;
+	            outline: none;
+	            background: transparent;
+	            font-size: 14px;
+	            color: var(--text-primary);
+	        }
+	        /* ==================== 响应式 ==================== */
+	        @media (max-width: 1200px) {
+	            .stats-grid {
+	                grid-template-columns: repeat(2, 1fr);
+	            }
+	            .form-grid {
+	                grid-template-columns: 1fr;
+	            }
+	        }
+	        @media (max-width: 768px) {
+	            .sidebar {
+	                transform: translateX(-100%);
+	                transition: transform var(--duration-normal) var(--ease-out);
+	            }
+	            .sidebar.open {
+	                transform: translateX(0);
+	            }
+	            .main-content {
+	                margin-left: 0;
+	            }
+	            .mobile-toggle {
+	                display: flex !important;
+	            }
+	            .stats-grid {
+	                grid-template-columns: 1fr;
+	            }
+	            .search-box {
+	                width: 100%;
+	            }
+	            .toolbar-actions {
+	                width: 100%;
+	            }
+	            .data-table {
+	                display: block;
+	                overflow-x: auto;
+	            }
+	        }
+	        /* 减少动画 */
+	        @media (prefers-reduced-motion: reduce) {
+	            *, *::before, *::after {
+	                animation-duration: 0.01ms !important;
+	                transition-duration: 0.01ms !important;
+	            }
+	        }
+	    </style>
+	</head>
+	<body>
+	    <div class="app-layout">
+	        <!-- 侧边导航栏 -->
+	        <aside class="sidebar" id="sidebar">
+	            <div class="sidebar-brand">
+	                <div class="brand-logo">A</div>
+	                <span class="brand-text">Agent Platform</span>
+	            </div>
+	            <nav class="nav-menu">
+	                <div class="nav-section">
+	                    <div class="nav-section-title">概览</div>
+	                    <div class="nav-item active">
+	                        <iconify-icon icon="lucide:layout-dashboard"></iconify-icon>
+	                        <span>仪表盘</span>
+	                    </div>
+	                    <div class="nav-item">
+	                        <iconify-icon icon="lucide:message-square"></iconify-icon>
+	                        <span>对话管理</span>
+	                        <span class="nav-badge">12</span>
+	                    </div>
+	                </div>
+	                <div class="nav-section">
+	                    <div class="nav-section-title">核心功能</div>
+	                    <div class="nav-item">
+	                        <iconify-icon icon="lucide:users"></iconify-icon>
+	                        <span>用户管理</span>
+	                    </div>
+	                    <div class="nav-item">
+	                        <iconify-icon icon="lucide:wrench"></iconify-icon>
+	                        <span>工具配置</span>
+	                    </div>
+	                    <div class="nav-item">
+	                        <iconify-icon icon="lucide:brain"></iconify-icon>
+	                        <span>模型管理</span>
+	                    </div>
+	                    <div class="nav-item">
+	                        <iconify-icon icon="lucide:file-text"></iconify-icon>
+	                        <span>知识库</span>
+	                    </div>
+	                </div>
+	                <div class="nav-section">
+	                    <div class="nav-section-title">系统</div>
+	                    <div class="nav-item">
+	                        <iconify-icon icon="lucide:bar-chart-3"></iconify-icon>
+	                        <span>数据分析</span>
+	                    </div>
+	                    <div class="nav-item">
+	                        <iconify-icon icon="lucide:settings"></iconify-icon>
+	                        <span>系统设置</span>
+	                    </div>
+	                    <div class="nav-item">
+	                        <iconify-icon icon="lucide:shield"></iconify-icon>
+	                        <span>权限管理</span>
+	                    </div>
+	                </div>
+	            </nav>
+	            <div class="sidebar-footer">
+	                <div class="user-profile">
+	                    <div class="user-avatar">ZS</div>
+	                    <div class="user-info">
+	                        <div class="user-name">张三</div>
+	                        <div class="user-role">超级管理员</div>
+	                    </div>
+	                    <iconify-icon icon="lucide:chevron-right" style="color: var(--text-quaternary);"></iconify-icon>
+	                </div>
+	            </div>
+	        </aside>
+	        <!-- 主内容区 -->
+	        <main class="main-content">
+	            <!-- 顶栏 -->
+	            <header class="topbar">
+	                <div class="topbar-left">
+	                    <button class="topbar-btn mobile-toggle" id="mobileToggle" style="display: none;">
+	                        <iconify-icon icon="lucide:menu" width="20"></iconify-icon>
+	                    </button>
+	                    <div>
+	                        <h1 class="page-title">用户管理</h1>
+	                        <div class="breadcrumb">
+	                            <span>管理后台</span>
+	                            <span class="breadcrumb-separator">/</span>
+	                            <span class="breadcrumb-current">用户管理</span>
+	                        </div>
+	                    </div>
+	                </div>
+	                <div class="topbar-right">
+	                    <button class="topbar-btn">
+	                        <iconify-icon icon="lucide:search" width="18"></iconify-icon>
+	                    </button>
+	                    <button class="topbar-btn">
+	                        <iconify-icon icon="lucide:bell" width="18"></iconify-icon>
+	                        <span class="notification-dot"></span>
+	                    </button>
+	                    <button class="topbar-btn">
+	                        <iconify-icon icon="lucide:help-circle" width="18"></iconify-icon>
+	                    </button>
+	                </div>
+	            </header>
+	            <!-- 内容区域 -->
+	            <div class="content-area">
+	                <!-- 统计卡片 -->
+	                <div class="stats-grid">
+	                    <div class="stat-card">
+	                        <div class="stat-header">
+	                            <div class="stat-icon blue">
+	                                <iconify-icon icon="lucide:users"></iconify-icon>
+	                            </div>
+	                            <div class="stat-trend up">
+	                                <iconify-icon icon="lucide:trending-up" width="14"></iconify-icon>
+	                                12.5%
+	                            </div>
+	                        </div>
+	                        <div class="stat-value">2,847</div>
+	                        <div class="stat-label">总用户数</div>
+	                    </div>
+	                    <div class="stat-card">
+	                        <div class="stat-header">
+	                            <div class="stat-icon green">
+	                                <iconify-icon icon="lucide:user-check"></iconify-icon>
+	                            </div>
+	                            <div class="stat-trend up">
+	                                <iconify-icon icon="lucide:trending-up" width="14"></iconify-icon>
+	                                8.2%
+	                            </div>
+	                        </div>
+	                        <div class="stat-value">1,923</div>
+	                        <div class="stat-label">活跃用户</div>
+	                    </div>
+	                    <div class="stat-card">
+	                        <div class="stat-header">
+	                            <div class="stat-icon orange">
+	                                <iconify-icon icon="lucide:user-plus"></iconify-icon>
+	                            </div>
+	                            <div class="stat-trend down">
+	                                <iconify-icon icon="lucide:trending-down" width="14"></iconify-icon>
+	                                3.1%
+	                            </div>
+	                        </div>
+	                        <div class="stat-value">156</div>
+	                        <div class="stat-label">新增用户（本周）</div>
+	                    </div>
+	                    <div class="stat-card">
+	                        <div class="stat-header">
+	                            <div class="stat-icon teal">
+	                                <iconify-icon icon="lucide:message-circle"></iconify-icon>
+	                            </div>
+	                            <div class="stat-trend up">
+	                                <iconify-icon icon="lucide:trending-up" width="14"></iconify-icon>
+	                                23.7%
+	                            </div>
+	                        </div>
+	                        <div class="stat-value">18.4K</div>
+	                        <div class="stat-label">本月对话数</div>
+	                    </div>
+	                </div>
+	                <!-- 用户列表表格 -->
+	                <div class="card">
+	                    <div class="card-header">
+	                        <h3 class="card-title">用户列表</h3>
+	                        <button class="btn btn-primary btn-sm">
+	                            <iconify-icon icon="lucide:plus" width="16"></iconify-icon>
+	                            添加用户
+	                        </button>
+	                    </div>
+	                    <div class="card-body">
+	                        <div class="table-toolbar">
+	                            <div class="search-box">
+	                                <iconify-icon icon="lucide:search" width="18"></iconify-icon>
+	                                <input type="text" placeholder="搜索用户名、邮箱...">
+	                            </div>
+	                            <div class="toolbar-actions">
+	                                <select class="form-select" style="width: auto;">
+	                                    <option>所有状态</option>
+	                                    <option>已激活</option>
+	                                    <option>未激活</option>
+	                                    <option>待审核</option>
+	                                </select>
+	                                <select class="form-select" style="width: auto;">
+	                                    <option>所有角色</option>
+	                                    <option>管理员</option>
+	                                    <option>普通用户</option>
+	                                    <option>访客</option>
+	                                </select>
+	                                <button class="btn btn-secondary btn-sm">
+	                                    <iconify-icon icon="lucide:filter" width="16"></iconify-icon>
+	                                    筛选
+	                                </button>
+	                                <button class="btn btn-secondary btn-sm">
+	                                    <iconify-icon icon="lucide:download" width="16"></iconify-icon>
+	                                    导出
+	                                </button>
+	                            </div>
+	                        </div>
+	                        <table class="data-table">
+	                            <thead>
+	                                <tr>
+	                                    <th>用户</th>
+	                                    <th>角色</th>
+	                                    <th>状态</th>
+	                                    <th>注册时间</th>
+	                                    <th>最后登录</th>
+	                                    <th>操作</th>
+	                                </tr>
+	                            </thead>
+	                            <tbody>
+	                                <tr>
+	                                    <td>
+	                                        <div class="user-cell">
+	                                            <img src="https://picsum.photos/seed/user1/100/100.jpg" alt="" class="user-cell-avatar">
+	                                            <div>
+	                                                <div class="user-cell-name">李明</div>
+	                                                <div class="user-cell-email">liming@example.com</div>
+	                                            </div>
+	                                        </div>
+	                                    </td>
+	                                    <td>管理员</td>
+	                                    <td><span class="status-tag status-active">已激活</span></td>
+	                                    <td>2024-01-15</td>
+	                                    <td>刚刚</td>
+	                                    <td>
+	                                        <div class="action-group">
+	                                            <button class="action-btn" title="编辑">
+	                                                <iconify-icon icon="lucide:pencil" width="16"></iconify-icon>
+	                                            </button>
+	                                            <button class="action-btn" title="查看详情">
+	                                                <iconify-icon icon="lucide:eye" width="16"></iconify-icon>
+	                                            </button>
+	                                            <button class="action-btn danger" title="删除">
+	                                                <iconify-icon icon="lucide:trash-2" width="16"></iconify-icon>
+	                                            </button>
+	                                        </div>
+	                                    </td>
+	                                </tr>
+	                                <tr>
+	                                    <td>
+	                                        <div class="user-cell">
+	                                            <img src="https://picsum.photos/seed/user2/100/100.jpg" alt="" class="user-cell-avatar">
+	                                            <div>
+	                                                <div class="user-cell-name">王芳</div>
+	                                                <div class="user-cell-email">wangfang@example.com</div>
+	                                            </div>
+	                                        </div>
+	                                    </td>
+	                                    <td>普通用户</td>
+	                                    <td><span class="status-tag status-active">已激活</span></td>
+	                                    <td>2024-02-20</td>
+	                                    <td>2小时前</td>
+	                                    <td>
+	                                        <div class="action-group">
+	                                            <button class="action-btn" title="编辑">
+	                                                <iconify-icon icon="lucide:pencil" width="16"></iconify-icon>
+	                                            </button>
+	                                            <button class="action-btn" title="查看详情">
+	                                                <iconify-icon icon="lucide:eye" width="16"></iconify-icon>
+	                                            </button>
+	                                            <button class="action-btn danger" title="删除">
+	                                                <iconify-icon icon="lucide:trash-2" width="16"></iconify-icon>
+	                                            </button>
+	                                        </div>
+	                                    </td>
+	                                </tr>
+	                                <tr>
+	                                    <td>
+	                                        <div class="user-cell">
+	                                            <img src="https://picsum.photos/seed/user3/100/100.jpg" alt="" class="user-cell-avatar">
+	                                            <div>
+	                                                <div class="user-cell-name">张伟</div>
+	                                                <div class="user-cell-email">zhangwei@example.com</div>
+	                                            </div>
+	                                        </div>
+	                                    </td>
+	                                    <td>普通用户</td>
+	                                    <td><span class="status-tag status-pending">待审核</span></td>
+	                                    <td>2024-03-01</td>
+	                                    <td>从未登录</td>
+	                                    <td>
+	                                        <div class="action-group">
+	                                            <button class="action-btn" title="编辑">
+	                                                <iconify-icon icon="lucide:pencil" width="16"></iconify-icon>
+	                                            </button>
+	                                            <button class="action-btn" title="查看详情">
+	                                                <iconify-icon icon="lucide:eye" width="16"></iconify-icon>
+	                                            </button>
+	                                            <button class="action-btn danger" title="删除">
+	                                                <iconify-icon icon="lucide:trash-2" width="16"></iconify-icon>
+	                                            </button>
+	                                        </div>
+	                                    </td>
+	                                </tr>
+	                                <tr>
+	                                    <td>
+	                                        <div class="user-cell">
+	                                            <img src="https://picsum.photos/seed/user4/100/100.jpg" alt="" class="user-cell-avatar">
+	                                            <div>
+	                                                <div class="user-cell-name">刘洋</div>
+	                                                <div class="user-cell-email">liuyang@example.com</div>
+	                                            </div>
+	                                        </div>
+	                                    </td>
+	                                    <td>访客</td>
+	                                    <td><span class="status-tag status-inactive">未激活</span></td>
+	                                    <td>2024-03-10</td>
+	                                    <td>5天前</td>
+	                                    <td>
+	                                        <div class="action-group">
+	                                            <button class="action-btn" title="编辑">
+	                                                <iconify-icon icon="lucide:pencil" width="16"></iconify-icon>
+	                                            </button>
+	                                            <button class="action-btn" title="查看详情">
+	                                                <iconify-icon icon="lucide:eye" width="16"></iconify-icon>
+	                                            </button>
+	                                            <button class="action-btn danger" title="删除">
+	                                                <iconify-icon icon="lucide:trash-2" width="16"></iconify-icon>
+	                                            </button>
+	                                        </div>
+	                                    </td>
+	                                </tr>
+	                                <tr>
+	                                    <td>
+	                                        <div class="user-cell">
+	                                            <img src="https://picsum.photos/seed/user5/100/100.jpg" alt="" class="user-cell-avatar">
+	                                            <div>
+	                                                <div class="user-cell-name">陈静</div>
+	                                                <div class="user-cell-email">chenjing@example.com</div>
+	                                            </div>
+	                                        </div>
+	                                    </td>
+	                                    <td>普通用户</td>
+	                                    <td><span class="status-tag status-active">已激活</span></td>
+	                                    <td>2024-03-12</td>
+	                                    <td>1天前</td>
+	                                    <td>
+	                                        <div class="action-group">
+	                                            <button class="action-btn" title="编辑">
+	                                                <iconify-icon icon="lucide:pencil" width="16"></iconify-icon>
+	                                            </button>
+	                                            <button class="action-btn" title="查看详情">
+	                                                <iconify-icon icon="lucide:eye" width="16"></iconify-icon>
+	                                            </button>
+	                                            <button class="action-btn danger" title="删除">
+	                                                <iconify-icon icon="lucide:trash-2" width="16"></iconify-icon>
+	                                            </button>
+	                                        </div>
+	                                    </td>
+	                                </tr>
+	                            </tbody>
+	                        </table>
+	                        <div class="table-footer">
+	                            <div class="pagination-info">
+	                                显示 1-5 条，共 2,847 条记录
+	                            </div>
+	                            <div class="pagination">
+	                                <button class="page-btn" disabled>
+	                                    <iconify-icon icon="lucide:chevron-left" width="16"></iconify-icon>
+	                                </button>
+	                                <button class="page-btn active">1</button>
+	                                <button class="page-btn">2</button>
+	                                <button class="page-btn">3</button>
+	                                <button class="page-btn">...</button>
+	                                <button class="page-btn">569</button>
+	                                <button class="page-btn">
+	                                    <iconify-icon icon="lucide:chevron-right" width="16"></iconify-icon>
+	                                </button>
+	                            </div>
+	                        </div>
+	                    </div>
+	                </div>
+	                <!-- 工具配置面板示例 -->
+	                <div class="card" style="margin-top: var(--space-8);">
+	                    <div class="card-header">
+	                        <h3 class="card-title">工具配置面板</h3>
+	                        <div style="display: flex; gap: 8px;">
+	                            <button class="btn btn-ghost btn-sm">取消</button>
+	                            <button class="btn btn-primary btn-sm">保存配置</button>
+	                        </div>
+	                    </div>
+	                    <div class="card-body">
+	                        <div class="form-grid">
+	                            <div class="form-group">
+	                                <label class="form-label">工具名称 <span class="required">*</span></label>
+	                                <input type="text" class="form-input" value="Web Search Tool" placeholder="输入工具名称">
+	                            </div>
+	                            <div class="form-group">
+	                                <label class="form-label">工具类型</label>
+	                                <select class="form-select">
+	                                    <option selected>搜索工具</option>
+	                                    <option>数据处理</option>
+	                                    <option>API调用</option>
+	                                    <option>自定义脚本</option>
+	                                </select>
+	                            </div>
+	                            <div class="form-group full-width">
+	                                <label class="form-label">工具描述</label>
+	                                <textarea class="form-textarea" placeholder="描述该工具的功能和使用场景...">用于执行网络搜索，获取实时信息和最新数据。支持多种搜索引擎切换，返回结构化的搜索结果。</textarea>
+	                                <p class="form-hint">此描述将展示给AI模型，帮助其理解何时调用此工具</p>
+	                            </div>
+	                            <div class="form-group full-width">
+	                                <label class="form-label">API Endpoint</label>
+	                                <input type="url" class="form-input" value="https://api.example.com/v1/search" placeholder="https://api.example.com/endpoint">
+	                            </div>
+	                            <div class="form-group">
+	                                <label class="form-label">请求方法</label>
+	                                <select class="form-select">
+	                                    <option selected>POST</option>
+	                                    <option>GET</option>
+	                                    <option>PUT</option>
+	                                    <option>DELETE</option>
+	                                </select>
+	                            </div>
+	                            <div class="form-group">
+	                                <label class="form-label">超时时间 (秒)</label>
+	                                <input type="number" class="form-input" value="30" placeholder="30">
+	                            </div>
+	                            <div class="form-group full-width">
+	                                <label class="form-label">认证标签</label>
+	                                <div class="tags-input">
+	                                    <span class="tag-item">
+	                                        search
+	                                        <span class="tag-remove"><iconify-icon icon="lucide:x" width="12"></iconify-icon></span>
+	                                    </span>
+	                                    <span class="tag-item">
+	                                        web
+	                                        <span class="tag-remove"><iconify-icon icon="lucide:x" width="12"></iconify-icon></span>
+	                                    </span>
+	                                    <span class="tag-item">
+	                                        real-time
+	                                        <span class="tag-remove"><iconify-icon icon="lucide:x" width="12"></iconify-icon></span>
+	                                    </span>
+	                                    <input type="text" placeholder="添加标签后回车...">
+	                                </div>
+	                            </div>
+	                            <div class="form-group full-width">
+	                                <label class="form-label">功能开关</label>
+	                                <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+	                                    <div class="switch-wrapper">
+	                                        <div class="switch-info">
+	                                            <h4>启用缓存</h4>
+	                                            <p>缓存常用查询结果以提升响应速度</p>
+	                                        </div>
+	                                        <label class="switch">
+	                                            <input type="checkbox" checked>
+	                                            <span class="switch-slider"></span>
+	                                        </label>
+	                                    </div>
+	                                    <div class="switch-wrapper">
+	                                        <div class="switch-info">
+	                                            <h4>限流保护</h4>
+	                                            <p>防止过度调用导致API配额耗尽</p>
+	                                        </div>
+	                                        <label class="switch">
+	                                            <input type="checkbox" checked>
+	                                            <span class="switch-slider"></span>
+	                                        </label>
+	                                    </div>
+	                                    <div class="switch-wrapper">
+	                                        <div class="switch-info">
+	                                            <h4>日志记录</h4>
+	                                            <p>记录所有工具调用便于调试和分析</p>
+	                                        </div>
+	                                        <label class="switch">
+	                                            <input type="checkbox">
+	                                            <span class="switch-slider"></span>
+	                                        </label>
+	                                    </div>
+	                                </div>
+	                            </div>
+	                        </div>
+	                    </div>
+	                </div>
+	            </div>
+	        </main>
+	    </div>
+	    <script>
+	        // 初始化DOM元素引用
+	        const sidebar = document.getElementById('sidebar');
+	        const mobileToggle = document.getElementById('mobileToggle');
+	        // 移动端侧边栏切换
+	        function handleResize() {
+	            if (window.innerWidth <= 768) {
+	                mobileToggle.style.display = 'flex';
+	            } else {
+	                mobileToggle.style.display = 'none';
+	                sidebar.classList.remove('open');
+	            }
+	        }
+	        mobileToggle.addEventListener('click', function() {
+	            sidebar.classList.toggle('open');
+	        });
+	        // 点击外部关闭侧边栏
+	        document.addEventListener('click', function(e) {
+	            if (window.innerWidth <= 768 && 
+	                !sidebar.contains(e.target) && 
+	                !mobileToggle.contains(e.target)) {
+	                sidebar.classList.remove('open');
+	            }
+	        });
+	        window.addEventListener('resize', handleResize);
+	        handleResize();
+	        // 导航项点击切换
+	        document.querySelectorAll('.nav-item').forEach(function(item) {
+	            item.addEventListener('click', function() {
+	                document.querySelectorAll('.nav-item').forEach(function(i) {
+	                    i.classList.remove('active');
+	                });
+	                this.classList.add('active');
+	                // 移动端自动收起
+	                if (window.innerWidth <= 768) {
+	                    sidebar.classList.remove('open');
+	                }
+	            });
+	        });
+	        // 标签删除功能
+	        document.querySelectorAll('.tag-remove').forEach(function(btn) {
+	            btn.addEventListener('click', function() {
+	                this.closest('.tag-item').remove();
+	            });
+	        });
+	        // 表格行悬停效果增强
+	        document.querySelectorAll('.data-table tbody tr').forEach(function(row) {
+	            row.addEventListener('mouseenter', function() {
+	                this.style.cursor = 'pointer';
+	            });
+	        });
+	    </script>
+	</body>
+	</html>

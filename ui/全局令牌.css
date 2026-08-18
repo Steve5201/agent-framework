@@ -1,0 +1,83 @@
+	:root {
+	  /* ========== 色彩系统 ========== */
+	  /* 基础色板 */
+	  --bg-primary: #F8F9FA;           /* 主背景 - 浅灰白 */
+	  --bg-secondary: #FFFFFF;         /* 次级背景 - 纯白 */
+	  --bg-tertiary: #F1F3F5;          /* 三级背景 - 悬浮/卡片底色 */
+	  --bg-hover: #E9ECEF;             /* 悬浮态背景 */
+	  --bg-active: #DEE2E6;            /* 激活态背景 */
+	  /* 文字层级 */
+	  --text-primary: #212529;         /* 主文字 - 深黑灰 */
+	  --text-secondary: #495057;       /* 次级文字 - 中灰 */
+	  --text-tertiary: #868E96;        /* 辅助文字 - 浅灰 */
+	  --text-placeholder: #ADB5BD;     /* 占位符文字 */
+	  --text-inverse: #FFFFFF;         /* 反白文字 */
+	  /* 品牌色系 - 低饱和度蓝调 */
+	  --color-primary: #4DABF7;        /* 主色调 - 柔和蓝 */
+	  --color-primary-light: #74C0FC;  /* 主色调浅 */
+	  --color-primary-dark: #339AF0;   /* 主色调深 */
+	  --color-success: #69DB7C;        /* 成功状态 - 柔绿 */
+	  --color-warning: #FFD43B;        /* 警告状态 - 柔黄 */
+	  --color-danger: #FF8787;         /* 危险状态 - 柔红 */
+	  /* 边框与分割线 */
+	  --border-color: #DEE2E6;         /* 默认边框 */
+	  --border-light: #E9ECEF;         /* 浅边框 */
+	  --divider-color: #E9ECEF;        /* 分割线 */
+	  /* 阴影系统 - 柔和微阴影 */
+	  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+	  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+	  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+	  --shadow-focus: 0 0 0 3px rgba(77, 171, 247, 0.25);
+	  /* ========== 字体系统 ========== */
+	  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 
+	                 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+	                 sans-serif;
+	  --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+	  /* 字号阶梯 */
+	  --text-xs: 12px;                 /* 辅助信息 */
+	  --text-sm: 13px;                 /* 次级内容 */
+	  --text-base: 14px;               /* 正文基准 */
+	  --text-md: 15px;                 /* 强调正文 */
+	  --text-lg: 16px;                 /* 小标题 */
+	  --text-xl: 18px;                 /* 标题 */
+	  --text-2xl: 20px;                /* 大标题 */
+	  --text-3xl: 24px;                /* 页面标题 */
+	  /* 字重 */
+	  --font-normal: 400;
+	  --font-medium: 500;
+	  --font-semibold: 600;
+	  --font-bold: 700;
+	  /* 行高 */
+	  --leading-tight: 1.25;
+	  --leading-normal: 1.5;
+	  --leading-relaxed: 1.75;
+	  /* ========== 间距系统 (4px 基准) ========== */
+	  --space-1: 4px;
+	  --space-2: 8px;
+	  --space-3: 12px;
+	  --space-4: 16px;
+	  --space-5: 20px;
+	  --space-6: 24px;
+	  --space-8: 32px;
+	  --space-10: 40px;
+	  --space-12: 48px;
+	  --space-16: 64px;
+	  /* ========== 圆角系统 ========== */
+	  --radius-sm: 4px;
+	  --radius-md: 8px;
+	  --radius-lg: 12px;
+	  --radius-xl: 16px;
+	  --radius-full: 9999px;
+	  /* ========== 过渡动画 ========== */
+	  --transition-fast: 150ms ease;
+	  --transition-base: 200ms ease;
+	  --transition-slow: 300ms ease;
+	  /* ========== 层级 ========== */
+	  --z-dropdown: 100;
+	  --z-sticky: 200;
+	  --z-fixed: 300;
+	  --z-modal-backdrop: 400;
+	  --z-modal: 500;
+	  --z-popover: 600;
+	  --z-tooltip: 700;
+	}

@@ -1,0 +1,760 @@
+	<!DOCTYPE html>
+	<html lang="zh-CN">
+	<head>
+	    <meta charset="UTF-8">
+	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	    <title>智能体聊天界面</title>
+	    <!-- 字体 -->
+	    <link rel="preconnect" href="https://fonts.googleapis.com">
+	    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
+	    <!-- Tailwind -->
+	    <script src="https://cdn.tailwindcss.com"></script>
+	    <!-- Iconify -->
+	    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+	    <style>
+	        /* ==================== 全局设计令牌 ==================== */
+	        :root {
+	            /* 配色系统 */
+	            --bg-primary: #F8F9FA;           /* 主背景 */
+	            --bg-secondary: #FFFFFF;         /* 卡片/容器背景 */
+	            --bg-tertiary: #F1F3F5;          /* 悬停/激活态背景 */
+	            --bg-input: #F8F9FA;             /* 输入框背景 */
+	            --text-primary: #1A1A2E;         /* 主文字 */
+	            --text-secondary: #5C6370;       /* 次要文字 */
+	            --text-tertiary: #868E96;        /* 辅助文字 */
+	            --text-inverse: #FFFFFF;         /* 反色文字 */
+	            --accent-primary: #0D9488;       /* 主强调色 - 青绿 */
+	            --accent-light: #CCFBF1;         /* 浅强调色 */
+	            --accent-hover: #0F766E;         /* 强调色悬停 */
+	            --border-light: #E9ECEF;         /* 浅边框 */
+	            --border-default: #DEE2E6;       /* 默认边框 */
+	            /* 用户气泡 */
+	            --bubble-user-bg: #0D9488;
+	            --bubble-user-text: #FFFFFF;
+	            /* AI气泡 */
+	            --bubble-ai-bg: #FFFFFF;
+	            --bubble-ai-border: #E9ECEF;
+	            /* 间距系统 */
+	            --space-xs: 4px;
+	            --space-sm: 8px;
+	            --space-md: 16px;
+	            --space-lg: 24px;
+	            --space-xl: 32px;
+	            --space-2xl: 48px;
+	            /* 圆角 */
+	            --radius-sm: 6px;
+	            --radius-md: 10px;
+	            --radius-lg: 16px;
+	            --radius-xl: 20px;
+	            --radius-full: 9999px;
+	            /* 阴影 */
+	            --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+	            --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+	            --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+	            /* 过渡 */
+	            --transition-fast: 150ms ease;
+	            --transition-normal: 250ms ease;
+	            --transition-slow: 350ms ease;
+	        }
+	        * {
+	            margin: 0;
+	            padding: 0;
+	            box-sizing: border-box;
+	        }
+	        body {
+	            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+	            background-color: var(--bg-primary);
+	            color: var(--text-primary);
+	            line-height: 1.6;
+	            overflow: hidden;
+	        }
+	        /* ==================== 布局结构 ==================== */
+	        .chat-container {
+	            display: flex;
+	            height: 100vh;
+	            width: 100vw;
+	        }
+	        /* ==================== 侧边栏 - 对话列表 ==================== */
+	        .sidebar {
+	            width: 280px;
+	            min-width: 280px;
+	            background: var(--bg-secondary);
+	            border-right: 1px solid var(--border-light);
+	            display: flex;
+	            flex-direction: column;
+	            transition: var(--transition-normal);
+	        }
+	        .sidebar-header {
+	            padding: var(--space-lg);
+	            border-bottom: 1px solid var(--border-light);
+	        }
+	        .sidebar-title {
+	            font-size: 18px;
+	            font-weight: 600;
+	            color: var(--text-primary);
+	            letter-spacing: -0.02em;
+	        }
+	        .new-chat-btn {
+	            width: 100%;
+	            padding: 12px 16px;
+	            margin-top: var(--space-md);
+	            background: var(--accent-primary);
+	            color: var(--text-inverse);
+	            border: none;
+	            border-radius: var(--radius-md);
+	            font-size: 14px;
+	            font-weight: 500;
+	            cursor: pointer;
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            gap: 8px;
+	            transition: var(--transition-fast);
+	        }
+	        .new-chat-btn:hover {
+	            background: var(--accent-hover);
+	            transform: translateY(-1px);
+	        }
+	        .conversation-list {
+	            flex: 1;
+	            overflow-y: auto;
+	            padding: var(--space-sm);
+	        }
+	        .conversation-item {
+	            padding: 14px 16px;
+	            margin-bottom: 4px;
+	            border-radius: var(--radius-md);
+	            cursor: pointer;
+	            transition: var(--transition-fast);
+	            position: relative;
+	        }
+	        .conversation-item:hover {
+	            background: var(--bg-tertiary);
+	        }
+	        .conversation-item.active {
+	            background: var(--accent-light);
+	        }
+	        .conversation-item.active::before {
+	            content: '';
+	            position: absolute;
+	            left: 0;
+	            top: 50%;
+	            transform: translateY(-50%);
+	            width: 3px;
+	            height: 20px;
+	            background: var(--accent-primary);
+	            border-radius: var(--radius-full);
+	        }
+	        .conversation-title {
+	            font-size: 14px;
+	            font-weight: 500;
+	            color: var(--text-primary);
+	            white-space: nowrap;
+	            overflow: hidden;
+	            text-overflow: ellipsis;
+	            margin-bottom: 4px;
+	        }
+	        .conversation-preview {
+	            font-size: 12px;
+	            color: var(--text-tertiary);
+	            white-space: nowrap;
+	            overflow: hidden;
+	            text-overflow: ellipsis;
+	        }
+	        .conversation-time {
+	            font-size: 11px;
+	            color: var(--text-tertiary);
+	            margin-top: 6px;
+	        }
+	        /* ==================== 主聊天区域 ==================== */
+	        .chat-main {
+	            flex: 1;
+	            display: flex;
+	            flex-direction: column;
+	            background: var(--bg-primary);
+	            min-width: 0;
+	        }
+	        /* 顶部栏 */
+	        .chat-header {
+	            height: 64px;
+	            padding: 0 var(--space-xl);
+	            background: var(--bg-secondary);
+	            border-bottom: 1px solid var(--border-light);
+	            display: flex;
+	            align-items: center;
+	            justify-content: space-between;
+	        }
+	        .chat-header-left {
+	            display: flex;
+	            align-items: center;
+	            gap: 12px;
+	        }
+	        .agent-avatar {
+	            width: 36px;
+	            height: 36px;
+	            border-radius: var(--radius-md);
+	            background: linear-gradient(135deg, var(--accent-primary), #14B8A6);
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            color: white;
+	            font-weight: 600;
+	            font-size: 14px;
+	        }
+	        .agent-info h2 {
+	            font-size: 15px;
+	            font-weight: 600;
+	            color: var(--text-primary);
+	        }
+	        .agent-status {
+	            font-size: 12px;
+	            color: var(--accent-primary);
+	            display: flex;
+	            align-items: center;
+	            gap: 6px;
+	        }
+	        .status-dot {
+	            width: 6px;
+	            height: 6px;
+	            background: var(--accent-primary);
+	            border-radius: 50%;
+	            animation: pulse 2s infinite;
+	        }
+	        @keyframes pulse {
+	            0%, 100% { opacity: 1; }
+	            50% { opacity: 0.5; }
+	        }
+	        .chat-header-actions {
+	            display: flex;
+	            gap: 8px;
+	        }
+	        .header-btn {
+	            width: 36px;
+	            height: 36px;
+	            border-radius: var(--radius-sm);
+	            border: 1px solid var(--border-light);
+	            background: transparent;
+	            cursor: pointer;
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            color: var(--text-secondary);
+	            transition: var(--transition-fast);
+	        }
+	        .header-btn:hover {
+	            background: var(--bg-tertiary);
+	            color: var(--text-primary);
+	            border-color: var(--border-default);
+	        }
+	        /* 消息区域 */
+	        .messages-container {
+	            flex: 1;
+	            overflow-y: auto;
+	            padding: var(--space-xl) var(--space-2xl);
+	            scroll-behavior: smooth;
+	        }
+	        .messages-container::-webkit-scrollbar {
+	            width: 6px;
+	        }
+	        .messages-container::-webkit-scrollbar-track {
+	            background: transparent;
+	        }
+	        .messages-container::-webkit-scrollbar-thumb {
+	            background: var(--border-default);
+	            border-radius: var(--radius-full);
+	        }
+	        .message-wrapper {
+	            display: flex;
+	            margin-bottom: var(--space-lg);
+	            gap: 12px;
+	            animation: fadeInUp 0.3s ease-out;
+	        }
+	        @keyframes fadeInUp {
+	            from {
+	                opacity: 0;
+	                transform: translateY(10px);
+	            }
+	            to {
+	                opacity: 1;
+	                transform: translateY(0);
+	            }
+	        }
+	        .message-wrapper.user {
+	            flex-direction: row-reverse;
+	        }
+	        .message-avatar {
+	            width: 36px;
+	            height: 36px;
+	            border-radius: var(--radius-md);
+	            flex-shrink: 0;
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            font-size: 13px;
+	            font-weight: 600;
+	        }
+	        .message-wrapper.ai .message-avatar {
+	            background: linear-gradient(135deg, var(--accent-primary), #14B8A6);
+	            color: white;
+	        }
+	        .message-wrapper.user .message-avatar {
+	            background: #E9ECEF;
+	            color: var(--text-secondary);
+	        }
+	        .message-content {
+	            max-width: 65%;
+	            min-width: 80px;
+	        }
+	        /* 消息气泡样式 */
+	        .message-bubble {
+	            padding: 14px 18px;
+	            border-radius: var(--radius-lg);
+	            font-size: 14px;
+	            line-height: 1.7;
+	            word-break: break-word;
+	        }
+	        .message-wrapper.ai .message-bubble {
+	            background: var(--bubble-ai-bg);
+	            border: 1px solid var(--bubble-ai-border);
+	            color: var(--text-primary);
+	            border-top-left-radius: var(--radius-sm);
+	            box-shadow: var(--shadow-sm);
+	        }
+	        .message-wrapper.user .message-bubble {
+	            background: var(--bubble-user-bg);
+	            color: var(--bubble-user-text);
+	            border-top-right-radius: var(--radius-sm);
+	            box-shadow: var(--shadow-md);
+	        }
+	        /* Markdown 排版优化 */
+	        .markdown-content p {
+	            margin-bottom: 10px;
+	        }
+	        .markdown-content p:last-child {
+	            margin-bottom: 0;
+	        }
+	        .markdown-content code {
+	            background: rgba(0,0,0,0.06);
+	            padding: 2px 6px;
+	            border-radius: 4px;
+	            font-family: 'SF Mono', 'Consolas', monospace;
+	            font-size: 13px;
+	        }
+	        .markdown-content pre {
+	            background: #1E293B;
+	            color: #E2E8F0;
+	            padding: 16px;
+	            border-radius: var(--radius-md);
+	            overflow-x: auto;
+	            margin: 12px 0;
+	            font-size: 13px;
+	            line-height: 1.6;
+	        }
+	        .markdown-content pre code {
+	            background: none;
+	            padding: 0;
+	            color: inherit;
+	        }
+	        .markdown-content ul,
+	        .markdown-content ol {
+	            padding-left: 20px;
+	            margin: 10px 0;
+	        }
+	        .markdown-content li {
+	            margin-bottom: 4px;
+	        }
+	        .markdown-content strong {
+	            font-weight: 600;
+	            color: inherit;
+	        }
+	        .markdown-content blockquote {
+	            border-left: 3px solid var(--accent-primary);
+	            padding-left: 14px;
+	            margin: 12px 0;
+	            color: var(--text-secondary);
+	            font-style: italic;
+	        }
+	        .message-time {
+	            font-size: 11px;
+	            color: var(--text-tertiary);
+	            margin-top: 6px;
+	            padding: 0 4px;
+	        }
+	        .message-wrapper.user .message-time {
+	            text-align: right;
+	        }
+	        /* AI 思考过程 */
+	        .thinking-indicator {
+	            display: flex;
+	            align-items: center;
+	            gap: 6px;
+	            padding: 12px 18px;
+	            color: var(--text-tertiary);
+	            font-size: 13px;
+	        }
+	        .thinking-dots {
+	            display: flex;
+	            gap: 4px;
+	        }
+	        .thinking-dots span {
+	            width: 6px;
+	            height: 6px;
+	            background: var(--accent-primary);
+	            border-radius: 50%;
+	            animation: bounce 1.4s infinite ease-in-out both;
+	        }
+	        .thinking-dots span:nth-child(1) { animation-delay: -0.32s; }
+	        .thinking-dots span:nth-child(2) { animation-delay: -0.16s; }
+	        .thinking-dots span:nth-child(3) { animation-delay: 0s; }
+	        @keyframes bounce {
+	            0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+	            40% { transform: scale(1); opacity: 1; }
+	        }
+	        /* ==================== 底部输入区 ==================== */
+	        .input-area {
+	            padding: var(--space-lg) var(--space-2xl) var(--space-xl);
+	            background: var(--bg-primary);
+	        }
+	        .input-wrapper {
+	            max-width: 800px;
+	            margin: 0 auto;
+	            background: var(--bg-secondary);
+	            border: 1px solid var(--border-default);
+	            border-radius: var(--radius-xl);
+	            padding: 8px 8px 8px 20px;
+	            display: flex;
+	            align-items: flex-end;
+	            gap: 8px;
+	            transition: var(--transition-fast);
+	            box-shadow: var(--shadow-sm);
+	        }
+	        .input-wrapper:focus-within {
+	            border-color: var(--accent-primary);
+	            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+	        }
+	        .message-input {
+	            flex: 1;
+	            border: none;
+	            outline: none;
+	            resize: none;
+	            font-size: 14px;
+	            line-height: 1.5;
+	            max-height: 120px;
+	            min-height: 24px;
+	            padding: 8px 0;
+	            font-family: inherit;
+	            background: transparent;
+	            color: var(--text-primary);
+	        }
+	        .message-input::placeholder {
+	            color: var(--text-tertiary);
+	        }
+	        .input-actions {
+	            display: flex;
+	            align-items: center;
+	            gap: 4px;
+	        }
+	        .input-action-btn {
+	            width: 36px;
+	            height: 36px;
+	            border-radius: var(--radius-md);
+	            border: none;
+	            background: transparent;
+	            cursor: pointer;
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            color: var(--text-tertiary);
+	            transition: var(--transition-fast);
+	        }
+	        .input-action-btn:hover {
+	            background: var(--bg-tertiary);
+	            color: var(--text-secondary);
+	        }
+	        .send-btn {
+	            width: 40px;
+	            height: 40px;
+	            border-radius: var(--radius-md);
+	            border: none;
+	            background: var(--accent-primary);
+	            color: white;
+	            cursor: pointer;
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            transition: var(--transition-fast);
+	        }
+	        .send-btn:hover {
+	            background: var(--accent-hover);
+	            transform: scale(1.02);
+	        }
+	        .send-btn:active {
+	            transform: scale(0.98);
+	        }
+	        .input-hint {
+	            text-align: center;
+	            margin-top: 10px;
+	            font-size: 11px;
+	            color: var(--text-tertiary);
+	        }
+	        /* ==================== 响应式适配 ==================== */
+	        @media (max-width: 768px) {
+	            .sidebar {
+	                position: fixed;
+	                left: -100%;
+	                z-index: 100;
+	                height: 100vh;
+	                box-shadow: var(--shadow-lg);
+	            }
+	            .sidebar.open {
+	                left: 0;
+	            }
+	            .messages-container {
+	                padding: var(--space-md);
+	            }
+	            .message-content {
+	                max-width: 85%;
+	            }
+	            .input-area {
+	                padding: var(--space-md);
+	            }
+	        }
+	        /* 减少动画偏好 */
+	        @media (prefers-reduced-motion: reduce) {
+	            *, *::before, *::after {
+	                animation-duration: 0.01ms !important;
+	                transition-duration: 0.01ms !important;
+	            }
+	        }
+	    </style>
+	</head>
+	<body>
+	    <div class="chat-container">
+	        <!-- 侧边栏：对话列表 -->
+	        <aside class="sidebar" id="sidebar">
+	            <div class="sidebar-header">
+	                <h1 class="sidebar-title">对话历史</h1>
+	                <button class="new-chat-btn">
+	                    <iconify-icon icon="lucide:plus" width="16"></iconify-icon>
+	                    新建对话
+	                </button>
+	            </div>
+	            <div class="conversation-list">
+	                <!-- 当前活跃对话 -->
+	                <div class="conversation-item active">
+	                    <div class="conversation-title">数据分析报告生成</div>
+	                    <div class="conversation-preview">请帮我分析Q3季度的销售数据...</div>
+	                    <div class="conversation-time">刚刚</div>
+	                </div>
+	                <!-- 历史对话列表 -->
+	                <div class="conversation-item">
+	                    <div class="conversation-title">代码审查助手</div>
+	                    <div class="conversation-preview">这段代码的性能可以如何优化？</div>
+	                    <div class="conversation-time">今天 14:32</div>
+	                </div>
+	                <div class="conversation-item">
+	                    <div class="conversation-title">文档撰写支持</div>
+	                    <div class="conversation-preview">帮我写一份API接口文档</div>
+	                    <div class="conversation-time">昨天 09:15</div>
+	                </div>
+	                <div class="conversation-item">
+	                    <div class="conversation-title">创意头脑风暴</div>
+	                    <div class="conversation-preview">为新产品起一些有创意的名字</div>
+	                    <div class="conversation-time">3天前</div>
+	                </div>
+	                <div class="conversation-item">
+	                    <div class="conversation-title">学习计划制定</div>
+	                    <div class="conversation-preview">制定一份机器学习入门路线图</div>
+	                    <div class="conversation-time">上周</div>
+	                </div>
+	            </div>
+	        </aside>
+	        <!-- 主聊天区域 -->
+	        <main class="chat-main">
+	            <!-- 顶部信息栏 -->
+	            <header class="chat-header">
+	                <div class="chat-header-left">
+	                    <button class="header-btn" id="toggleSidebar" style="display: none;">
+	                        <iconify-icon icon="lucide:menu" width="18"></iconify-icon>
+	                    </button>
+	                    <div class="agent-avatar">AI</div>
+	                    <div class="agent-info">
+	                        <h2>智能助手</h2>
+	                        <span class="agent-status">
+	                            <span class="status-dot"></span>
+	                            在线响应中
+	                        </span>
+	                    </div>
+	                </div>
+	                <div class="chat-header-actions">
+	                    <button class="header-btn" title="导出对话">
+	                        <iconify-icon icon="lucide:download" width="17"></iconify-icon>
+	                    </button>
+	                    <button class="header-btn" title="设置">
+	                        <iconify-icon icon="lucide:settings" width="17"></iconify-icon>
+	                    </button>
+	                </div>
+	            </header>
+	            <!-- 消息显示区域 -->
+	            <div class="messages-container" id="messagesContainer">
+	                <!-- 欢迎消息 -->
+	                <div class="message-wrapper ai">
+	                    <div class="message-avatar">AI</div>
+	                    <div class="message-content">
+	                        <div class="message-bubble markdown-content">
+	                            <p>你好！我是你的智能助手。</p>
+	                            <p>我可以帮助你完成以下任务：</p>
+	                            <ul>
+	                                <li><strong>数据分析</strong> - 处理和可视化数据</li>
+	                                <li><strong>代码编写</strong> - 协助开发和调试</li>
+	                                <li><strong>文档创作</strong> - 撰写各类文档</li>
+	                                <li><strong>问题解答</strong> - 提供专业建议</li>
+	                            </ul>
+	                            <p>请问有什么可以帮助你的？</p>
+	                        </div>
+	                        <div class="message-time">10:00</div>
+	                    </div>
+	                </div>
+	                <!-- 用户消息示例 -->
+	                <div class="message-wrapper user">
+	                    <div class="message-avatar">U</div>
+	                    <div class="message-content">
+	                        <div class="message-bubble">
+	                            请帮我分析一下这份销售数据的关键指标，并给出可视化建议。
+	                        </div>
+	                        <div class="message-time">10:02</div>
+	                    </div>
+	                </div>
+	                <!-- AI回复 - 含Markdown -->
+	                <div class="message-wrapper ai">
+	                    <div class="message-avatar">AI</div>
+	                    <div class="message-content">
+	                        <div class="message-bubble markdown-content">
+	                            <p>好的，我来帮你分析销售数据的关键指标：</p>
+	                            <blockquote>
+	                                核心指标包括：总销售额、订单量、客单价、转化率、复购率
+	                            </blockquote>
+	                            <p><strong>推荐的可视化方案：</strong></p>
+	                            <ol>
+	                                <li>趋势折线图 - 展示月度销售额变化</li>
+	                                <li>饼图 - 各品类销售占比</li>
+	                                <li>柱状图 - 区域对比分析</li>
+	                            </ol>
+	                            <p>以下是生成图表的代码示例：</p>
+	                            <pre><code>import matplotlib.pyplot as plt
+	import pandas as pd
+	# 数据准备
+	data = pd.read_csv('sales_data.csv')
+	plt.figure(figsize=(12, 6))
+	plt.plot(data['month'], data['revenue'])
+	plt.title('Monthly Revenue Trend')
+	plt.show()</code></pre>
+	                            <p>需要我进一步解释某个部分吗？</p>
+	                        </div>
+	                        <div class="message-time">10:03</div>
+	                    </div>
+	                </div>
+	                <!-- 用户追问 -->
+	                <div class="message-wrapper user">
+	                    <div class="message-avatar">U</div>
+	                    <div class="message-content">
+	                        <div class="message-bubble">
+	                            能详细说明一下复购率的计算方法吗？
+	                        </div>
+	                        <div class="message-time">10:05</div>
+	                    </div>
+	                </div>
+	                <!-- AI思考中指示器 -->
+	                <div class="message-wrapper ai">
+	                    <div class="message-avatar">AI</div>
+	                    <div class="message-content">
+	                        <div class="thinking-indicator">
+	                            <div class="thinking-dots">
+	                                <span></span>
+	                                <span></span>
+	                                <span></span>
+	                            </div>
+	                            <span>正在思考中...</span>
+	                        </div>
+	                    </div>
+	                </div>
+	            </div>
+	            <!-- 底部输入区域 -->
+	            <footer class="input-area">
+	                <div class="input-wrapper">
+	                    <textarea 
+	                        class="message-input" 
+	                        placeholder="输入你的问题... (Shift+Enter换行)"
+	                        rows="1"
+	                        id="messageInput"
+	                    ></textarea>
+	                    <div class="input-actions">
+	                        <button class="input-action-btn" title="上传附件">
+	                            <iconify-icon icon="lucide:paperclip" width="18"></iconify-icon>
+	                        </button>
+	                        <button class="send-btn" title="发送消息">
+	                            <iconify-icon icon="lucide:arrow-up" width="18"></iconify-icon>
+	                        </button>
+	                    </div>
+	                </div>
+	                <p class="input-hint">按 Enter 发送 · Shift + Enter 换行 · 支持 Markdown 格式</p>
+	            </footer>
+	        </main>
+	    </div>
+	    <script>
+	        // 初始化变量
+	        const sidebar = document.getElementById('sidebar');
+	        const toggleBtn = document.getElementById('toggleSidebar');
+	        const messageInput = document.getElementById('messageInput');
+	        const messagesContainer = document.getElementById('messagesContainer');
+	        // 自动调整输入框高度
+	        messageInput.addEventListener('input', function() {
+	            this.style.height = 'auto';
+	            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+	        });
+	        // Enter发送，Shift+Enter换行
+	        messageInput.addEventListener('keydown', function(e) {
+	            if (e.key === 'Enter' && !e.shiftKey) {
+	                e.preventDefault();
+	                if (this.value.trim()) {
+	                    // 这里可以添加发送逻辑
+	                    console.log('发送消息:', this.value);
+	                    this.value = '';
+	                    this.style.height = 'auto';
+	                }
+	            }
+	        });
+	        // 移动端侧边栏切换
+	        function checkMobile() {
+	            if (window.innerWidth <= 768) {
+	                toggleBtn.style.display = 'flex';
+	            } else {
+	                toggleBtn.style.display = 'none';
+	                sidebar.classList.remove('open');
+	            }
+	        }
+	        toggleBtn.addEventListener('click', function() {
+	            sidebar.classList.toggle('open');
+	        });
+	        window.addEventListener('resize', checkMobile);
+	        checkMobile();
+	        // 点击外部关闭侧边栏（移动端）
+	        document.addEventListener('click', function(e) {
+	            if (window.innerWidth <= 768 && 
+	                !sidebar.contains(e.target) && 
+	                !toggleBtn.contains(e.target)) {
+	                sidebar.classList.remove('open');
+	            }
+	        });
+	        // 对话项点击切换
+	        document.querySelectorAll('.conversation-item').forEach(function(item) {
+	            item.addEventListener('click', function() {
+	                document.querySelectorAll('.conversation-item').forEach(function(i) {
+	                    i.classList.remove('active');
+	                });
+	                this.classList.add('active');
+	            });
+	        });
+	    </script>
+	</body>
+	</html>

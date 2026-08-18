@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useRef } from 'react'
+import { Sparkles } from 'lucide-react'
 import { useChatStore } from '@/stores/chat'
 import type { ChatMessage } from '@/types/api'
 import MessageItem from './MessageItem'
@@ -25,9 +26,12 @@ export default function MessageList() {
 
   if (messages.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-        <div className="text-2xl font-semibold">开始一段新对话</div>
-        <div className="text-sm text-muted-foreground">
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+        <div className="flex size-14 items-center justify-center rounded-full bg-accent text-primary">
+          <Sparkles className="size-6" />
+        </div>
+        <div className="text-xl font-semibold">开始一段新对话</div>
+        <div className="max-w-sm text-sm text-muted-foreground">
           在下方输入问题，智能体将调用工具为你解答（如计算器、回显）。
         </div>
       </div>

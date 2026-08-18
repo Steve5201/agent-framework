@@ -199,7 +199,7 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
   return (
     <div className="flex h-full overflow-hidden">
       {/* 桌面侧栏 */}
-      <aside className="hidden w-64 shrink-0 border-r bg-background md:block">
+      <aside className="hidden w-64 shrink-0 border-r bg-card md:block">
         <SessionSidebar />
       </aside>
 
@@ -211,7 +211,7 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
             onClick={() => setSidebarOpen(false)}
             aria-hidden
           />
-          <aside className="absolute inset-y-0 left-0 w-72 border-r bg-background shadow-lg">
+          <aside className="absolute inset-y-0 left-0 w-72 border-r bg-card shadow-lg">
             <SessionSidebar onNavigate={() => setSidebarOpen(false)} />
           </aside>
         </div>

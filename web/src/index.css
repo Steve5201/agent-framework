@@ -147,6 +147,21 @@ button,
     box-shadow 200ms ease;
 }
 
+/* 消息出现：淡入 + 轻微上移（聊天界面.css 消息动画规范） */
+@keyframes msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.msg-in {
+  animation: msg-in 220ms ease-out;
+}
+
 /* 工具调用代码块等预格式文本 */
 pre,
 code {

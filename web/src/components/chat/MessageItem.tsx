@@ -23,9 +23,9 @@ export default function MessageItem({
 }) {
   if (message.role === 'tool') {
     return (
-      <div className="px-4 py-1.5">
+      <div className="msg-in px-4 py-1.5">
         <div className="mx-auto max-w-3xl">
-          <div className="flex items-start gap-2 rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+          <div className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
             <span className="shrink-0 font-medium">工具结果</span>
             <code className="min-w-0 flex-1 break-all">{message.content}</code>
           </div>
@@ -39,7 +39,7 @@ export default function MessageItem({
     const isImage = isImageMarker(message.content)
     const hasText = message.content.trim().length > 0
     return (
-      <div className="flex justify-end px-4 py-2">
+      <div className="msg-in flex justify-end px-4 py-2">
         <div className="flex max-w-[75%] flex-col items-end gap-1.5">
           {/* 合并气泡的附件部分：上传文件/图片注入消息渲染为卡片（需求 3） */}
           {attachments.map((a) =>
@@ -54,7 +54,7 @@ export default function MessageItem({
           ) : isImage ? (
             <ImageMessageCard content={message.content} />
           ) : hasText ? (
-            <div className="rounded-lg bg-primary px-3.5 py-2 text-sm text-primary-foreground whitespace-pre-wrap break-words">
+            <div className="rounded-2xl bg-primary px-4 py-2.5 text-sm text-primary-foreground shadow-sm whitespace-pre-wrap break-words">
               {message.content}
             </div>
           ) : null}
@@ -66,7 +66,7 @@ export default function MessageItem({
 
   // assistant
   return (
-    <div className="flex justify-start px-4 py-2">
+    <div className="msg-in flex justify-start px-4 py-2">
       <div className="flex max-w-[85%] min-w-0 flex-col">
         {/* 思考过程折叠块：思考文本 + 工具调用/返回可视化（需求 9）。
          *  工具调没调、返回什么，由真实执行事件渲染，一眼可辨，杜绝幻觉。

@@ -233,7 +233,12 @@ export default function ChatInput({ canConfigure = true }: { canConfigure?: bool
           </div>
         )}
         {/* 拖拽高亮：仅视觉提示，投放区域即整个输入区 */}
-        <div className={cn('flex items-end gap-2 rounded-lg', dragging && 'ring-2 ring-primary/60')}>
+        <div
+          className={cn(
+            'flex items-end gap-1.5 rounded-2xl border bg-card px-2.5 py-1.5 shadow-sm',
+            dragging && 'ring-2 ring-primary/60',
+          )}
+        >
           <Textarea
             ref={taRef}
             rows={1}
@@ -251,7 +256,7 @@ export default function ChatInput({ canConfigure = true }: { canConfigure?: bool
             }}
             onKeyDown={onKeyDown}
             disabled={busy}
-            className="min-h-[40px] max-h-[200px] flex-1"
+            className="min-h-[40px] max-h-[200px] flex-1 resize-none border-0 bg-transparent px-1 py-2 shadow-none focus-visible:ring-0"
           />
           {(sending || regenerating) ? (
             <Button
@@ -276,6 +281,7 @@ export default function ChatInput({ canConfigure = true }: { canConfigure?: bool
               disabled={!sendable}
               title="发送"
               aria-label="发送"
+              className="size-9 shrink-0 rounded-full shadow-sm"
             >
               <Send />
             </Button>

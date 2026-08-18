@@ -1,0 +1,15 @@
+交互反馈规范
+场景	反馈方式	时长
+按钮 hover	背景色变化	150ms
+按钮 active	缩放 0.98	即时
+卡片 hover	阴影增强 + 微上移	200ms
+输入框 focus	边框高亮 + 外发光	150ms
+消息出现	淡入 + 上移	300ms
+加载中	点跳动动画	循环
+
+无障碍访问要点
+色彩对比度：所有文字与背景对比度 ≥ 4.5:1（WCAG AA标准）
+焦点可见：所有可交互元素在 focus 时显示 --shadow-focus
+键盘导航：支持 Tab 键顺序切换，Enter/Space 触发操作
+语义化标签：正确使用 <nav>, <main>, <aside>, <button> 等
+ARIA 属性：图标按钮需添加 aria-label，状态需添加 aria-live

@@ -1,0 +1,27 @@
+	/* 移动端适配断点 */
+	@media (max-width: 768px) {
+	  :root {
+	    --sidebar-width: 0;
+	    --content-padding: var(--space-4);
+	  }
+	  .chat-sidebar {
+	    position: fixed;
+	    transform: translateX(-100%);
+	    z-index: var(--z-modal);
+	  }
+	  .chat-sidebar.open {
+	    transform: translateX(0);
+	  }
+	  .admin-sidebar {
+	    transform: translateX(-100%);
+	  }
+	  .admin-main {
+	    margin-left: 0;
+	  }
+	  .message-bubble {
+	    max-width: 85%;
+	  }
+	  .stats-grid {
+	    grid-template-columns: 1fr;
+	  }
+	}

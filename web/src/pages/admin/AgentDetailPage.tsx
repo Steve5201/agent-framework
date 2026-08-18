@@ -687,7 +687,7 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-3.5">
             <div
-              className="flex size-14 shrink-0 items-center justify-center rounded-2xl border bg-gradient-to-br from-indigo-500/15 via-card to-violet-500/10 text-2xl shadow-sm"
+              className="flex size-14 shrink-0 items-center justify-center rounded-2xl border bg-gradient-to-br from-blue-500/15 via-card to-violet-500/10 text-2xl shadow-sm"
               aria-hidden
             >
               {agent.avatar || agent.name.charAt(0).toUpperCase()}
@@ -765,7 +765,7 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
           <div className="max-w-2xl space-y-4 rounded-xl border bg-card p-5">
             {saveError && <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{saveError}</div>}
             <div className="mb-4 flex items-center gap-1.5">
-              <Pencil className="size-4 text-indigo-500" />
+              <Pencil className="size-4 text-blue-500" />
               <h2 className="text-sm font-semibold">编辑基本信息</h2>
             </div>
             <div className="space-y-1.5">
@@ -857,7 +857,7 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
           <div className="rounded-xl border bg-card p-5">
             <div className="mb-4">
               <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-                <Settings2 className="size-4 text-indigo-500" /> 默认会话配置
+                <Settings2 className="size-4 text-blue-500" /> 默认会话配置
               </h2>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 新会话在创建时固化（快照）当时的默认配置，此后普通用户在配置区对会话的实时修改即时覆盖。管理端再调整默认配置只影响后续新建会话，历史会话不受影响。
@@ -1322,7 +1322,7 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
             </div>
           ) : usage ? (
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              <StatCard icon={<Hash className="size-3.5" />} label="调用次数" value={String(usage.calls)} tone="text-indigo-500" />
+              <StatCard icon={<Hash className="size-3.5" />} label="调用次数" value={String(usage.calls)} tone="text-blue-500" />
               <StatCard icon={<Coins className="size-3.5" />} label="输入 tokens" value={fmtNum(usage.prompt_tokens)} tone="text-sky-500" />
               <StatCard icon={<Coins className="size-3.5" />} label="输出 tokens" value={fmtNum(usage.completion_tokens)} tone="text-violet-500" />
               <StatCard icon={<CircleDollarSign className="size-3.5" />} label="总成本（USD）" value={`$${usage.cost_usd.toFixed(4)}`} tone="text-amber-500" />

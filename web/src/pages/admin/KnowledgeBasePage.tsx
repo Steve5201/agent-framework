@@ -438,7 +438,7 @@ export default function KnowledgeBasePage({ fixedAgentId }: { fixedAgentId?: str
               className={cn(
                 'mb-2 cursor-pointer rounded-lg border p-3 transition-colors',
                 selected?.id === kb.id
-                  ? 'border-indigo-500/50 bg-indigo-500/5'
+                  ? 'border-blue-500/50 bg-blue-500/5'
                   : 'hover:bg-accent/70',
               )}
             >

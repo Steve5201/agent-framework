@@ -115,7 +115,7 @@ function buildPayload(form: ModelInput, editing: boolean): ModelInput {
 /** 模型名 -> 展示用图标主题色（按名散列，简单区分）。 */
 function nameColor(name: string): string {
   const palette = [
-    'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300',
+    'bg-blue-500/15 text-blue-600 dark:text-blue-300',
     'bg-sky-500/15 text-sky-600 dark:text-sky-300',
     'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300',
     'bg-amber-500/15 text-amber-600 dark:text-amber-300',
@@ -254,7 +254,7 @@ export default function ModelsPage() {
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-300">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
               <Cpu className="size-4.5" />
             </div>
             <h1 className="text-lg font-semibold tracking-tight">大模型管理</h1>

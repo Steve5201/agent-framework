@@ -503,7 +503,7 @@ export default function McpPage({ fixedAgentId }: { fixedAgentId?: string } = {}
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-300">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
               <Server className="size-4.5" />
             </div>
             <h1 className="text-lg font-semibold tracking-tight">MCP Server 管理</h1>
@@ -577,7 +577,7 @@ export default function McpPage({ fixedAgentId }: { fixedAgentId?: string } = {}
                 >
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-2.5">
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-300">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
                         <Server className="size-4" />
                       </span>
                       <span className="font-medium">{s.name}</span>
@@ -662,7 +662,7 @@ export default function McpPage({ fixedAgentId }: { fixedAgentId?: string } = {}
                       <div className="space-y-2">
                         {s.discovered_tools?.map((t) => (
                           <div key={t.name} className="flex items-start gap-3">
-                            <code className="shrink-0 rounded bg-background px-1.5 py-0.5 font-mono text-[11px] text-indigo-600 dark:text-indigo-300">
+                            <code className="shrink-0 rounded bg-background px-1.5 py-0.5 font-mono text-[11px] text-blue-600 dark:text-blue-300">
                               {t.name}
                             </code>
                             <span className="text-xs leading-5 text-muted-foreground">
@@ -961,7 +961,7 @@ export default function McpPage({ fixedAgentId }: { fixedAgentId?: string } = {}
             <label
               className={cn(
                 'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-8 text-center transition-colors',
-                uploadZip ? 'border-indigo-500/40 bg-indigo-500/5' : 'border-border hover:border-indigo-500/40 hover:bg-accent/40',
+                uploadZip ? 'border-blue-500/40 bg-blue-500/5' : 'border-border hover:border-blue-500/40 hover:bg-accent/40',
               )}
             >
               <input
@@ -976,7 +976,7 @@ export default function McpPage({ fixedAgentId }: { fixedAgentId?: string } = {}
               />
               {uploadZip ? (
                 <>
-                  <Archive className="size-6 text-indigo-500" />
+                  <Archive className="size-6 text-blue-500" />
                   <span className="text-sm font-medium">{uploadZip.name}</span>
                   <span className="text-xs text-muted-foreground">{(uploadZip.size / 1024).toFixed(1)} KB · 点击重新选择</span>
                 </>

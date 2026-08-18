@@ -86,7 +86,7 @@ function Modal({
 
 /** 技能名首字头像配色（静态类名数组，保证 Tailwind 可扫描到）。 */
 const AVATAR_COLORS = [
-  'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300',
+  'bg-blue-500/15 text-blue-600 dark:text-blue-300',
   'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300',
   'bg-amber-500/15 text-amber-600 dark:text-amber-300',
   'bg-rose-500/15 text-rose-600 dark:text-rose-300',
@@ -382,7 +382,7 @@ export default function SkillsPage({ fixedAgentId }: { fixedAgentId?: string } =
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-300">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
               <Wrench className="size-4.5" />
             </div>
             <h1 className="text-lg font-semibold tracking-tight">技能管理</h1>
@@ -424,7 +424,7 @@ export default function SkillsPage({ fixedAgentId }: { fixedAgentId?: string } =
 
       {/* 统计卡片 */}
       <div className="mb-4 grid grid-cols-3 gap-3">
-        <StatCard icon={<Wrench className="size-4" />} label="全部技能" value={stats.total} accent="text-indigo-600 dark:text-indigo-400" />
+        <StatCard icon={<Wrench className="size-4" />} label="全部技能" value={stats.total} accent="text-blue-600 dark:text-blue-400" />
         <StatCard
           icon={<CheckCircle2 className="size-4" />}
           label="已启用"
@@ -529,7 +529,7 @@ export default function SkillsPage({ fixedAgentId }: { fixedAgentId?: string } =
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-1.5">
                       {sk.semver ? (
-                        <span className="rounded-md border border-indigo-500/20 bg-indigo-500/10 px-1.5 py-0.5 font-mono text-[11px] font-medium text-indigo-600 dark:text-indigo-300">
+                        <span className="rounded-md border border-blue-500/20 bg-blue-500/10 px-1.5 py-0.5 font-mono text-[11px] font-medium text-blue-600 dark:text-blue-300">
                           v{sk.semver}
                         </span>
                       ) : (
@@ -688,7 +688,7 @@ export default function SkillsPage({ fixedAgentId }: { fixedAgentId?: string } =
                   版本
                   <span
                     className={cn(
-                      'rounded bg-indigo-500/10 px-1 font-mono text-[11px] text-indigo-600 dark:text-indigo-300',
+                      'rounded bg-blue-500/10 px-1 font-mono text-[11px] text-blue-600 dark:text-blue-300',
                       !fm.version && 'bg-rose-500/10 text-rose-500',
                     )}
                   >
@@ -725,7 +725,7 @@ export default function SkillsPage({ fixedAgentId }: { fixedAgentId?: string } =
                   {editing.versions?.map((v) => (
                     <li key={v.semver} className="flex items-center justify-between text-xs">
                       <span className="font-mono">
-                        <span className="rounded bg-indigo-500/10 px-1 py-px text-[10px] text-indigo-600 dark:text-indigo-300">
+                        <span className="rounded bg-blue-500/10 px-1 py-px text-[10px] text-blue-600 dark:text-blue-300">
                           {v.semver}
                         </span>
                         <span className="ml-2 text-muted-foreground">
@@ -772,8 +772,8 @@ export default function SkillsPage({ fixedAgentId }: { fixedAgentId?: string } =
               className={cn(
                 'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors',
                 zipFile
-                  ? 'border-indigo-500/40 bg-indigo-500/5'
-                  : 'border-border hover:border-indigo-500/40 hover:bg-accent/40',
+                  ? 'border-blue-500/40 bg-blue-500/5'
+                  : 'border-border hover:border-blue-500/40 hover:bg-accent/40',
               )}
             >
               <input
@@ -788,7 +788,7 @@ export default function SkillsPage({ fixedAgentId }: { fixedAgentId?: string } =
               />
               {zipFile ? (
                 <>
-                  <Archive className="size-7 text-indigo-500" />
+                  <Archive className="size-7 text-blue-500" />
                   <span className="text-sm font-medium">{zipFile.name}</span>
                   <span className="text-xs text-muted-foreground">{(zipFile.size / 1024).toFixed(1)} KB · 点击可重新选择</span>
                 </>

@@ -61,17 +61,17 @@ export default function AdminLayout() {
   return (
     <div className="flex h-screen bg-muted/30">
       {/* 侧边栏：卡片化，微渐变品牌区 + 模块导航 */}
-      <aside className="flex w-60 shrink-0 flex-col border-r bg-background">
+      <aside className="flex w-60 shrink-0 flex-col border-r bg-card">
         <div className="relative overflow-hidden border-b px-4 py-4">
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent" />
           <div className="relative flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400">
               <ShieldCheck className="size-4.5" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold leading-tight">管理端</span>
-                <Badge variant="outline" className="shrink-0 bg-indigo-500/10 px-1.5 py-0 text-[10px] text-indigo-600 dark:text-indigo-300">
+                <Badge variant="outline" className="shrink-0 bg-blue-500/10 px-1.5 py-0 text-[10px] text-blue-600 dark:text-blue-300">
                   {ROLE_LABELS[me?.role ?? ''] ?? me?.role ?? '管理员'}
                 </Badge>
               </div>
@@ -100,7 +100,7 @@ export default function AdminLayout() {
                 cn(
                   'group relative flex items-center justify-between gap-2 rounded-md px-2.5 py-2 text-sm transition-colors',
                   isActive
-                    ? 'bg-indigo-500/10 font-medium text-indigo-700 dark:text-indigo-300'
+                    ? 'bg-blue-500/10 font-medium text-blue-700 dark:text-blue-300'
                     : 'text-foreground/75 hover:bg-accent/70 hover:text-foreground',
                 )
               }
@@ -108,7 +108,7 @@ export default function AdminLayout() {
               {({ isActive }) => (
                 <>
                   {isActive && (
-                    <span className="absolute -left-2 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-indigo-500" />
+                    <span className="absolute -left-2 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-blue-500" />
                   )}
                   <span className="flex min-w-0 items-center gap-2">
                     <ModuleIcon m={m} />
@@ -119,7 +119,7 @@ export default function AdminLayout() {
                     className={cn(
                       'shrink-0 text-[10px]',
                       m.implemented &&
-                        'bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/10 dark:text-indigo-300',
+                        'bg-blue-500/10 text-blue-600 hover:bg-blue-500/10 dark:text-blue-300',
                     )}
                   >
                     {m.implemented ? '已实现' : '规划中'}

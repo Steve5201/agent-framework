@@ -23,7 +23,7 @@ function statusStyle(status: number) {
 /** 角色徽标配色（与 UsersPage 一致） */
 const ROLE_STYLE: Record<string, string> = {
   super_admin: 'bg-amber-500/10 text-amber-600 dark:text-amber-300',
-  agent_admin: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-300',
+  agent_admin: 'bg-blue-500/10 text-blue-600 dark:text-blue-300',
   admin: 'bg-sky-500/10 text-sky-600 dark:text-sky-300',
 }
 
@@ -129,7 +129,7 @@ export default function LogsPage() {
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-300">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
               <ScrollText className="size-4.5" />
             </div>
             <h1 className="text-lg font-semibold tracking-tight">操作日志</h1>

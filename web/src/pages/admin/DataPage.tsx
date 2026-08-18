@@ -316,7 +316,7 @@ export default function DataPage() {
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-300">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
               <TrendingUp className="size-4.5" />
             </div>
             <h1 className="text-lg font-semibold tracking-tight">数据管理</h1>

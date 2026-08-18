@@ -7,6 +7,7 @@ import { isAdminRole, isAllAgentScope, getHomeScope } from '@/lib/roles'
 import { getServerUrl, setServerUrl as persistServerUrl } from '@/lib/settings'
 import { clearRemembered, loadRemembered, saveRemembered } from '@/lib/remember'
 import { useAuthStore } from '@/stores/auth'
+import { Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -264,7 +265,10 @@ export default function LoginPage() {
     // （桌面端窗口较矮时"服务器地址"设置区必须可见）。
     <div className="flex h-full justify-center overflow-y-auto p-4">
       <Card className="my-auto w-full max-w-sm">
-        <CardHeader>
+        <CardHeader className="items-center text-center">
+          <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <Bot className="size-6" />
+          </div>
           <CardTitle className="text-lg">{title}</CardTitle>
           <CardDescription>{subTitle}</CardDescription>
         </CardHeader>

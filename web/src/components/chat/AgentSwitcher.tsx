@@ -114,7 +114,7 @@ export default function AgentSwitcherDialog({ onClose }: Props) {
         {/* 头部：图标 + 标题 + 关闭 */}
         <div className="mb-3 flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-300">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-300">
               <ArrowLeftRight className="size-4" />
             </span>
             <div>

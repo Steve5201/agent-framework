@@ -27,6 +27,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -415,6 +416,7 @@ type fakeAuthClient struct {
 	agentSp       string // GetAgentPublic 返回的智能体系统提示词
 	agentErr      error  // GetAgentPublic 错误注入
 	agentDisabled bool   // 默认启用；置真 → GetAgentPublic 返回 status=0（停用）
+	agentCtxMD    metadata.MD // 最近一次 GetAgentPublic 的出站元数据（断言调用者透传）
 }
 
 func (f *fakeAuthClient) Register(_ context.Context, _ *authpb.RegisterRequest, _ ...grpc.CallOption) (*authpb.RegisterResponse, error) {
@@ -424,7 +426,8 @@ func (f *fakeAuthClient) Register(_ context.Context, _ *authpb.RegisterRequest, 
 	return &authpb.RegisterResponse{UserId: "1", Username: "alice"}, nil
 }
 
-func (f *fakeAuthClient) GetAgentPublic(_ context.Context, _ *authpb.GetAgentRequest, _ ...grpc.CallOption) (*authpb.GetAgentPublicResponse, error) {
+func (f *fakeAuthClient) GetAgentPublic(ctx context.Context, _ *authpb.GetAgentRequest, _ ...grpc.CallOption) (*authpb.GetAgentPublicResponse, error) {
+	f.agentCtxMD, _ = metadata.FromOutgoingContext(ctx)
 	if f.agentErr != nil {
 		return nil, f.agentErr
 	}
@@ -824,6 +827,36 @@ func TestCreateSessionHandler_StrictDomain(t *testing.T) {
 	}
 	if agent.lastCreateReq != nil {
 		t.Fatalf("已停用域不应触达 agent 服务, got %+v", agent.lastCreateReq)
+	}
+}
+
+func TestCreateSessionHandler_AgentScopeInjectsCallerMetadata(t *testing.T) {
+	// 回归：域校验（ensureAgentAccessible → GetAgentPublic）必须以带
+	// x-user-id / x-user-role 的出站元数据调用 authsvc，否则 authsvc
+	// userIDFromMetadata 取空，会话类接口全线 401"缺少调用者身份"。
+	mgr := newTestManager(t)
+	auth := &fakeAuthClient{}
+	clients := &Clients{
+		Auth:  auth,
+		Agent: &fakeAgentClient{},
+		JWT:   mgr,
+		Log:   zap.NewNop(),
+	}
+	handler := clients.RequireAuth()(http.HandlerFunc(clients.CreateSession))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/agent/sessions", strings.NewReader(`{"agent_id":"tutor"}`))
+	req.Header.Set("Authorization", "Bearer "+signedAccessAs(t, mgr, "1", "super_admin", ""))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("创建会话应 201, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if got := auth.agentCtxMD.Get("x-user-id"); len(got) == 0 || got[0] != "1" {
+		t.Fatalf("GetAgentPublic 应携带 x-user-id=1, got %v", auth.agentCtxMD.Get("x-user-id"))
+	}
+	if got := auth.agentCtxMD.Get("x-user-role"); len(got) == 0 || got[0] != "super_admin" {
+		t.Fatalf("GetAgentPublic 应携带 x-user-role=super_admin, got %v", auth.agentCtxMD.Get("x-user-role"))
 	}
 }
 

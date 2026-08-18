@@ -9,7 +9,6 @@
 package gatewaysvc
 
 import (
-	"context"
 	"net/http"
 	"regexp"
 	"strings"
@@ -63,7 +62,7 @@ func (c *Clients) userAgentScope(r *http.Request, requested string) (string, err
 	if !agentIDRe.MatchString(agent) {
 		return "", apperr.New(apperr.CodeInvalidArgument, "非法的智能体 ID（仅限字母/数字/中划线，≤64 字符）")
 	}
-	if err := c.ensureAgentAccessible(r.Context(), agent); err != nil {
+	if err := c.ensureAgentAccessible(r, agent); err != nil {
 		return "", err
 	}
 	return agent, nil
@@ -108,7 +107,7 @@ func (c *Clients) agentScopeFor(r *http.Request, requested string) (string, erro
 		return "", apperr.New(apperr.CodeInvalidArgument, "非法的智能体 ID（仅限字母/数字/中划线，≤64 字符）")
 	}
 	// 严格多租户：具体域必须是已注册且启用的智能体（孤儿域 / 已停用域拒绝）。
-	if err := c.ensureAgentAccessible(r.Context(), req); err != nil {
+	if err := c.ensureAgentAccessible(r, req); err != nil {
 		return "", err
 	}
 	return req, nil
@@ -119,11 +118,17 @@ func (c *Clients) agentScopeFor(r *http.Request, requested string) (string, erro
 // 复用 authsvc.GetAgentPublic（游客负 user_id 会跳过用户存在性校验），
 // NotFound → 孤儿域；status=0 → 已停用。供 agentScopeFor / userAgentScope /
 // GetAgentDomain 统一调用，保证"各种访问地址必须有对应智能体才能访问"。
-func (c *Clients) ensureAgentAccessible(ctx context.Context, agentID string) error {
+func (c *Clients) ensureAgentAccessible(r *http.Request, agentID string) error {
 	if agentID == "" || agentID == allAgentScopeID {
 		return nil
 	}
-	ar, err := c.Auth.GetAgentPublic(ctx, &authpb.GetAgentRequest{Id: agentID})
+	// 调用方身份必须经 gRPC 出站 metadata 透传（x-user-id），否则 authsvc
+	// 无法识别调用者，直接回"缺少调用者身份"。
+	userID, err := userIDFrom(r)
+	if err != nil {
+		return err
+	}
+	ar, err := c.Auth.GetAgentPublic(userCtx(r, userID), &authpb.GetAgentRequest{Id: agentID})
 	if err != nil {
 		if apperr.CodeOf(apperr.FromGRPCError(err)) == apperr.CodeNotFound {
 			return apperr.New(apperr.CodeNotFound, "智能体 "+agentID+" 不存在或尚未创建，无法访问")

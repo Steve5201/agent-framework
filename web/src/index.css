@@ -4,52 +4,52 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ---------------------------------------------------------------------------
- * shadcn/ui 主题变量（neutral 基础色，OKLCH 色彩空间）
- * 极简高信息密度：低对比度背景 + 高对比文本 + 克制的高亮色
+ * shadcn/ui 主题变量 —— 浅色简洁 + 低饱和蓝（参考 ui/ 模板设计令牌）
+ * 极简高信息密度：低对比度背景 + 高对比文本 + 柔和的品牌蓝
  * ------------------------------------------------------------------------- */
 :root {
-  --background: oklch(0.985 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.96 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.96 0 0);
-  --muted-foreground: oklch(0.55 0 0);
-  --accent: oklch(0.95 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --radius: 0.5rem;
+  --background: #f7f8fa;
+  --foreground: #212529;
+  --card: #ffffff;
+  --card-foreground: #212529;
+  --popover: #ffffff;
+  --popover-foreground: #212529;
+  --primary: #1c7ed6;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f3f5;
+  --secondary-foreground: #212529;
+  --muted: #f1f3f5;
+  --muted-foreground: #6b7280;
+  --accent: #e7f0fe;
+  --accent-foreground: #1c7ed6;
+  --destructive: #e03131;
+  --destructive-foreground: #ffffff;
+  --border: #e9ecf0;
+  --input: #dde1e6;
+  --ring: #339af0;
+  --radius: 0.625rem;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --background: #17181a;
+  --foreground: #f1f3f5;
+  --card: #1f2125;
+  --card-foreground: #f1f3f5;
+  --popover: #1f2125;
+  --popover-foreground: #f1f3f5;
+  --primary: #4dabf7;
+  --primary-foreground: #0f1115;
+  --secondary: #2b2d31;
+  --secondary-foreground: #f1f3f5;
+  --muted: #2b2d31;
+  --muted-foreground: #9ba3ac;
+  --accent: #1e2a3a;
+  --accent-foreground: #74c0fc;
+  --destructive: #fa5252;
+  --destructive-foreground: #ffffff;
+  --border: rgb(255 255 255 / 8%);
+  --input: rgb(255 255 255 / 12%);
+  --ring: #4dabf7;
 }
 
 /* 把 CSS 变量映射为 Tailwind 主题令牌（Tailwind v4 的 @theme inline 语法） */
@@ -104,6 +104,47 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* 文本选区：柔和品牌蓝 */
+::selection {
+  background: rgb(77 171 247 / 25%);
+}
+
+/* 键盘焦点：全站统一外发光（无障碍，其它说明.txt 焦点可见要求） */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(77 171 247 / 35%);
+}
+
+/* 细滚动条，贴合浅色简洁风格 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 可交互元素统一过渡（其它说明.txt 交互反馈规范） */
+a,
+button,
+[role='button'] {
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    opacity 150ms ease,
+    transform 150ms ease,
+    box-shadow 200ms ease;
 }
 
 /* 工具调用代码块等预格式文本 */

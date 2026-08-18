@@ -1389,7 +1389,7 @@ function Row({ label, value, mono = false }: { label: string; value: string; mon
 /** 用量统计卡。tone 控制图标配色（text-* 类）。 */
 function StatCard({ icon, label, value, tone = 'text-foreground' }: { icon: React.ReactNode; label: string; value: string; tone?: string }) {
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm">
+    <div className="stat-hover rounded-xl border bg-card p-4 shadow-sm">
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-md border bg-muted/40', tone)}>{icon}</span>
         {label}

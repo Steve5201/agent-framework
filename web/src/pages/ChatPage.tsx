@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { LogIn, Menu, ShieldAlert } from 'lucide-react'
+import { Bot, LogIn, Menu, ShieldAlert } from 'lucide-react'
 import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
 import { isTauri } from '@/lib/storage'
@@ -219,7 +219,7 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
 
       <main className="flex min-w-0 flex-1 flex-col">
         {/* 移动端顶栏 */}
-        <div className="flex items-center border-b px-2 py-1.5 md:hidden">
+        <div className="flex items-center border-b bg-card px-2 py-1.5 md:hidden">
           <Button
             variant="ghost"
             size="icon"
@@ -228,7 +228,10 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
           >
             <Menu />
           </Button>
-          <span className="ml-1 truncate text-sm font-medium">{scopeTitle}</span>
+          <span className="ml-1 flex min-w-0 items-center gap-1.5">
+            <Bot className="size-3.5 shrink-0 text-primary" />
+            <span className="truncate text-sm font-medium">{scopeTitle}</span>
+          </span>
           {isGuest && mode === 'agent' ? (
             <Link
               to={loginUrl}
@@ -240,6 +243,34 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
           ) : (
             /* 登录用户：顶栏右侧菜单入口（设置/管理端/退出登录等，注册表驱动） */
             <MenuButton className="ml-auto" />
+          )}
+        </div>
+
+        {/* 桌面端头部栏：智能体身份 + 在线状态（参照 ui_chat.html 顶部信息栏） */}
+        <div className="hidden items-center justify-between border-b bg-card px-5 py-2.5 md:flex">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-sm">
+              <Bot className="size-4.5" />
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold">{scopeTitle}</div>
+              <div className="flex items-center gap-1.5 text-xs text-emerald-600">
+                <span className="relative flex size-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
+                </span>
+                在线响应中
+              </div>
+            </div>
+          </div>
+          {isGuest && mode === 'agent' && (
+            <Link
+              to={loginUrl}
+              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'cursor-pointer')}
+            >
+              <LogIn className="mr-1 h-3.5 w-3.5" />
+              登录 / 注册
+            </Link>
           )}
         </div>
 

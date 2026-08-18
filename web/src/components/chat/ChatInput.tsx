@@ -315,6 +315,10 @@ export default function ChatInput({ canConfigure = true }: { canConfigure?: bool
         </div>
         {/* 上传反馈行：成功/失败提示，短暂显示后消失 */}
         {uploadHint && <div className="mt-1.5 text-xs text-muted-foreground">{uploadHint}</div>}
+        {/* 输入提示行（参照 ui_chat.html input-hint） */}
+        <div className="mt-1.5 text-center text-[11px] text-muted-foreground/70">
+          按 Enter 发送 · Shift+Enter 换行 · 支持 Markdown 格式
+        </div>
       </div>
     </div>
   )

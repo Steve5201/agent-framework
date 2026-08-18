@@ -835,7 +835,7 @@ function StatCard({
   accent: string
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3">
+    <div className="stat-hover flex items-center gap-3 rounded-xl border bg-card px-4 py-3">
       <div className={cn('flex size-9 items-center justify-center rounded-lg bg-muted', accent)}>{icon}</div>
       <div>
         <div className="text-lg font-semibold leading-tight tabular-nums">{value}</div>

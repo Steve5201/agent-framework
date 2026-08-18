@@ -17,8 +17,31 @@ interface Props {
   onNavigate?: () => void
 }
 
+/** 相对时间（会话列表）：刚刚 / N分钟前 / 今天 HH:mm / 昨天 / N天前 / 日期 */
+function relativeTime(iso: string): string {
+  const t = new Date(iso)
+  if (Number.isNaN(t.getTime())) return ''
+  const now = new Date()
+  const mins = Math.floor((now.getTime() - t.getTime()) / 60000)
+  if (mins < 1) return '刚刚'
+  if (mins < 60) return `${mins}分钟前`
+  if (now.toDateString() === t.toDateString()) {
+    return `今天 ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`
+  }
+  const days = Math.floor(mins / 1440)
+  if (days === 1) return '昨天'
+  if (days < 7) return `${days}天前`
+  return `${t.getFullYear()}/${t.getMonth() + 1}/${t.getDate()}`
+}
+
 /** 单个会话行：单击选中、双击重命名、悬停删除。 */
-function SessionRow({ session, active }: { session: { id: string; title: string }; active: boolean }) {
+function SessionRow({
+  session,
+  active,
+}: {
+  session: { id: string; title: string; updated_at: string }
+  active: boolean
+}) {
   const selectSession = useChatStore((s) => s.selectSession)
   const renameSession = useChatStore((s) => s.renameSession)
   const deleteSession = useChatStore((s) => s.deleteSession)
@@ -67,11 +90,24 @@ function SessionRow({ session, active }: { session: { id: string; title: string 
           }}
           title={session.title || '新对话'}
           className={cn(
-            'w-full cursor-pointer rounded-md px-3 py-2 text-left text-sm transition-colors',
-            active ? 'bg-accent text-accent-foreground' : 'text-foreground/90 hover:bg-accent/60',
+            'relative w-full cursor-pointer rounded-md px-3 py-2 pl-4 text-left text-sm transition-colors',
+            active
+              ? 'bg-primary/10 font-medium text-primary'
+              : 'text-foreground/90 hover:bg-accent/60',
           )}
         >
-          <span className="block truncate pr-10">{session.title || '新对话'}</span>
+          {active && (
+            <span
+              className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-primary"
+              aria-hidden
+            />
+          )}
+          <span className="flex min-w-0 items-baseline gap-2 pr-9">
+            <span className="truncate">{session.title || '新对话'}</span>
+            <span className="shrink-0 text-[11px] text-muted-foreground/70">
+              {relativeTime(session.updated_at)}
+            </span>
+          </span>
         </button>
       )}
       {!editing && (
@@ -156,48 +192,48 @@ export default function SessionSidebar({ onNavigate }: Props) {
 
   return (
     <div className="flex h-full flex-col">
-      {/* 顶栏：应用名 + 刷新 + 新建 */}
-      <div className="flex items-center justify-between border-b px-3 py-2.5">
-        <span className="text-sm font-semibold">智能体助手</span>
-        <div className="flex items-center gap-0.5">
-          {isTauri() && (
+      {/* 顶栏：应用名 + 刷新（新建对话为下方全宽主按钮） */}
+      <div className="border-b px-3 pb-2.5 pt-2.5">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold">智能体助手</span>
+          <div className="flex items-center gap-0.5">
+            {isTauri() && (
+              <Button
+                variant="ghost"
+                size="icon"
+                title="门户配置（切换要连接的智能体门户）"
+                aria-label="门户配置"
+                onClick={() => {
+                  void navigate('/portal')
+                  onNavigate?.()
+                }}
+              >
+                <Settings2 className="size-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
-              title="门户配置（切换要连接的智能体门户）"
-              aria-label="门户配置"
-              onClick={() => {
-                void navigate('/portal')
-                onNavigate?.()
-              }}
+              title="刷新会话列表（同步其它端的新会话）"
+              aria-label="刷新会话列表"
+              onClick={() => void loadSessions()}
+              disabled={sessionsLoading}
             >
-              <Settings2 className="size-4" />
+              <RefreshCw className={cn('size-4', sessionsLoading && 'animate-spin')} />
             </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            title="刷新会话列表（同步其它端的新会话）"
-            aria-label="刷新会话列表"
-            onClick={() => void loadSessions()}
-            disabled={sessionsLoading}
-          >
-            <RefreshCw className={cn('size-4', sessionsLoading && 'animate-spin')} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            title="新建会话"
-            aria-label="新建会话"
-            onClick={() => {
-              void createSession()
-                .then(onNavigate)
-                .catch((err) => alert(`新建会话失败：${(err as Error).message}`))
-            }}
-          >
-            <Plus />
-          </Button>
+          </div>
         </div>
+        <Button
+          className="mt-2 w-full"
+          title="新建会话"
+          onClick={() => {
+            void createSession()
+              .then(onNavigate)
+              .catch((err) => alert(`新建会话失败：${(err as Error).message}`))
+          }}
+        >
+          <Plus /> 新建对话
+        </Button>
       </div>
 
       {/* 会话列表（独立滚动区） */}

@@ -162,6 +162,19 @@ button,
   animation: msg-in 220ms ease-out;
 }
 
+/* 统计卡 hover：阴影增强 + 微上浮（ui_admin.html stat-card:hover，其它说明.txt 卡片交互规范） */
+.stat-hover {
+  transition:
+    box-shadow 200ms ease,
+    transform 200ms ease,
+    border-color 200ms ease;
+}
+.stat-hover:hover {
+  box-shadow: 0 4px 16px rgb(0 0 0 / 8%);
+  transform: translateY(-2px);
+  border-color: var(--border);
+}
+
 /* 工具调用代码块等预格式文本 */
 pre,
 code {

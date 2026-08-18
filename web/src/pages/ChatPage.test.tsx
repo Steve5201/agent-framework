@@ -187,7 +187,7 @@ describe('ChatPage · 管理端对话会话域回退', () => {
     await screen.findByTestId('chat-input')
     expect(useChatStore.getState().agentId).toBe('math')
     expect(apiMocks.listSessions).toHaveBeenCalledWith(1, 50, 'math')
-    // 移动端顶栏标题展示当前智能体域，便于确认归属
-    expect(screen.getByText('管理端对话 · math')).toBeInTheDocument()
+    // 顶栏标题展示当前智能体域（桌面头部栏 + 移动端顶栏），便于确认归属
+    expect(screen.getAllByText('管理端对话 · math').length).toBeGreaterThan(0)
   })
 })

@@ -70,7 +70,7 @@ function StatCard({
   icon?: React.ReactNode
 }) {
   return (
-    <Card>
+    <Card className="stat-hover">
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-2">
           <span className="truncate text-xs text-muted-foreground">{label}</span>

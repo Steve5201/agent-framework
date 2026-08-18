@@ -84,6 +84,11 @@ func (s *Service) Register(ctx context.Context, username, password, agentID stri
 	if agentID == allAgentID {
 		return nil, errors.New(errors.CodePermissionDenied, "超管门户不支持注册")
 	}
+	// 门户域必须已注册且启用（严格多租户）：孤儿域 / 已停用域禁止注册，
+	// 避免把"不存在或已停用的智能体"打上账号标签、制造孤儿账号。
+	if err := s.EnsureAgentAccessible(ctx, agentID); err != nil {
+		return nil, err
+	}
 	hash, err := auth.HashPassword(password)
 	if err != nil {
 		return nil, err
@@ -132,6 +137,14 @@ func (s *Service) Login(ctx context.Context, username, password, agentID string)
 	if err := auth.CheckPassword(u.PasswordHash, password); err != nil {
 		s.throttle.recordFailure(username, now)
 		return nil, errors.New(errors.CodeUnauthenticated, "用户名或密码错误")
+	}
+
+	// 门户域必须已注册且启用（严格多租户）：孤儿域 / 已停用域登录直接拒绝，
+	// 普通用户也不会再自动绑定孤儿域标签。放行管理端入口（空串）与超管门户（'*'）。
+	if agentID != "" && agentID != allAgentID {
+		if err := s.EnsureAgentAccessible(ctx, agentID); err != nil {
+			return nil, err
+		}
 	}
 
 	// 管理员入口（无 agent_id 的 /v1/auth/login）只允许管理员类账号登录：
@@ -362,6 +375,14 @@ func (s *Service) AdminCreateUser(ctx context.Context, actorID, username, passwo
 			return nil, errors.New(errors.CodePermissionDenied, "只能在本智能体组内创建用户")
 		}
 		agentID = scope // 强制归入调用者的智能体
+	}
+
+	// 门户域必须已注册且启用（严格多租户）：孤儿域 / 已停用域禁止建号，
+	// 从源头杜绝"账号绑定了不存在的智能体"。
+	if agentID != "" {
+		if err := s.EnsureAgentAccessible(ctx, agentID); err != nil {
+			return nil, err
+		}
 	}
 
 	merged := mergeTags(agentTags(agentID), tags)
@@ -774,7 +795,30 @@ func (s *Service) GetAgentPublic(ctx context.Context, actorID, id string) (*Agen
 		Welcome:         a.Welcome,
 		SystemPrompt:    a.SystemPrompt,
 		ReasoningEffort: a.ReasoningEffort,
+		Status:          a.Status,
 	}, nil
+}
+
+// EnsureAgentAccessible 校验智能体域可访问：域必须已注册且启用。
+// 空串（管理端域）与 '*'（超管全门户标识）不是注册表里的真实智能体，直接放行。
+// 供登录 / 注册 / 创建用户 / 域访问入口复用，杜绝"孤儿域"与"已停用域"访问。
+func (s *Service) EnsureAgentAccessible(ctx context.Context, agentID string) error {
+	if agentID == "" || agentID == allAgentID {
+		return nil
+	}
+	a, err := s.repo.GetAgent(ctx, agentID)
+	if err != nil {
+		if errors.CodeOf(err) == errors.CodeNotFound {
+			return errors.New(errors.CodeNotFound,
+				fmt.Sprintf("智能体 %s 不存在或尚未创建，请先创建该智能体", agentID))
+		}
+		return err
+	}
+	if a.Status != 1 {
+		return errors.New(errors.CodePermissionDenied,
+			fmt.Sprintf("智能体 %s 已停用，无法访问", agentID))
+	}
+	return nil
 }
 
 // UpdateAgent 更新智能体元数据：super_admin 任意；agent_admin 仅限自身归属域。

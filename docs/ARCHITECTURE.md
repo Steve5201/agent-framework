@@ -237,6 +237,7 @@ gateway :8080 ── 请求头 X-Guest-ID ──▶ agent-service
   - 会话态：`sessions.agent_id` 域列。
 - **会话域三态 + 管理员落地（P2-AG）**：`listSessions` 的 `agent_id` 三态——`''`=管理端域、`'*'`=全部域不过滤、具体 ID=精确匹配。管理员登录后按角色**落地归属会话域**（超管 `/agent/*`、agent_admin/admin `/agent/{绑定域}`），管理端新建会话同样按归属回退（`getHomeScope`），不再产生 `agent_id=''` 孤儿会话。此前"登录后首屏空列表、须手动切 `*` 域"根因即登录一律落地 `/admin/chat`（管理端域）与会话实际归属脱节。
 - **模块裁剪**：`/v1/admin/modules` 按角色过滤；前端 `RoleGuard` 路由守卫（agents 仅 super_admin，users 限 super_admin+agent_admin）。
+- **严格多租户域守卫**：注册 / 门户登录 / 管理端建号统一走 `EnsureAgentAccessible`——目标域**必须已注册且启用**（`agents.status=1`），空串（管理端域）与 `*`（超管全门户）放行；gateway 侧建会话 / 工具 / 资源访问同样经 `GetAgentPublic` 校验域（孤儿域 404、停用域 403）。杜绝"孤儿域 / 已停用域"的账号与访问。智能体 `owner` 可选（解耦鸡生蛋），推荐顺序：先建域 → 再建组内账号 → `BindAgentOwner` 升级 `agent_admin`。
 - 核心不变量：**除最高超管外，任何管理员只能管理自己智能体组**，租户间互不可感知（对标"一个独立系统"体验）。
 
 ### 10.3 审计日志（阶段4）

@@ -1816,7 +1816,8 @@ func (x *GetAgentResponse) GetAgent() *Agent {
 }
 
 // GetAgentPublicResponse 公开智能体元数据（前台可展示/装配字段白名单，
-// 不含 owner_user_id / status / created_at 等管理字段）。
+// 不含 owner_user_id / created_at 等管理字段；status 仅暴露启停位，供前端
+// 域守卫判断"已停用"）。
 type GetAgentPublicResponse struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                                  // 智能体 ID
@@ -1826,6 +1827,7 @@ type GetAgentPublicResponse struct {
 	Welcome         string                 `protobuf:"bytes,5,opt,name=welcome,proto3" json:"welcome,omitempty"`                                        // 欢迎语
 	SystemPrompt    string                 `protobuf:"bytes,6,opt,name=system_prompt,json=systemPrompt,proto3" json:"system_prompt,omitempty"`          // 按智能体系统提示词（空 = 用实例全局 prompt）
 	ReasoningEffort string                 `protobuf:"bytes,7,opt,name=reasoning_effort,json=reasoningEffort,proto3" json:"reasoning_effort,omitempty"` // 默认推理强度 low/high/max（空 = 用实例默认）
+	Status          int32                  `protobuf:"varint,8,opt,name=status,proto3" json:"status,omitempty"`                                         // 1=启用 0=停用（严格多租户域校验用）
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -1907,6 +1909,13 @@ func (x *GetAgentPublicResponse) GetReasoningEffort() string {
 		return x.ReasoningEffort
 	}
 	return ""
+}
+
+func (x *GetAgentPublicResponse) GetStatus() int32 {
+	if x != nil {
+		return x.Status
+	}
+	return 0
 }
 
 // UpdateAgentRequest 更新智能体元数据。
@@ -2349,7 +2358,7 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\x0fGetAgentRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"8\n" +
 	"\x10GetAgentResponse\x12$\n" +
-	"\x05agent\x18\x01 \x01(\v2\x0e.auth.v1.AgentR\x05agent\"\xe0\x01\n" +
+	"\x05agent\x18\x01 \x01(\v2\x0e.auth.v1.AgentR\x05agent\"\xf8\x01\n" +
 	"\x16GetAgentPublicResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -2357,7 +2366,8 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\x06avatar\x18\x04 \x01(\tR\x06avatar\x12\x18\n" +
 	"\awelcome\x18\x05 \x01(\tR\awelcome\x12#\n" +
 	"\rsystem_prompt\x18\x06 \x01(\tR\fsystemPrompt\x12)\n" +
-	"\x10reasoning_effort\x18\a \x01(\tR\x0freasoningEffort\"\xf2\x01\n" +
+	"\x10reasoning_effort\x18\a \x01(\tR\x0freasoningEffort\x12\x16\n" +
+	"\x06status\x18\b \x01(\x05R\x06status\"\xf2\x01\n" +
 	"\x12UpdateAgentRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +

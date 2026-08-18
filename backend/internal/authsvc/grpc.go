@@ -314,6 +314,7 @@ func (g *grpcServer) GetAgentPublic(ctx context.Context, req *authpb.GetAgentReq
 		Welcome:         a.Welcome,
 		SystemPrompt:    a.SystemPrompt,
 		ReasoningEffort: a.ReasoningEffort,
+		Status:          int32(a.Status),
 	}, nil
 }
 

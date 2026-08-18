@@ -9,6 +9,7 @@
 package gatewaysvc
 
 import (
+	"context"
 	"net/http"
 	"regexp"
 	"strings"
@@ -22,6 +23,10 @@ import (
 
 // defaultAgentID 资源域缺省值（与 adminsvc / 前端 DEFAULT_AGENT_ID 一致）。
 const defaultAgentID = "tutor"
+
+// allAgentScopeID 超管全门户标识（与 authsvc allAgentID、前端 ALL_AGENT_ID 一致）。
+// 它不是注册表里的真实智能体，仅作为超管专属门户（/agent/*、/login/*）标识。
+const allAgentScopeID = "*"
 
 // agentIDRe 智能体域 ID 白名单（与 authsvc/adminsvc 一致）：字母数字 + 中划线，≤64 字符。
 var agentIDRe = regexp.MustCompile(`^[A-Za-z0-9-]{1,64}$`)
@@ -40,7 +45,9 @@ type kbLiteView struct {
 //     会话归属目标域）；空 / "*"（全门户标识）回退默认域；
 //   - 其它登录用户：锁定 JWT 携带的自身归属（identity.AgentID），忽略请求参数，
 //     防"声明管 A 域、实际操作 B 域"的越权枚举。
-func userAgentScope(r *http.Request, requested string) (string, error) {
+//
+// 解析出的具体域必须已注册且启用（严格多租户）：孤儿域 / 已停用域一律拒绝。
+func (c *Clients) userAgentScope(r *http.Request, requested string) (string, error) {
 	agent := ""
 	if roleFrom(r) == "super_admin" {
 		agent = strings.TrimSpace(requested)
@@ -56,6 +63,9 @@ func userAgentScope(r *http.Request, requested string) (string, error) {
 	if !agentIDRe.MatchString(agent) {
 		return "", apperr.New(apperr.CodeInvalidArgument, "非法的智能体 ID（仅限字母/数字/中划线，≤64 字符）")
 	}
+	if err := c.ensureAgentAccessible(r.Context(), agent); err != nil {
+		return "", err
+	}
 	return agent, nil
 }
 
@@ -67,7 +77,10 @@ func userAgentScope(r *http.Request, requested string) (string, error) {
 //   - super_admin：管理端域（”）、全门户（'*'）、任意具体域；
 //   - agent_admin / admin：管理端域（”）与自身 JWT 归属域，其它域拒绝；
 //   - 普通用户 / 游客：锁定 JWT 自身归属（游客回退默认域），忽略请求参数。
-func agentScopeFor(r *http.Request, requested string) (string, error) {
+//
+// 解析出的具体域必须已注册且启用（严格多租户）：孤儿域 / 已停用域一律拒绝，
+// 超管访问孤儿域同样报错（'*' 与 '' 豁免）。
+func (c *Clients) agentScopeFor(r *http.Request, requested string) (string, error) {
 	role := roleFrom(r)
 	req := strings.TrimSpace(requested)
 	switch role {
@@ -94,7 +107,33 @@ func agentScopeFor(r *http.Request, requested string) (string, error) {
 	if !agentIDRe.MatchString(req) {
 		return "", apperr.New(apperr.CodeInvalidArgument, "非法的智能体 ID（仅限字母/数字/中划线，≤64 字符）")
 	}
+	// 严格多租户：具体域必须是已注册且启用的智能体（孤儿域 / 已停用域拒绝）。
+	if err := c.ensureAgentAccessible(r.Context(), req); err != nil {
+		return "", err
+	}
 	return req, nil
+}
+
+// ensureAgentAccessible 校验智能体域存在且启用（严格多租户域访问硬校验）。
+// 空串（管理端域）与 '*'（超管全门户标识）不是注册表里的真实智能体，直接放行。
+// 复用 authsvc.GetAgentPublic（游客负 user_id 会跳过用户存在性校验），
+// NotFound → 孤儿域；status=0 → 已停用。供 agentScopeFor / userAgentScope /
+// GetAgentDomain 统一调用，保证"各种访问地址必须有对应智能体才能访问"。
+func (c *Clients) ensureAgentAccessible(ctx context.Context, agentID string) error {
+	if agentID == "" || agentID == allAgentScopeID {
+		return nil
+	}
+	ar, err := c.Auth.GetAgentPublic(ctx, &authpb.GetAgentRequest{Id: agentID})
+	if err != nil {
+		if apperr.CodeOf(apperr.FromGRPCError(err)) == apperr.CodeNotFound {
+			return apperr.New(apperr.CodeNotFound, "智能体 "+agentID+" 不存在或尚未创建，无法访问")
+		}
+		return apperr.FromGRPCError(err)
+	}
+	if ar.GetStatus() != 1 {
+		return apperr.New(apperr.CodePermissionDenied, "智能体 "+agentID+" 已停用，无法访问")
+	}
+	return nil
 }
 
 // ListKBs GET /v1/agent/kbs?agent_id=tutor：列出当前资源域的知识库。
@@ -104,7 +143,7 @@ func (c *Clients) ListKBs(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, apperr.New(apperr.CodeUnavailable, "rag-service 未接入，知识库功能不可用"))
 		return
 	}
-	agent, err := userAgentScope(r, r.URL.Query().Get("agent_id"))
+	agent, err := c.userAgentScope(r, r.URL.Query().Get("agent_id"))
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -135,15 +174,16 @@ type agentDomainView struct {
 	Exists bool   `json:"exists"`
 	ID     string `json:"id"`
 	Name   string `json:"name"`
+	Status int32  `json:"status"` // 1=启用 0=停用（exists=true 时有效）
 }
 
-// GetAgentDomain GET /v1/agent/domains/{id}：公开校验智能体域是否存在。
+// GetAgentDomain GET /v1/agent/domains/{id}：公开校验智能体域是否存在且启用。
 // 供前端在切换 /agent/{id} 时先验域（孤儿域直接拒绝/踢回），免登录调用
 // （域名"是否存在"是公开信息，不泄露私有字段）。调用方以游客身份查询：
 // authsvc.GetAgentPublic 对游客（负 user_id）已跳过用户存在性校验。
 func (c *Clients) GetAgentDomain(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.PathValue("id"))
-	if id == "" || id == "*" {
+	if id == "" || id == allAgentScopeID {
 		writeJSON(w, http.StatusOK, agentDomainView{Exists: false, ID: id})
 		return
 	}
@@ -159,5 +199,10 @@ func (c *Clients) GetAgentDomain(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, apperr.FromGRPCError(err))
 		return
 	}
-	writeJSON(w, http.StatusOK, agentDomainView{Exists: true, ID: ar.GetId(), Name: ar.GetName()})
+	writeJSON(w, http.StatusOK, agentDomainView{
+		Exists: true,
+		ID:     ar.GetId(),
+		Name:   ar.GetName(),
+		Status: ar.GetStatus(),
+	})
 }

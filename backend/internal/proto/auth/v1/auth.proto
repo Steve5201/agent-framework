@@ -253,7 +253,8 @@ message GetAgentResponse {
 }
 
 // GetAgentPublicResponse 公开智能体元数据（前台可展示/装配字段白名单，
-// 不含 owner_user_id / status / created_at 等管理字段）。
+// 不含 owner_user_id / created_at 等管理字段；status 仅暴露启停位，供前端
+// 域守卫判断"已停用"）。
 message GetAgentPublicResponse {
   string id = 1;                 // 智能体 ID
   string name = 2;               // 展示名
@@ -262,6 +263,7 @@ message GetAgentPublicResponse {
   string welcome = 5;            // 欢迎语
   string system_prompt = 6;      // 按智能体系统提示词（空 = 用实例全局 prompt）
   string reasoning_effort = 7;   // 默认推理强度 low/high/max（空 = 用实例默认）
+  int32 status = 8;              // 1=启用 0=停用（严格多租户域校验用）
 }
 
 // UpdateAgentRequest 更新智能体元数据。

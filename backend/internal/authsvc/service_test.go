@@ -29,6 +29,10 @@ func newTestService(t *testing.T) (*Service, *fakeRepo) {
 		t.Fatalf("auth.New error = %v", err)
 	}
 	repo := newFakeRepo()
+	// 严格多租户：登录/注册/建号均校验智能体域存在。默认播种测试常用域，
+	// 避免各用例重复前置；使用其它域的用例自行 seedAgent。
+	repo.seedAgent("test")
+	repo.seedAgent("tutor")
 	svc := NewService(Config{
 		Repo:             repo,
 		JWT:              mgr,

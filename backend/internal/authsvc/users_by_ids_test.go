@@ -77,13 +77,17 @@ func TestAdminGetUsersByIds_ScopeFilter(t *testing.T) {
 	root, _ := svc.repo.GetUserByUsername(context.Background(), "root")
 	rootID := root.ID
 
+	// 严格多租户：先建域，再建组内用户，最后绑定 owner（升级 agent_admin）
+	if _, err := svc.CreateAgent(context.Background(), rootID, "math", "数学智能体", "", "", "", "", "", "", 0); err != nil {
+		t.Fatalf("CreateAgent: %v", err)
+	}
 	owner, err := svc.AdminCreateUser(context.Background(), rootID, "math_owner", testPassword, "user", "math", nil)
 	if err != nil {
 		t.Fatalf("create math_owner: %v", err)
 	}
 	ownerID, _ := strconv.ParseInt(owner.ID, 10, 64)
-	if _, err := svc.CreateAgent(context.Background(), rootID, "math", "数学智能体", "", "", "", "", "", "", ownerID); err != nil {
-		t.Fatalf("CreateAgent: %v", err)
+	if _, err := svc.BindAgentOwner(context.Background(), rootID, "math", ownerID); err != nil {
+		t.Fatalf("BindAgentOwner: %v", err)
 	}
 	uTutor, _ := svc.AdminCreateUser(context.Background(), rootID, "u_tutor", testPassword, "user", "tutor", nil)
 	uMath, _ := svc.AdminCreateUser(context.Background(), rootID, "u_math", testPassword, "user", "math", nil)

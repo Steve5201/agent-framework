@@ -27,7 +27,7 @@ const agentDefaultsFileName = "agent_defaults.json"
 // ListAgentDefaults GET /v1/agent/defaults?agent_id=xxx。
 // 返回当前资源域的智能体默认会话配置对象（前端取 model 字段做回退）。
 func (c *Clients) ListAgentDefaults(w http.ResponseWriter, r *http.Request) {
-	agent, err := userAgentScope(r, r.URL.Query().Get("agent_id"))
+	agent, err := c.userAgentScope(r, r.URL.Query().Get("agent_id"))
 	if err != nil {
 		writeError(w, r, err)
 		return

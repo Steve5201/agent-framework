@@ -244,6 +244,22 @@ func (f *fakeRepo) GetAgent(_ context.Context, id string) (*Agent, error) {
 	return nil, apperr.New(apperr.CodeNotFound, "智能体不存在")
 }
 
+// seedAgent 直接向注册表播种智能体（测试前置，status=1 启用）。
+func (f *fakeRepo) seedAgent(id string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	now := time.Now()
+	f.agents[id] = &Agent{ID: id, Name: id, Status: 1, CreatedAt: now, UpdatedAt: now}
+}
+
+// seedAgentStatus 播种指定状态的智能体（1=启用 / 0=停用）。
+func (f *fakeRepo) seedAgentStatus(id string, status int) {
+	f.seedAgent(id)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.agents[id].Status = status
+}
+
 // UpdateAgent 更新智能体元数据（fake：全量覆盖，空串=清空，与 SQL 语义一致）。
 func (f *fakeRepo) UpdateAgent(_ context.Context, a *Agent) (*Agent, error) {
 	f.mu.Lock()

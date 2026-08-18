@@ -355,6 +355,7 @@ chat store 的 `streamChat` handler `onToolCall` 中检测 `LOCAL_TOOL_NAMES.has
 - **按角色跳转（落地角色归属会话域，P2-AG）**：已登录/登录成功后用 `isAdminRole` 判定——管理员 → `/agent/{getHomeScope(user)}` 角色归属会话域（`super_admin` → `/agent/*` 全部域；`agent_admin` / `admin` → `/agent/{绑定域}`）；普通用户 → `/agent/{agentId}` 对应智能体门户；登录成功后先合并游客会话（`mergeGuestSessions`，失败不阻断）。修复背景：原一律跳 `/admin/chat`（管理端域）与管理员会话实际归属脱节，曾致"登录后首屏空列表、需手动切 `*` 域才出现"。
 - **归属域兜底（`getHomeScope`，方案 C）**：`src/lib/roles.ts` 新增 `getHomeScope(user)`——超管→`*`、agent_admin/admin→绑定域、普通用户/游客→`''`。管理端对话域（`ChatPage mode="admin"`）无记忆时按它回退会话域（`loadRememberedAgent() || getHomeScope(user)`）；`chat.ts createSession` 对管理端空串域按角色归属回退（超管→`*`→默认域 tutor、绑定域管理员→绑定域），**不再产生 `agent_id=''` 的孤儿会话**。测试：`roles.test.ts`（getHomeScope 4 例）+ `chat.createSession.test.ts`（管理端空串回退 3 例）+ `ChatPage.test.tsx`（已登录超管/绑定域管理员回退 2 例）。
 - **返回游客模式**：表单下方「以游客身份继续（不登录）」按钮 → `/agent/{agentId}`，本地游客会话不丢失（覆盖"从游客模式进登录页想返回"与"登录页兜底"场景）。
+- **门户域预验（严格多租户域守卫）**：前端切换/进入 `/agent/:agentId` 前调用 `GET /v1/agent/domains/{id}`（`src/lib/agent.ts getDomain`），孤儿域（`exists=false`）与已停用域（`status=0`）直接拒绝并提示"智能体不存在或已停用"；登录/注册遇后端 `404`（域不存在/未创建）或 `403`（域已停用）同样给出对应提示。
 - **服务器地址**：`agent.server_url` 持久化（见第 3 节），保存立即生效。
 - **测试**：`LoginPage.test.tsx`（表单/错误提示/门户注册显隐/服务器地址/记住密码域隔离）。
 

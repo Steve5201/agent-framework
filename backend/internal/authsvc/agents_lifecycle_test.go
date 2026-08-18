@@ -15,7 +15,12 @@ func seedAgents(t *testing.T, svc *Service) (string, int64) {
 	if _, err := svc.EnsureAdmin(context.Background(), "root", testPassword); err != nil {
 		t.Fatalf("EnsureAdmin: %v", err)
 	}
+	// 严格多租户：建号需域已注册。先建智能体（暂不绑定 owner），再建组内用户，
+	// 最后绑定 owner（升级为 agent_admin）——解耦"建号需域、建域可无用户"。
 	root, _ := svc.repo.GetUserByUsername(context.Background(), "root")
+	if _, err := svc.CreateAgent(context.Background(), root.ID, "math", "数学智能体", "desc", "model-x", "🦉", "你好", "你是数学助手", "high", 0); err != nil {
+		t.Fatalf("CreateAgent: %v", err)
+	}
 	owner, err := svc.AdminCreateUser(context.Background(), root.ID, "math_owner", testPassword, "user", "math", nil)
 	if err != nil {
 		t.Fatalf("AdminCreateUser: %v", err)
@@ -24,8 +29,8 @@ func seedAgents(t *testing.T, svc *Service) (string, int64) {
 	if err != nil {
 		t.Fatalf("ParseInt(owner.ID): %v", err)
 	}
-	if _, err := svc.CreateAgent(context.Background(), root.ID, "math", "数学智能体", "desc", "model-x", "🦉", "你好", "你是数学助手", "high", ownerID); err != nil {
-		t.Fatalf("CreateAgent: %v", err)
+	if _, err := svc.BindAgentOwner(context.Background(), root.ID, "math", ownerID); err != nil {
+		t.Fatalf("BindAgentOwner: %v", err)
 	}
 	return root.ID, ownerID
 }
@@ -83,9 +88,12 @@ func TestGetAgentPublic_Whitelist(t *testing.T) {
 	if a.Name != "数学智能体" || a.SystemPrompt != "你是数学助手" || a.ReasoningEffort != "high" || a.Avatar != "🦉" || a.Welcome != "你好" {
 		t.Fatalf("白名单字段透出异常: %+v", a)
 	}
-	// 管理字段不外泄（owner/status/默认模型）
-	if a.OwnerUserID != 0 || a.Status != 0 || a.Model != "" {
+	// 管理字段不外泄（owner/默认模型）；status 启停位公开（严格多租户域校验用）
+	if a.OwnerUserID != 0 || a.Model != "" {
 		t.Fatalf("管理字段应被剔除: %+v", a)
+	}
+	if a.Status != 1 {
+		t.Fatalf("启用中的智能体 status 应透出 1, got %d", a.Status)
 	}
 	// 不存在
 	if _, err := svc.GetAgentPublic(context.Background(), plain.ID, "nope"); apperr.CodeOf(err) != apperr.CodeNotFound {

@@ -658,6 +658,7 @@ export interface AgentDomainCheck {
   exists: boolean
   id: string
   name: string
+  status: number
 }
 
 /**

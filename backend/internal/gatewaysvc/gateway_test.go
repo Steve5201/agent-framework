@@ -407,10 +407,11 @@ func TestPatternPathMatch(t *testing.T) {
 // fakeAuthClient 最小 auth 客户端：只实现测试需要的 Login / Register / GetAgentPublic。
 type fakeAuthClient struct {
 	authpb.AuthServiceClient
-	loginErr    error
-	registerErr error
-	agentSp     string // GetAgentPublic 返回的智能体系统提示词
-	agentErr    error  // GetAgentPublic 错误注入
+	loginErr      error
+	registerErr   error
+	agentSp       string // GetAgentPublic 返回的智能体系统提示词
+	agentErr      error  // GetAgentPublic 错误注入
+	agentDisabled bool   // 默认启用；置真 → GetAgentPublic 返回 status=0（停用）
 }
 
 func (f *fakeAuthClient) Register(_ context.Context, _ *authpb.RegisterRequest, _ ...grpc.CallOption) (*authpb.RegisterResponse, error) {
@@ -424,7 +425,11 @@ func (f *fakeAuthClient) GetAgentPublic(_ context.Context, _ *authpb.GetAgentReq
 	if f.agentErr != nil {
 		return nil, f.agentErr
 	}
-	return &authpb.GetAgentPublicResponse{Id: "tutor", SystemPrompt: f.agentSp}, nil
+	status := int32(1)
+	if f.agentDisabled {
+		status = 0
+	}
+	return &authpb.GetAgentPublicResponse{Id: "tutor", SystemPrompt: f.agentSp, Status: status}, nil
 }
 
 func (f *fakeAuthClient) Login(_ context.Context, _ *authpb.LoginRequest, _ ...grpc.CallOption) (*authpb.LoginResponse, error) {
@@ -774,9 +779,9 @@ func TestCreateSessionHandler_AgentSystemPromptInjected(t *testing.T) {
 	}
 }
 
-// TestCreateSessionHandler_AgentFetchFailure 查询智能体元数据失败不阻断创建。
-// 用超管令牌显式请求 ghost 域（普通用户会被锁定到自身归属，绕过该分支）。
-func TestCreateSessionHandler_AgentFetchFailure(t *testing.T) {
+// TestCreateSessionHandler_StrictDomain 严格多租户：孤儿域 / 已停用域创建会话
+// 在域解析阶段即被拒绝（不再"页面能开、对话才报错"）。
+func TestCreateSessionHandler_StrictDomain(t *testing.T) {
 	mgr := newTestManager(t)
 	agent := &fakeAgentClient{}
 	clients := &Clients{
@@ -787,16 +792,35 @@ func TestCreateSessionHandler_AgentFetchFailure(t *testing.T) {
 	}
 	handler := clients.RequireAuth()(http.HandlerFunc(clients.CreateSession))
 
+	// 孤儿域（GetAgentPublic NotFound）→ 404，不触达 agent 服务。
 	req := httptest.NewRequest(http.MethodPost, "/v1/agent/sessions", strings.NewReader(`{"agent_id":"ghost"}`))
 	req.Header.Set("Authorization", "Bearer "+signedAccessAs(t, mgr, "1", "super_admin", ""))
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("agent 元数据查询失败不应阻断创建, got %d body=%s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("孤儿域创建会话应 404, got %d body=%s", rec.Code, rec.Body.String())
 	}
-	if got := agent.lastCreateReq.GetSystemPrompt(); got != "" {
-		t.Fatalf("查询失败应回退全局提示词, got %q", got)
+	if !strings.Contains(rec.Body.String(), "不存在或尚未创建") {
+		t.Fatalf("404 应携带孤儿域提示, body=%s", rec.Body.String())
+	}
+	if agent.lastCreateReq != nil {
+		t.Fatalf("孤儿域不应触达 agent 服务, got %+v", agent.lastCreateReq)
+	}
+
+	// 已停用域（GetAgentPublic status=0）→ 403。
+	clients.Auth = &fakeAuthClient{agentDisabled: true}
+	req2 := httptest.NewRequest(http.MethodPost, "/v1/agent/sessions", strings.NewReader(`{"agent_id":"tutor"}`))
+	req2.Header.Set("Authorization", "Bearer "+signedAccessAs(t, mgr, "1", "super_admin", ""))
+	rec2 := httptest.NewRecorder()
+	handler.ServeHTTP(rec2, req2)
+	if rec2.Code != http.StatusForbidden {
+		t.Fatalf("已停用域创建会话应 403, got %d body=%s", rec2.Code, rec2.Body.String())
+	}
+	if !strings.Contains(rec2.Body.String(), "已停用") {
+		t.Fatalf("403 应携带停用提示, body=%s", rec2.Body.String())
+	}
+	if agent.lastCreateReq != nil {
+		t.Fatalf("已停用域不应触达 agent 服务, got %+v", agent.lastCreateReq)
 	}
 }
 

@@ -53,6 +53,7 @@ type Module interface {
   - `agent_admin`（智能体超管）：只能管理**自己智能体组**——资源域锁定 JWT 归属（忽略 `agent_id` 参数，防越权）；可创建组内 user/admin、管理组内资源；无 agents/data 模块；
   - `admin`（组内普通管理员）：域同样锁定；无用户管理/智能体管理/数据管理。
 - **资源域参数**：`?agent_id=<id>`（字母/数字/中划线，≤64 字符）——仅 super_admin 生效，agent_admin/admin 由后端强制锁定自身归属，越域请求被忽略或 404。
+- **严格多租户域守卫（建号前置）**：`POST /v1/admin/users` 创建用户的归属域**必须已注册且启用**（`agents` 表存在且 `status=1`），否则 `404 NOT_FOUND`（"智能体 X 不存在或尚未创建，请先创建该智能体"）或 `403 PERMISSION_DENIED`（已停用）。推荐流程：**先建智能体**（`POST /v1/admin/agents`，`super_admin`）→ **再建组内账号**（`/v1/admin/users`）→ **绑定 owner**（`POST /v1/admin/agents/{id}/owner`，升级为 `agent_admin`）——解耦"建号需域、建域可暂无用户"的鸡生蛋。
 - **请求体上限**：1MB（防超大 body）。
 - **统一错误体**（与 gateway 其它接口同构）：
 

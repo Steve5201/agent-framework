@@ -42,7 +42,8 @@ func TestRegisterInvalidAgentID(t *testing.T) {
 }
 
 func TestLoginBindsAgentTag(t *testing.T) {
-	svc, _ := newTestService(t)
+	svc, repo := newTestService(t)
+	repo.seedAgent("math")
 	// 先通用注册（无 agent 标签）
 	u, err := svc.Register(context.Background(), "carol", testPassword, "")
 	if err != nil {
@@ -85,7 +86,8 @@ func TestLoginBindsAgentTag(t *testing.T) {
 // 归属该智能体——跨域登录被拒（防止门户登录自动改绑导致管理员跨租户越权），
 // 且超管（无归属）禁止走门户入口。
 func TestLogin_AdminPortalCrossDomain(t *testing.T) {
-	svc, _ := newTestService(t)
+	svc, repo := newTestService(t)
+	repo.seedAgent("math")
 	if _, err := svc.EnsureAdmin(context.Background(), "root", testPassword); err != nil {
 		t.Fatalf("EnsureAdmin: %v", err)
 	}
@@ -179,7 +181,8 @@ func TestSuperAdminAllAgentTag(t *testing.T) {
 }
 
 func TestAdminCreateUser(t *testing.T) {
-	svc, _ := newTestService(t)
+	svc, repo := newTestService(t)
+	repo.seedAgent("ops")
 	if _, err := svc.EnsureAdmin(context.Background(), "root", testPassword); err != nil {
 		t.Fatalf("EnsureAdmin: %v", err)
 	}
@@ -223,14 +226,18 @@ func TestAdminCreateUser_RoleHierarchy(t *testing.T) {
 	}
 	root, _ := svc.repo.GetUserByUsername(context.Background(), "root")
 	rootID := root.ID
+	// 严格多租户：建号需域已注册。先建 math 智能体（暂不绑定 owner）。
+	if _, err := svc.CreateAgent(context.Background(), rootID, "math", "数学智能体", "", "", "", "", "", "", 0); err != nil {
+		t.Fatalf("CreateAgent: %v", err)
+	}
 	// 创建 math 的智能体超管：owner 用户升级为 agent_admin
 	owner, err := svc.AdminCreateUser(context.Background(), rootID, "math_owner", testPassword, "user", "math", nil)
 	if err != nil {
 		t.Fatalf("create owner: %v", err)
 	}
 	ownerID, _ := strconv.ParseInt(owner.ID, 10, 64)
-	if _, err := svc.CreateAgent(context.Background(), rootID, "math", "数学智能体", "", "", "", "", "", "", ownerID); err != nil {
-		t.Fatalf("CreateAgent: %v", err)
+	if _, err := svc.BindAgentOwner(context.Background(), rootID, "math", ownerID); err != nil {
+		t.Fatalf("BindAgentOwner: %v", err)
 	}
 	// owner 现在应是 agent_admin（智能体超管）
 	ownerFresh, _ := svc.repo.GetUserByUsername(context.Background(), "math_owner")
@@ -305,11 +312,14 @@ func TestAdminListUsers_ScopeFilter(t *testing.T) {
 	}
 	root, _ := svc.repo.GetUserByUsername(context.Background(), "root")
 	rootID := root.ID
-	// math 组超管
+	// math 组超管：先建域再建号再绑定 owner（严格多租户：建号需域已注册）。
+	if _, err := svc.CreateAgent(context.Background(), rootID, "math", "数学智能体", "", "", "", "", "", "", 0); err != nil {
+		t.Fatalf("CreateAgent: %v", err)
+	}
 	owner, _ := svc.AdminCreateUser(context.Background(), rootID, "math_owner", testPassword, "user", "math", nil)
 	ownerID, _ := strconv.ParseInt(owner.ID, 10, 64)
-	if _, err := svc.CreateAgent(context.Background(), rootID, "math", "数学智能体", "", "", "", "", "", "", ownerID); err != nil {
-		t.Fatalf("CreateAgent: %v", err)
+	if _, err := svc.BindAgentOwner(context.Background(), rootID, "math", ownerID); err != nil {
+		t.Fatalf("BindAgentOwner: %v", err)
 	}
 	// 两个组的普通用户
 	if _, err := svc.AdminCreateUser(context.Background(), rootID, "u_tutor", testPassword, "user", "tutor", nil); err != nil {
@@ -353,14 +363,17 @@ func TestCreateAgent_AndListAgents(t *testing.T) {
 	if _, err := svc.CreateAgent(context.Background(), rootID, "bad/id", "bad", "", "", "", "", "", "", 2); apperr.CodeOf(err) != apperr.CodeInvalidArgument {
 		t.Fatalf("非法 ID 应拒绝, got %v", err)
 	}
-	// 超管创建 math 智能体（owner 用户被授予 agent_admin）
+	// 超管创建 math 智能体（先建域，后建用户并绑定 owner → 升级 agent_admin）
+	if _, err := svc.CreateAgent(context.Background(), rootID, "math", "数学智能体", "", "", "", "", "", "", 0); err != nil {
+		t.Fatalf("超管创建智能体应成功, got %v", err)
+	}
 	owner, err := svc.AdminCreateUser(context.Background(), rootID, "math_owner", testPassword, "user", "math", nil)
 	if err != nil {
 		t.Fatalf("create owner: %v", err)
 	}
 	ownerID, _ := strconv.ParseInt(owner.ID, 10, 64)
-	if _, err := svc.CreateAgent(context.Background(), rootID, "math", "数学智能体", "", "", "", "", "", "", ownerID); err != nil {
-		t.Fatalf("超管创建智能体应成功, got %v", err)
+	if _, err := svc.BindAgentOwner(context.Background(), rootID, "math", ownerID); err != nil {
+		t.Fatalf("BindAgentOwner: %v", err)
 	}
 	// owner 被授予 agent_admin
 	ownerFresh, _ := svc.repo.GetUserByUsername(context.Background(), "math_owner")
@@ -368,13 +381,13 @@ func TestCreateAgent_AndListAgents(t *testing.T) {
 		t.Fatalf("owner 角色 = %s, want agent_admin", ownerFresh.Role)
 	}
 
-	// 超管列表：全部
+	// 超管列表：全部（newTestService 预播种 test/tutor，加上 math = 3 个）
 	agents, err := svc.ListAgents(context.Background(), rootID)
 	if err != nil {
 		t.Fatalf("ListAgents: %v", err)
 	}
-	if len(agents) != 1 {
-		t.Fatalf("超管应看到 1 个智能体, got %d", len(agents))
+	if len(agents) != 3 {
+		t.Fatalf("超管应看到 3 个智能体, got %d", len(agents))
 	}
 	// 其它角色：只能看到自己归属
 	member, _ := svc.AdminCreateUser(context.Background(), rootID, "math_member", testPassword, "admin", "math", nil)

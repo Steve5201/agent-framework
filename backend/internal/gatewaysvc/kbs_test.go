@@ -65,9 +65,9 @@ func (f *fakeRagClient) RetryDocument(context.Context, *ragv1.RetryDocumentReque
 	return nil, status.Error(codes.Unimplemented, "not used")
 }
 
-// newKBClients 构造带 fake rag 的 Clients（经 RequireAuth 模拟真实链路）。
+// newKBClients 构造带 fake rag/ auth 的 Clients（经 RequireAuth 模拟真实链路）。
 func newKBClients(mgr *auth.Manager, rag ragv1.RagServiceClient) *Clients {
-	return &Clients{JWT: mgr, Log: zap.NewNop(), Rag: rag}
+	return &Clients{JWT: mgr, Log: zap.NewNop(), Rag: rag, Auth: &fakeAuthClient{}}
 }
 
 // kbRequest 走 RequireAuth 中间件发起 GET /v1/agent/kbs。
@@ -89,29 +89,62 @@ func TestUserAgentScope(t *testing.T) {
 	// 普通用户（JWT agentID=tutor）请求其它域 → 被锁定为 tutor。
 	req := httptest.NewRequest(http.MethodGet, "/v1/agent/kbs?agent_id=math", nil)
 	req = req.WithContext(authCtxWithRoleAgent(t, mgr, "user", "tutor"))
-	if got, err := userAgentScope(req, "math"); err != nil || got != "tutor" {
+	if got, err := c.userAgentScope(req, "math"); err != nil || got != "tutor" {
 		t.Fatalf("普通用户应锁定自身域 tutor, got %q err=%v", got, err)
 	}
 
 	// super_admin 显式指定域 → 跟随。
 	req = httptest.NewRequest(http.MethodGet, "/v1/agent/kbs?agent_id=math", nil)
 	req = req.WithContext(authCtxWithRoleAgent(t, mgr, "super_admin", ""))
-	if got, err := userAgentScope(req, "math"); err != nil || got != "math" {
+	if got, err := c.userAgentScope(req, "math"); err != nil || got != "math" {
 		t.Fatalf("超管应跟随显式域 math, got %q err=%v", got, err)
 	}
 
 	// super_admin 传 "*"（全门户标识）→ 回退默认域 tutor。
 	req = httptest.NewRequest(http.MethodGet, "/v1/agent/kbs?agent_id=*", nil)
 	req = req.WithContext(authCtxWithRoleAgent(t, mgr, "super_admin", ""))
-	if got, err := userAgentScope(req, "*"); err != nil || got != defaultAgentID {
+	if got, err := c.userAgentScope(req, "*"); err != nil || got != defaultAgentID {
 		t.Fatalf("超管全门户标识应回退默认域, got %q err=%v", got, err)
 	}
 
 	// 非法 ID → 拒绝。
 	req = httptest.NewRequest(http.MethodGet, "/v1/agent/kbs?agent_id=bad!id", nil)
 	req = req.WithContext(authCtxWithRoleAgent(t, mgr, "super_admin", ""))
-	if _, err := userAgentScope(req, "bad!id"); err == nil {
+	if _, err := c.userAgentScope(req, "bad!id"); err == nil {
 		t.Fatal("非法智能体 ID 应被拒绝")
+	}
+}
+
+// TestUserAgentScope_StrictDomain 严格多租户：孤儿域 / 已停用域一律拒绝（含超管）。
+func TestUserAgentScope_StrictDomain(t *testing.T) {
+	mgr := newTestManager(t)
+
+	// 孤儿域：GetAgentPublic 返回 NotFound → userAgentScope 报错。
+	c := newKBClients(mgr, nil)
+	c.Auth = &fakeAuthClient{agentErr: status.Error(codes.NotFound, "agent 不存在")}
+	req := httptest.NewRequest(http.MethodGet, "/v1/agent/kbs?agent_id=orphan", nil)
+	req = req.WithContext(authCtxWithRoleAgent(t, mgr, "super_admin", ""))
+	if _, err := c.userAgentScope(req, "orphan"); err == nil {
+		t.Fatal("超管访问孤儿域应被拒绝")
+	}
+
+	// 已停用域：GetAgentPublic 返回 status=0 → userAgentScope 报错。
+	c.Auth = &fakeAuthClient{agentDisabled: true}
+	req = httptest.NewRequest(http.MethodGet, "/v1/agent/kbs?agent_id=tutor", nil)
+	req = req.WithContext(authCtxWithRoleAgent(t, mgr, "super_admin", ""))
+	if _, err := c.userAgentScope(req, "tutor"); err == nil {
+		t.Fatal("已停用域应被拒绝")
+	}
+
+	// 管理端域（''）与全门户（'*'）豁免：不触发域校验（孤儿 fake 也不报错）。
+	c.Auth = &fakeAuthClient{agentErr: status.Error(codes.NotFound, "agent 不存在")}
+	mgmt := httptest.NewRequest(http.MethodGet, "/v1/agent/sessions", nil)
+	mgmt = mgmt.WithContext(authCtxWithRoleAgent(t, mgr, "super_admin", ""))
+	if got, err := c.agentScopeFor(mgmt, ""); err != nil || got != "" {
+		t.Fatalf("超管管理端域应豁免返回空, got %q err=%v", got, err)
+	}
+	if got, err := c.agentScopeFor(mgmt, "*"); err != nil || got != "" {
+		t.Fatalf("超管全门户标识应豁免返回空, got %q err=%v", got, err)
 	}
 }
 

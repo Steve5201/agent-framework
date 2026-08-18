@@ -73,8 +73,8 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
     checkAgentDomain(scope)
       .then((d) => {
         if (cancelled) return
-        if (!d.exists) {
-          // 孤儿域：直接踢回
+        // 孤儿域（exists=false）或停用域（status!==1）：直接踢回
+        if (!d.exists || d.status !== 1) {
           navigate(`/agent/${kickTarget}`)
           return
         }

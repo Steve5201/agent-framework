@@ -127,6 +127,8 @@ gateway 会把该 ID 贯穿到内部 gRPC 调用与日志。不带时 gateway �
 
 **作用**：创建一个新账号。用户名唯一，密码强校验。**仅分智能体门户入口**（`{agent_id}`）可用；管理员账号由管理员经 `/v1/admin/users` 创建，不开放自助注册。
 
+> **严格多租户域守卫**：目标门户域 `{agent_id}` **必须已注册且启用**（`agents` 表存在且 `status=1`），否则返回 `404 NOT_FOUND`（"智能体 X 不存在或尚未创建，请先创建该智能体"）或 `403 PERMISSION_DENIED`（"智能体 X 已停用，无法访问"）——杜绝"账号绑定不存在的孤儿域"。
+
 **定义**：`POST /v1/auth/register/{agent_id}`（如 `/v1/auth/register/tutor`）
 
 **请求体**：
@@ -156,7 +158,7 @@ gateway 会把该 ID 贯穿到内部 gRPC 调用与日志。不带时 gateway �
 }
 ```
 
-**失败**：`409 ALREADY_EXISTS`（用户名已注册）、`400 INVALID_ARGUMENT`（格式不满足）。
+**失败**：`409 ALREADY_EXISTS`（用户名已注册）、`400 INVALID_ARGUMENT`（格式不满足）、`404 NOT_FOUND`（门户域不存在/未创建）、`403 PERMISSION_DENIED`（门户域已停用）。
 
 > 注：注册不直接返回令牌，注册成功后需再调登录接口。
 
@@ -167,6 +169,8 @@ gateway 会把该 ID 贯穿到内部 gRPC 调用与日志。不带时 gateway �
 **定义**：
 - `POST /v1/auth/login` —— 管理员入口，**仅放行 `role=admin` 的账号**；普通账号返回 `403 PERMISSION_DENIED`（"该入口仅限管理员登录，请使用对应的智能体门户入口"），防止普通用户误登/越权管理端。
 - `POST /v1/auth/login/{agent_id}` —— 智能体门户入口，任意有效账号可登录；用户尚无该 `agent` 标签时首次登录自动补写（绑定该智能体）。
+
+> **严格多租户域守卫**：门户登录 `{agent_id}` **必须已注册且启用**（与注册同规则），否则 `404 NOT_FOUND` / `403 PERMISSION_DENIED`；普通用户不再自动绑定"孤儿/已停用"域标签。空串（管理端入口）与 `*`（超管全门户）不在注册表校验范围，照常放行。
 
 **请求体**：
 
@@ -289,6 +293,7 @@ gateway 会把该 ID 贯穿到内部 gRPC 调用与日志。不带时 gateway �
 - **用户-智能体软关联**：`users.tags` JSONB；authsvc `AgentScope()` 解析为归属域。
 - **管理员判定**：`identity.IsAdminRole`（super_admin/agent_admin/admin 三者皆管理员）。
 - **门户登录归属校验**（阶段3 收尾，防跨域改绑越权）：管理员经智能体门户 `POST /v1/auth/login/{agent_id}` 登录时，`AgentScope()` 必须与 `agent_id` 一致，否则 `403 PERMISSION_DENIED`（"该账号不归属于智能体 X，请核对智能体 ID 或改用管理员入口"）；`super_admin`（无归属）禁止走门户入口，强制走管理员入口；普通用户首次经门户登录自动补写 `agent` 标签不变。
+- **严格多租户域守卫（`EnsureAgentAccessible`）**：注册 / 门户登录 / 管理端建号均校验目标域**已注册且启用**（`agents` 表存在且 `status=1`），空串与 `*` 放行——从源头杜绝"孤儿域 / 已停用域"账号与访问。新建智能体后建议按「先建域 → 再建组内账号 → `BindAgentOwner` 绑定 owner（升级 agent_admin）」的顺序落地（解耦"建号需域、建域可暂无用户"的鸡生蛋）。
 - **管辖边界**：`/v1/admin/users` 仅 super_admin + agent_admin；`/v1/admin/agents` 仅 super_admin；`/v1/admin/logs` 全员（域锁定见 admin 文档 §4.2）。
 - **历史迁移**（auth 迁移 000004）：旧的唯一 `admin` 账号自动升级为 `super_admin`，并建 `agents` 表（agent_id/name/owner_user_id）承载智能体注册表。
 
@@ -322,6 +327,29 @@ gateway 会把该 ID 贯穿到内部 gRPC 调用与日志。不带时 gateway �
 | POST | `/v1/agent/sessions/{id}/messages/{mid}/branch` | ✅ | 基于该轮创建分支会话 |
 | POST | `/v1/agent/sessions/{id}/chat` | ✅ | 对话（非流式） |
 | POST | `/v1/agent/sessions/{id}/chat/stream` | ✅ | 对话（SSE 流式） |
+| GET | `/v1/agent/domains/{id}` | 免 | 公开校验智能体域是否存在且启用（`{exists,id,name,status}`），供前端切换门户前预验域 |
+
+### 5.2b 公开域校验（`GET /v1/agent/domains/{id}`）
+
+**作用**：公开元数据——目标智能体域是否存在、是否启用。免登录（"域名是否存在"是公开信息，不泄露私有字段）；前端在切换 `/agent/{id}` 前先预验，孤儿域 / 已停用域直接拒绝并踢回。内部以游客身份（`x-user-id=-1`）查 `authsvc.GetAgentPublic`（对负 user_id 跳过用户存在性校验，只查智能体表）。
+
+**响应**（`200 OK`）：
+
+```json
+{
+  "exists": true,
+  "id": "tutor",
+  "name": "数学智能体",
+  "status": 1
+}
+```
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `exists` | bool | 域是否存在（孤儿域 = `false`，`status` 无效） |
+| `id` | string | 智能体 ID（`''` / `*` 视为不存在） |
+| `name` | string | 智能体名称 |
+| `status` | int32 | **1 = 启用，0 = 停用**（`exists=true` 时有效；会话/工具/资源访问对停用域一律 `403`） |
 
 ### 5.3 创建会话
 

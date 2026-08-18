@@ -1,10 +1,18 @@
 import { useEffect } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { LogIn, Menu, ShieldAlert } from 'lucide-react'
 import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
 import { isTauri } from '@/lib/storage'
-import { DEFAULT_AGENT_ID, loadRememberedAgent, getHomeScope } from '@/lib/roles'
+import { checkAgentDomain } from '@/lib/api'
+import {
+  ALL_AGENT_ID,
+  DEFAULT_AGENT_ID,
+  getUserAgentId,
+  isSuperAdmin,
+  loadRememberedAgent,
+  getHomeScope,
+} from '@/lib/roles'
 import SessionSidebar from '@/components/chat/SessionSidebar'
 import MenuButton from '@/menus/MenuButton'
 import MessageList from '@/components/chat/MessageList'
@@ -32,6 +40,7 @@ let lastStatus: 'loading' | 'authed' | 'guest' | null = null
  *  - 消息区与会话列表各自独立滚动（高信息密度布局）
  */
 export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
+  const navigate = useNavigate()
   const { agentId } = useParams<{ agentId?: string }>()
   const initAgent = useChatStore((s) => s.initAgent)
   const resetScope = useChatStore((s) => s.resetScope)
@@ -51,6 +60,35 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
   // '*' 不是注册表里的真实智能体（后端 validateAgentID 拒绝以它建会话），
   // 游客对话必然失败，故直接拦截，流程与"超管在自己的 * 域登录"统一。
   const superPortalBlocked = mode === 'agent' && scope === '*' && isGuest
+
+  // 域守卫：非超管访问非自身归属域 / 孤儿域 → 踢回归属域或默认域。
+  // 后端 agentScopeFor 已做硬校验（拒绝跨域 API），此处是前端体验层拦截：
+  // 打开 URL 即校验，避免"页面能开、一对话才报错"的迷惑。
+  useEffect(() => {
+    if (mode !== 'agent' || !scope || scope === ALL_AGENT_ID || isGuest) return
+    // 踢回目标：超管 → '*'；agent_admin/admin/普通用户 → 归属域（默认 tutor）。
+    const kickTarget = isSuperAdmin(user?.role) ? ALL_AGENT_ID : getUserAgentId(user)
+    if (kickTarget === scope) return // 已在归属域，无需踢回
+    let cancelled = false
+    checkAgentDomain(scope)
+      .then((d) => {
+        if (cancelled) return
+        if (!d.exists) {
+          // 孤儿域：直接踢回
+          navigate(`/agent/${kickTarget}`)
+          return
+        }
+        // 存在域：校验账号是否有权访问（超管任意；其它角色仅自身归属域）。
+        const allowed = isSuperAdmin(user?.role) || kickTarget === scope
+        if (!allowed) navigate(`/agent/${kickTarget}`)
+      })
+      .catch(() => {
+        // 网络异常不拦截（后端仍有硬校验兜底），避免误踢影响正常使用
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [mode, scope, user, isGuest, navigate])
 
   useEffect(() => {
     // 超管域游客被拦截：不加载会话列表（避免拉跨域列表 / 触发后端拒绝）

@@ -15,7 +15,9 @@ import (
 
 	apperr "github.com/Steve5201/agent-backend/internal/errors"
 	"github.com/Steve5201/agent-backend/internal/identity"
+	authpb "github.com/Steve5201/agent-backend/internal/proto/auth/v1"
 	ragv1 "github.com/Steve5201/agent-backend/internal/proto/rag/v1"
+	"google.golang.org/grpc/metadata"
 )
 
 // defaultAgentID 资源域缺省值（与 adminsvc / 前端 DEFAULT_AGENT_ID 一致）。
@@ -58,12 +60,12 @@ func userAgentScope(r *http.Request, requested string) (string, error) {
 }
 
 // agentScopeFor 解析会话/工具/资源类接口的请求域并校验访问权（多租户域隔离）。
-// 与 userAgentScope 的区别：显式处理管理端域（''）与全门户（'*'），并对
+// 与 userAgentScope 的区别：显式处理管理端域（”）与全门户（'*'），并对
 // 管理员类角色的跨域请求**显式拒绝**（而非静默锁定），防越权枚举。
 //
 // 访问权语义：
-//   - super_admin：管理端域（''）、全门户（'*'）、任意具体域；
-//   - agent_admin / admin：管理端域（''）与自身 JWT 归属域，其它域拒绝；
+//   - super_admin：管理端域（”）、全门户（'*'）、任意具体域；
+//   - agent_admin / admin：管理端域（”）与自身 JWT 归属域，其它域拒绝；
 //   - 普通用户 / 游客：锁定 JWT 自身归属（游客回退默认域），忽略请求参数。
 func agentScopeFor(r *http.Request, requested string) (string, error) {
 	role := roleFrom(r)
@@ -126,4 +128,36 @@ func (c *Clients) ListKBs(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"bases": bases, "agent_id": agent})
+}
+
+// agentDomainView 公开域校验接口的响应体（前端域守卫用）。
+type agentDomainView struct {
+	Exists bool   `json:"exists"`
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+}
+
+// GetAgentDomain GET /v1/agent/domains/{id}：公开校验智能体域是否存在。
+// 供前端在切换 /agent/{id} 时先验域（孤儿域直接拒绝/踢回），免登录调用
+// （域名"是否存在"是公开信息，不泄露私有字段）。调用方以游客身份查询：
+// authsvc.GetAgentPublic 对游客（负 user_id）已跳过用户存在性校验。
+func (c *Clients) GetAgentDomain(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.PathValue("id"))
+	if id == "" || id == "*" {
+		writeJSON(w, http.StatusOK, agentDomainView{Exists: false, ID: id})
+		return
+	}
+	// 以游客身份（-1）查询公开元数据；authsvc 会跳过用户校验，只查智能体表。
+	ctx := metadata.AppendToOutgoingContext(r.Context(), "x-user-id", "-1")
+	ar, err := c.Auth.GetAgentPublic(ctx, &authpb.GetAgentRequest{Id: id})
+	if err != nil {
+		// 智能体不存在 = 孤儿域；其余错误（依赖未就绪等）按真实错误返回。
+		if apperr.CodeOf(apperr.FromGRPCError(err)) == apperr.CodeNotFound {
+			writeJSON(w, http.StatusOK, agentDomainView{Exists: false, ID: id})
+			return
+		}
+		writeError(w, r, apperr.FromGRPCError(err))
+		return
+	}
+	writeJSON(w, http.StatusOK, agentDomainView{Exists: true, ID: ar.GetId(), Name: ar.GetName()})
 }

@@ -269,6 +269,8 @@ services:
       # 单一事实源（文件优先于环境变量，见 agent 启动装配逻辑）。
       AGENT_MCP_CONFIG_FILE: /app/mcp_servers.json
       AGENT_MCP_SERVERS_JSON: ""
+      # 管理端点共享令牌：磁盘配额等管理接口的鉴权密钥（与 gateway/llm-gateway 一致）。
+      LLM_ADMIN_TOKEN: ${LLM_ADMIN_TOKEN:-}
       # 日志落盘路径（挂载 logs 卷；工具审计等关键日志也会进入 agent 库 audit_tool_calls 表）。
       LOG_FILE: /logs/agent.log
       # 图片视觉解析（聊天上传图片，可选）：三项配齐才启用；VISION_MODEL 留空

@@ -653,6 +653,22 @@ export async function adminSearchKb(
   return resp.data.hits ?? []
 }
 
+/** 域存在性校验结果（公开接口，前端域守卫用）。 */
+export interface AgentDomainCheck {
+  exists: boolean
+  id: string
+  name: string
+}
+
+/**
+ * 校验智能体域是否存在（公开接口，免登录）。
+ * 供 /agent/{id} 路由守卫使用：孤儿域返回 exists=false，前端据此拒绝/踢回。
+ */
+export async function checkAgentDomain(id: string): Promise<AgentDomainCheck> {
+  const resp = await api.get<AgentDomainCheck>(`/v1/agent/domains/${encodeURIComponent(id)}`)
+  return resp.data
+}
+
 // ---- 智能体管理（阶段3·多租户，仅最高超管可访问） -------------------------------
 export async function adminListAgents(): Promise<Agent[]> {
   const resp = await api.get<ListAgentsResponse>('/v1/admin/agents')

@@ -95,6 +95,8 @@ func registerRoutes(mux *http.ServeMux, c *Clients) {
 	mux.HandleFunc("POST /v1/agent/sessions/merge-guest", c.MergeGuestSessions)
 	mux.HandleFunc("GET /v1/agent/tools", c.ListTools)
 	mux.HandleFunc("GET /v1/agent/resources", c.ListResources)
+	// 公开域校验（前端域守卫）：校验 /agent/{id} 是否为已注册智能体域。
+	mux.HandleFunc("GET /v1/agent/domains/{id}", c.GetAgentDomain)
 	mux.HandleFunc("GET /v1/agent/kbs", c.ListKBs)
 	// 智能体默认会话配置（P3 反馈：配置区"大模型"回退链用）。
 	mux.HandleFunc("GET /v1/agent/defaults", c.ListAgentDefaults)

@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -754,8 +755,12 @@ func (s *Service) GetAgent(ctx context.Context, actorID, id string) (*Agent, err
 // owner/status 等管理信息）。gateway 创建会话时据此注入按智能体 system_prompt
 // ——普通用户无需管理权限即可获取，与门户登录归属语义一致。
 func (s *Service) GetAgentPublic(ctx context.Context, actorID, id string) (*Agent, error) {
-	if _, err := s.repo.GetUserByID(ctx, actorID); err != nil {
-		return nil, err
+	// 游客（负 user_id 命名空间）无 users 记录，跳过存在性校验；只返回
+	// 白名单公开元数据，不涉及任何私有信息。
+	if uid, err := strconv.ParseInt(actorID, 10, 64); err == nil && uid > 0 {
+		if _, err := s.repo.GetUserByID(ctx, actorID); err != nil {
+			return nil, err
+		}
 	}
 	a, err := s.repo.GetAgent(ctx, id)
 	if err != nil {

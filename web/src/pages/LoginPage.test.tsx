@@ -9,12 +9,14 @@ const apiMocks = vi.hoisted(() => ({
   login: vi.fn(),
   register: vi.fn(),
   mergeGuestSessions: vi.fn(),
+  checkAgentDomain: vi.fn(),
 }))
 vi.mock('@/lib/api', () => ({
   ApiError: class ApiError extends Error {},
   login: apiMocks.login,
   register: apiMocks.register,
   mergeGuestSessions: apiMocks.mergeGuestSessions,
+  checkAgentDomain: apiMocks.checkAgentDomain,
 }))
 
 // 记住密码：mock 掉凭据存取，断言勾选行为
@@ -46,6 +48,12 @@ const renderPage = (path = '/login/tutor') =>
     </MemoryRouter>,
   )
 
+// 域守卫：非 '*' 门户先校验域存在才渲染表单，普通用例需等待表单出现
+const renderAndWait = async (path = '/login/tutor') => {
+  renderPage(path)
+  await screen.findByLabelText('用户名')
+}
+
 describe('LoginPage', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -55,13 +63,15 @@ describe('LoginPage', () => {
     apiMocks.login.mockReset()
     apiMocks.register.mockReset()
     apiMocks.mergeGuestSessions.mockReset()
+    apiMocks.checkAgentDomain.mockReset()
+    apiMocks.checkAgentDomain.mockResolvedValue({ exists: true, id: 'tutor', name: 'tutor', status: 1 })
     rememberMocks.saveRemembered.mockClear()
     rememberMocks.clearRemembered.mockClear()
     rememberMocks.loadRemembered.mockResolvedValue(null) // 默认无已存凭据
   })
 
-  it('门户登录页渲染登录表单与门户标识', () => {
-    renderPage()
+  it('门户登录页渲染登录表单与门户标识', async () => {
+    await renderAndWait()
     expect(screen.getByLabelText('用户名')).toBeInTheDocument()
     expect(screen.getByLabelText('密码')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '登录' })).toBeInTheDocument()
@@ -78,7 +88,7 @@ describe('LoginPage', () => {
       expires_in: 900,
       user: { id: '2', username: 'alice', role: 'user' },
     })
-    renderPage('/login/math')
+    await renderAndWait('/login/math')
     fireEvent.click(screen.getByText('去注册'))
     fireEvent.change(screen.getByLabelText('用户名'), { target: { value: 'alice' } })
     fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'Passw0rd1' } })
@@ -104,13 +114,13 @@ describe('LoginPage', () => {
   })
 
   it('空用户名提交给出具体错误提示', async () => {
-    renderPage()
+    await renderAndWait()
     fireEvent.click(screen.getByRole('button', { name: '登录' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('请输入用户名')
   })
 
   it('密码过短给出具体错误提示', async () => {
-    renderPage()
+    await renderAndWait()
     fireEvent.change(screen.getByLabelText('用户名'), { target: { value: 'alice' } })
     fireEvent.change(screen.getByLabelText('密码'), { target: { value: '123' } })
     fireEvent.click(screen.getByRole('button', { name: '登录' }))
@@ -118,7 +128,7 @@ describe('LoginPage', () => {
   })
 
   it('注册模式下两次密码不一致给出具体错误提示', async () => {
-    renderPage('/login/tutor')
+    await renderAndWait('/login/tutor')
     fireEvent.click(screen.getByText('去注册'))
     fireEvent.change(screen.getByLabelText('用户名'), { target: { value: 'alice' } })
     fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'Passw0rd1' } })
@@ -127,8 +137,8 @@ describe('LoginPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('两次输入的密码不一致')
   })
 
-  it('服务器地址设置区可见且可保存', () => {
-    renderPage()
+  it('服务器地址设置区可见且可保存', async () => {
+    await renderAndWait()
     const input = screen.getByLabelText('服务器地址')
     expect(input).toBeInTheDocument()
     fireEvent.change(input, { target: { value: 'http://10.0.0.2:8080' } })
@@ -146,7 +156,7 @@ describe('LoginPage', () => {
       user: { id: '1', username: 'alice', role: 'user' },
     })
     apiMocks.mergeGuestSessions.mockResolvedValue(3)
-    renderPage()
+    await renderAndWait()
     fireEvent.change(screen.getByLabelText('用户名'), { target: { value: 'alice' } })
     fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'Passw0rd1' } })
     fireEvent.click(screen.getByRole('button', { name: '登录' }))
@@ -164,7 +174,7 @@ describe('LoginPage', () => {
       expires_in: 900,
       user: { id: '1', username: 'alice', role: 'user' },
     })
-    renderPage()
+    await renderAndWait()
     fireEvent.change(screen.getByLabelText('用户名'), { target: { value: 'alice' } })
     fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'Passw0rd1' } })
     fireEvent.click(screen.getByRole('button', { name: '登录' }))
@@ -181,6 +191,8 @@ describe('LoginPage 记住密码', () => {
     localStorage.clear()
     useAuthStore.setState({ user: null, status: 'loading' })
     apiMocks.login.mockReset()
+    apiMocks.checkAgentDomain.mockReset()
+    apiMocks.checkAgentDomain.mockResolvedValue({ exists: true, id: 'tutor', name: 'tutor', status: 1 })
     rememberMocks.saveRemembered.mockClear()
     rememberMocks.clearRemembered.mockClear()
   })
@@ -198,7 +210,7 @@ describe('LoginPage 记住密码', () => {
       user: { id: '1', username: 'alice', role: 'user' },
     })
     rememberMocks.loadRemembered.mockResolvedValue(null)
-    renderPage()
+    await renderAndWait()
     fillLoginForm()
     fireEvent.click(screen.getByRole('checkbox')) // 勾选记住密码
     fireEvent.click(screen.getByRole('button', { name: '登录' }))
@@ -216,7 +228,7 @@ describe('LoginPage 记住密码', () => {
       user: { id: '1', username: 'alice', role: 'user' },
     })
     rememberMocks.loadRemembered.mockResolvedValue(null)
-    renderPage()
+    await renderAndWait()
     fillLoginForm()
     fireEvent.click(screen.getByRole('button', { name: '登录' }))
     await waitFor(() => expect(rememberMocks.clearRemembered).toHaveBeenCalledWith('tutor'))
@@ -225,7 +237,7 @@ describe('LoginPage 记住密码', () => {
 
   it('有已存凭据时自动回填用户名密码并勾选', async () => {
     rememberMocks.loadRemembered.mockResolvedValue({ username: 'alice', password: 'Passw0rd1' })
-    renderPage()
+    await renderAndWait()
     await waitFor(() => {
       expect((screen.getByLabelText('用户名') as HTMLInputElement).value).toBe('alice')
       expect((screen.getByLabelText('密码') as HTMLInputElement).value).toBe('Passw0rd1')
@@ -244,6 +256,8 @@ describe('LoginPage 登录落地域', () => {
     apiMocks.login.mockReset()
     apiMocks.mergeGuestSessions.mockReset()
     apiMocks.mergeGuestSessions.mockResolvedValue(0)
+    apiMocks.checkAgentDomain.mockReset()
+    apiMocks.checkAgentDomain.mockResolvedValue({ exists: true, id: 'tutor', name: 'tutor', status: 1 })
     rememberMocks.loadRemembered.mockResolvedValue(null)
   })
 
@@ -289,8 +303,57 @@ describe('LoginPage 登录落地域', () => {
       expires_in: 900,
       user: { id: '3', username: 'alice', role: 'user' },
     })
-    renderPage('/login/tutor')
+    await renderAndWait('/login/tutor')
     await fillAndSubmit('alice')
     await expectLanded('tutor')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 域守卫（阶段3·多租户门户化）：/login/:agentId 直连孤儿/停用域不渲染表单
+// ---------------------------------------------------------------------------
+describe('LoginPage 域守卫', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useAuthStore.setState({ user: null, status: 'loading' })
+    apiMocks.checkAgentDomain.mockReset()
+    rememberMocks.loadRemembered.mockResolvedValue(null)
+  })
+
+  it('孤儿域（不存在）不渲染登录表单，提示门户不存在', async () => {
+    apiMocks.checkAgentDomain.mockResolvedValue({
+      exists: false,
+      id: 'mi',
+      name: '',
+      status: 0,
+    })
+    renderPage('/login/mi')
+    expect(await screen.findByText('门户不存在或已停用')).toBeInTheDocument()
+    expect(screen.queryByLabelText('用户名')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '返回默认门户' })).toBeInTheDocument()
+  })
+
+  it('已停用域同样拦截表单渲染', async () => {
+    apiMocks.checkAgentDomain.mockResolvedValue({
+      exists: true,
+      id: 'tutor',
+      name: 'tutor',
+      status: 0,
+    })
+    renderPage('/login/tutor')
+    expect(await screen.findByText('门户不存在或已停用')).toBeInTheDocument()
+    expect(screen.queryByLabelText('用户名')).not.toBeInTheDocument()
+  })
+
+  it('域校验失败（网络异常）不阻断表单，后端仍有硬校验兜底', async () => {
+    apiMocks.checkAgentDomain.mockRejectedValue(new Error('network down'))
+    renderPage('/login/tutor')
+    expect(await screen.findByLabelText('用户名')).toBeInTheDocument()
+  })
+
+  it('超管门户（*）跳过域校验且不发起请求', async () => {
+    renderPage('/login/*')
+    expect(screen.getByLabelText('用户名')).toBeInTheDocument()
+    expect(apiMocks.checkAgentDomain).not.toHaveBeenCalled()
   })
 })

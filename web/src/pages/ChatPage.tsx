@@ -61,15 +61,33 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
   // 游客对话必然失败，故直接拦截，流程与"超管在自己的 * 域登录"统一。
   const superPortalBlocked = mode === 'agent' && scope === '*' && isGuest
 
-  // 域守卫：非超管访问非自身归属域 / 孤儿域 → 踢回归属域或默认域。
+  // 域守卫：孤儿域 / 停用域 / 登录用户非归属域 → 踢回默认门户或归属域。
   // 后端 agentScopeFor 已做硬校验（拒绝跨域 API），此处是前端体验层拦截：
   // 打开 URL 即校验，避免"页面能开、一对话才报错"的迷惑。
+  // 分支说明：
+  //  - status==='loading'：引导期身份未定，跳过，避免在游客/登录态落定前误踢
+  //    （如游客访问合法域 /agent/math，loading 期 user=null 会被误判为非归属域）；
+  //  - 游客（isGuest）：普通智能体域开放，仅孤儿/停用域踢回默认门户；
+  //  - 已登录：超管 → '*'、其它角色 → 归属域（默认 tutor），孤儿域与非归属域均踢回。
   useEffect(() => {
-    if (mode !== 'agent' || !scope || scope === ALL_AGENT_ID || isGuest) return
-    // 踢回目标：超管 → '*'；agent_admin/admin/普通用户 → 归属域（默认 tutor）。
+    if (mode !== 'agent' || !scope || scope === ALL_AGENT_ID || status === 'loading') return
+    let cancelled = false
+    if (isGuest) {
+      checkAgentDomain(scope)
+        .then((d) => {
+          if (cancelled) return
+          if (!d.exists || d.status !== 1) navigate(`/agent/${DEFAULT_AGENT_ID}`)
+        })
+        .catch(() => {
+          // 网络异常不拦截（后端仍有硬校验兜底），避免误踢影响正常使用
+        })
+      return () => {
+        cancelled = true
+      }
+    }
+    // 已登录踢回目标：超管 → '*'；agent_admin/admin/普通用户 → 归属域（默认 tutor）。
     const kickTarget = isSuperAdmin(user?.role) ? ALL_AGENT_ID : getUserAgentId(user)
     if (kickTarget === scope) return // 已在归属域，无需踢回
-    let cancelled = false
     checkAgentDomain(scope)
       .then((d) => {
         if (cancelled) return
@@ -88,7 +106,7 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
     return () => {
       cancelled = true
     }
-  }, [mode, scope, user, isGuest, navigate])
+  }, [mode, scope, user, isGuest, status, navigate])
 
   useEffect(() => {
     // 超管域游客被拦截：不加载会话列表（避免拉跨域列表 / 触发后端拒绝）

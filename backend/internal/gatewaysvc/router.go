@@ -31,6 +31,7 @@ var authWhitelist = []string{
 	"POST /v1/auth/login/{agent_id}",
 	"POST /v1/auth/refresh",
 	"GET /v1/models",
+	"GET /v1/agent/domains/{id}",
 	"GET /healthz",
 	"GET /v1/openapi.yaml",
 	"GET /swagger/ui",

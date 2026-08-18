@@ -345,6 +345,7 @@ func TestSkipRoute(t *testing.T) {
 		"POST /v1/auth/register/{agent_id}",
 		"POST /v1/auth/login",
 		"POST /v1/auth/login/{agent_id}",
+		"GET /v1/agent/domains/{id}",
 		"GET /swagger/ui",
 		"GET /",
 	}
@@ -359,6 +360,8 @@ func TestSkipRoute(t *testing.T) {
 		{"通配-注册tutor", http.MethodPost, "/v1/auth/register/tutor", true},
 		{"通配-注册多段ID", http.MethodPost, "/v1/auth/register/demo-tutor", true},
 		{"通配-登录智能体门户", http.MethodPost, "/v1/auth/login/tutor", true},
+		{"通配-域校验", http.MethodGet, "/v1/agent/domains/tutor", true},
+		{"通配-域校验多段ID", http.MethodGet, "/v1/agent/domains/demo-tutor", true},
 		{"精确-swagger-ui", http.MethodGet, "/swagger/ui", true},
 		{"精确-根路径", http.MethodGet, "/", true},
 		{"业务路由不被放行", http.MethodGet, "/v1/agent/sessions", false},

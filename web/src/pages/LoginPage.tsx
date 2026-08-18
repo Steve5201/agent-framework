@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
-import { ApiError, login, mergeGuestSessions, register } from '@/lib/api'
+import { ApiError, checkAgentDomain, login, mergeGuestSessions, register } from '@/lib/api'
 import { clearGuestId, getGuestId, hasGuestId } from '@/lib/guest'
 import { DEFAULT_AGENT_ID } from '@/App'
 import { isAdminRole, isAllAgentScope, getHomeScope } from '@/lib/roles'
@@ -40,6 +40,40 @@ export default function LoginPage() {
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  // 域守卫：登录页直连地址（/login/:agentId）也校验目标域是否存在且启用——
+  // 孤儿域 / 已停用域不渲染表单，直接提示（后端注册/登录同样 404/403 拦截）。
+  // 校验结果按 agentId 记录：切换门户（同组件复用）时，未命中记录的域显示
+  // 'checking'，直到异步校验完成——避免同步 setState（react-hooks/set-state-in-effect）。
+  const [domainCheck, setDomainCheck] = useState<{
+    agentId: string
+    state: 'checking' | 'ok' | 'missing'
+  }>({ agentId: effectiveAgentId, state: 'checking' })
+  const domainState =
+    !effectiveAgentId || isAllAgentScope(effectiveAgentId)
+      ? 'ok' // 空门户由下方 Early Return 重定向；超管门户（*）非注册表真实智能体，跳过校验
+      : domainCheck.agentId === effectiveAgentId
+        ? domainCheck.state
+        : 'checking'
+
+  useEffect(() => {
+    if (!effectiveAgentId || isAllAgentScope(effectiveAgentId)) return
+    let cancelled = false
+    checkAgentDomain(effectiveAgentId)
+      .then((d) => {
+        if (cancelled) return
+        setDomainCheck({
+          agentId: effectiveAgentId,
+          state: d.exists && d.status === 1 ? 'ok' : 'missing',
+        })
+      })
+      .catch(() => {
+        // 网络异常不拦截（后端仍有硬校验兜底），避免误判影响正常使用
+        if (!cancelled) setDomainCheck({ agentId: effectiveAgentId, state: 'ok' })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [effectiveAgentId])
 
   // 记住密码（按门户域隔离）：勾选后保存当前域凭据，切换门户互不影响
   const [rememberMe, setRememberMe] = useState(false)
@@ -104,6 +138,44 @@ export default function LoginPage() {
       ? `/agent/${getHomeScope(user)}`
       : `/agent/${effectiveAgentId || DEFAULT_AGENT_ID}`
     return <Navigate to={target} replace />
+  }
+
+  // 域守卫渲染门：校验中 / 孤儿或停用域（不渲染表单）。
+  if (domainState === 'checking') {
+    return (
+      <div className="flex h-full justify-center overflow-y-auto p-4">
+        <Card className="my-auto w-full max-w-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">智能体助手 · {effectiveAgentId}</CardTitle>
+            <CardDescription>正在校验门户……</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
+  if (domainState === 'missing') {
+    return (
+      <div className="flex h-full justify-center overflow-y-auto p-4">
+        <Card className="my-auto w-full max-w-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">门户不存在或已停用</CardTitle>
+            <CardDescription>
+              智能体 {effectiveAgentId} 不存在或尚未创建，请先创建该智能体后再访问。
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => navigate(`/login/${DEFAULT_AGENT_ID}`, { replace: true })}
+            >
+              返回默认门户
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   /**

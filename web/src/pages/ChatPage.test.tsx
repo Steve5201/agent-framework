@@ -3,15 +3,18 @@
 // 覆盖：'*' 域未登录（游客）禁止对话，仅渲染登录提示页；普通智能体域游客
 // 正常对话；已登录超管访问 '*' 域不受拦截。子组件打桩，只验证页面级分支。
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import ChatPage from './ChatPage'
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 
 // 隔离网络层：ChatPage 挂载即经 initAgent → listSessions 拉会话列表
-const apiMocks = vi.hoisted(() => ({ listSessions: vi.fn() }))
-vi.mock('@/lib/api', () => ({ listSessions: apiMocks.listSessions }))
+const apiMocks = vi.hoisted(() => ({ listSessions: vi.fn(), checkAgentDomain: vi.fn() }))
+vi.mock('@/lib/api', () => ({
+  listSessions: apiMocks.listSessions,
+  checkAgentDomain: apiMocks.checkAgentDomain,
+}))
 vi.mock('@/lib/sse', () => ({ streamChat: vi.fn(async () => {}) }))
 vi.mock('@/lib/localTools', () => ({
   LOCAL_TOOL_NAMES: new Set(),
@@ -49,6 +52,8 @@ describe('ChatPage · 超管专属门户游客拦截', () => {
     localStorage.clear()
     apiMocks.listSessions.mockReset()
     apiMocks.listSessions.mockResolvedValue({ sessions: [], total: 0 })
+    apiMocks.checkAgentDomain.mockReset()
+    apiMocks.checkAgentDomain.mockResolvedValue({ exists: true, id: 'tutor', name: 'tutor', status: 1 })
     useAuthStore.setState({ user: null, status: 'guest' })
   })
 
@@ -70,6 +75,46 @@ describe('ChatPage · 超管专属门户游客拦截', () => {
     expect(input).toBeInTheDocument()
     // 游客：canConfigure=false（配置按钮区隐藏）
     expect(input.getAttribute('data-configure')).toBe('false')
+    // 游客守卫：合法域发起校验但不踢回（listSessions 仍为 tutor 域）
+    expect(apiMocks.checkAgentDomain).toHaveBeenCalledWith('tutor')
+  })
+
+  it('游客访问孤儿域（不存在）踢回默认门户', async () => {
+    apiMocks.checkAgentDomain.mockResolvedValue({
+      exists: false,
+      id: 'mi',
+      name: '',
+      status: 0,
+    })
+    renderAt('/agent/mi')
+    // 踢回 /agent/tutor：会话列表以默认门户域重新拉取
+    await waitFor(() => expect(apiMocks.listSessions).toHaveBeenCalledWith(1, 50, 'tutor'))
+  })
+
+  it('游客访问停用域（status=0）踢回默认门户', async () => {
+    apiMocks.checkAgentDomain.mockResolvedValue({
+      exists: true,
+      id: 'tutor',
+      name: 'tutor',
+      status: 0,
+    })
+    renderAt('/agent/tutor')
+    await waitFor(() => expect(apiMocks.listSessions).toHaveBeenCalledWith(1, 50, 'tutor'))
+  })
+
+  it('游客访问合法非默认域（/agent/math）不被踢回', async () => {
+    apiMocks.checkAgentDomain.mockResolvedValue({
+      exists: true,
+      id: 'math',
+      name: 'math',
+      status: 1,
+    })
+    renderAt('/agent/math')
+    const input = await screen.findByTestId('chat-input')
+    expect(input).toBeInTheDocument()
+    expect(apiMocks.checkAgentDomain).toHaveBeenCalledWith('math')
+    // 未踢回：会话列表仍保持 math 域
+    expect(apiMocks.listSessions).toHaveBeenCalledWith(1, 50, 'math')
   })
 
   it('已登录超管访问 /agent/* 不受拦截，正常对话', () => {

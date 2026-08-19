@@ -216,7 +216,7 @@ await streamChat(
 | `isTauri(): boolean` | 是否运行在 Tauri 环境（`'__TAURI_INTERNALS__' in window`） |
 | `runLocalShell(command, cwd?, timeoutSecs?)` | 动态 import `@tauri-apps/api/core` 调 `local_shell_execute`；`timeoutSecs`：`>0` 强制超时 / `0` 默认 / `-1` 不限超时（自由模式） |
 | `isFreeMode() / setFreeMode(on)` | `src/lib/freeMode.ts`：读写本地偏好 `agent.free_mode`（仅本机、与服务器/角色无关） |
-| `FreeModeToggle` | `src/components/chat/FreeModeToggle.tsx`：桌面端专属开关，开启时弹风险警告确认 |
+| `FreeModeDialog` | `src/components/chat/config/FreeModeDialog.tsx`：配置按钮区注册的弹窗（仅桌面端 visible），开启时弹窗内风险提示 + 二次确认 |
 | `useChatStore.handleLocalToolCall(toolCallId, name, args)` | chat store 导出：解析参数 → 浏览器降级回填 / 桌面弹窗（自由模式直接执行） |
 | `useChatStore.resolveLocalCall(allow)` | 桌面确认回调：执行 + 回填（或拒绝回填） |
 

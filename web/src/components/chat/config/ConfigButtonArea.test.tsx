@@ -22,6 +22,14 @@ vi.mock('@/lib/localTools', () => ({
   isTauri: vi.fn(() => false),
   runLocalShell: vi.fn(),
 }))
+vi.mock('@/lib/freeMode', () => ({
+  isFreeMode: vi.fn(() => false),
+  setFreeMode: vi.fn(),
+}))
+
+import { isTauri } from '@/lib/localTools'
+
+const mockIsTauri = vi.mocked(isTauri)
 
 function setUser(role: string, agentTag?: string) {
   useAuthStore.setState({
@@ -49,6 +57,7 @@ function makeSession(id: string) {
 beforeEach(() => {
   localStorage.clear()
   vi.clearAllMocks()
+  mockIsTauri.mockReturnValue(false)
   useChatStore.setState({
     agentId: '',
     sessions: [],
@@ -102,6 +111,21 @@ describe('ConfigButtonArea', () => {
     useChatStore.setState({ sessions: [makeSession('s0')], activeId: 's0' })
     render(<ConfigButtonArea />)
     expect(screen.getByRole('button', { name: '沙盒配置' })).toBeInTheDocument()
+  })
+
+  it('自由模式按钮仅桌面端可见（浏览器不渲染）', () => {
+    mockIsTauri.mockReturnValue(false)
+    useChatStore.setState({ sessions: [makeSession('s0')], activeId: 's0' })
+    render(<ConfigButtonArea />)
+    expect(screen.queryByRole('button', { name: '自由模式' })).not.toBeInTheDocument()
+  })
+
+  it('自由模式按钮桌面端可见，且点击打开弹窗（不依赖会话）', async () => {
+    mockIsTauri.mockReturnValue(true)
+    render(<ConfigButtonArea />)
+    fireEvent.click(screen.getByRole('button', { name: '自由模式' }))
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(apiMocks.createSession).not.toHaveBeenCalled()
   })
 
   it('建会话失败时给出错误提示且不打开弹窗', async () => {

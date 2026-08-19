@@ -1,4 +1,4 @@
-import { Bot, Cpu, Database, Network, Settings2, Shield, Sparkles, Wand2, Workflow } from 'lucide-react'
+import { Bot, Cpu, Database, Flame, Network, Settings2, Shield, Sparkles, Wand2, Workflow } from 'lucide-react'
 import type { ConfigItem } from './types'
 import CapabilitiesDialog from './CapabilitiesDialog'
 import ThinkingDialog from './ThinkingDialog'
@@ -8,8 +8,10 @@ import MCPDialog from './MCPDialog'
 import LLMDialog from './LLMDialog'
 import ModeDialog from './ModeDialog'
 import SandboxDialog from './SandboxDialog'
+import FreeModeDialog from './FreeModeDialog'
 import AgentSwitcherDialog from '../AgentSwitcher'
 import { getUserAgentId, isAllAgentScope, isAdminRole } from '@/lib/roles'
+import { isTauri } from '@/lib/localTools'
 
 /**
  * 配置项注册表：输入区配置按钮的单一事实来源。
@@ -111,6 +113,15 @@ export const configRegistry: ConfigItem[] = [
     renderDialog: ({ activeSession, user }, onClose) => (
       <SandboxDialog sessionConfig={activeSession?.config} role={user?.role} onClose={onClose} />
     ),
+  },
+  // ---- 自由模式：纯本地个人化开关（仅桌面端可见，不依赖会话）。开启后本地
+  // shell 不询问、不限超时；每次开启都在弹窗内风险提示并二次确认。
+  {
+    key: 'freemode',
+    label: '自由模式',
+    icon: <Flame className="h-4 w-4" />,
+    visible: () => isTauri(),
+    renderDialog: (_ctx, onClose) => <FreeModeDialog onClose={onClose} />,
   },
   {
     key: 'agent',

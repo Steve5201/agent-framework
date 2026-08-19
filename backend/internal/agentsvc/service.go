@@ -473,6 +473,11 @@ func (s *Service) UpdateSessionConfig(ctx context.Context, userID, sessionID int
 	if err := s.repo.UpdateSessionConfig(ctx, sessionID, cfg); err != nil {
 		return nil, err
 	}
+	// 配置变更日志（旁路）：落库成功后记录改前/改后快照，便于追溯工具集变化。
+	// 写失败仅记服务日志、不阻塞保存主流程。
+	if err := s.repo.InsertSessionConfigLog(ctx, userID, sessionID, sess.Config, cfg); err != nil {
+		s.log.Warn("记录会话配置变更日志失败", zap.Int64("session_id", sessionID), zap.Error(err))
+	}
 	return s.repo.GetSession(ctx, sessionID)
 }
 
@@ -1054,6 +1059,11 @@ func (s *Service) newAgentWithConfig(ctx context.Context, sessionID int64, histo
 	toolNames := make([]string, 0, len(reg.Schemas()))
 	for _, ts := range reg.Schemas() {
 		toolNames = append(toolNames, ts.Name)
+	}
+	// 工具注入快照（旁路）：记录本轮实际装配给模型的工具名，便于核对
+	// 模型感知与实际注入是否一致。写失败仅记服务日志、不阻塞对话。
+	if err := s.repo.InsertSessionToolSnapshot(ctx, sessionID, sess.UserID, toolNames); err != nil {
+		s.log.Warn("记录工具注入快照失败", zap.Int64("session_id", sessionID), zap.Error(err))
 	}
 	cfg := schema.AgentConfig{
 		Model:             model,

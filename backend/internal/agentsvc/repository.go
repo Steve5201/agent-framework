@@ -65,6 +65,13 @@ type Repository interface {
 	// 审计写失败不阻塞对话主流程：由调用方决定是否记日志降级。
 	InsertAuditToolCall(ctx context.Context, a *AuditToolCall) error
 
+	// InsertSessionConfigLog 记录一次会话配置变更（改前/改后 config 快照）。
+	// 旁路日志，写失败仅记服务日志、不阻塞配置保存主流程。
+	InsertSessionConfigLog(ctx context.Context, userID, sessionID int64, beforeCfg, afterCfg SessionConfig) error
+	// InsertSessionToolSnapshot 记录一轮对话注入给模型前的工具名快照。
+	// 旁路日志，写失败仅记服务日志、不阻塞对话主流程。
+	InsertSessionToolSnapshot(ctx context.Context, sessionID, userID int64, tools []string) error
+
 	// SaveOrchestration 落库一次多智能体编排执行记录（过程输出入库，
 	// 会话/管理端复盘用）。写失败不阻塞对话主流程（调用方记日志降级）。
 	SaveOrchestration(ctx context.Context, run *OrchestrationRun) error
@@ -207,6 +214,14 @@ const (
 	sqlInsertAuditToolCall = `INSERT INTO audit_tool_calls
 		(user_id, session_id, agent_name, tool, tool_call_id, arguments, result, is_error, duration_ms)
 		VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9)`
+
+	sqlInsertSessionConfigLog = `INSERT INTO session_config_logs
+		(user_id, session_id, before_config, after_config)
+		VALUES ($1, $2, $3::jsonb, $4::jsonb)`
+
+	sqlInsertSessionToolSnapshot = `INSERT INTO session_tool_snapshots
+		(session_id, user_id, tools)
+		VALUES ($1, $2, $3)`
 )
 
 // sessionColumns 复用列集合（rowToSession 用）。
@@ -620,6 +635,38 @@ func (r *postgresRepo) InsertAuditToolCall(ctx context.Context, a *AuditToolCall
 	)
 	if err != nil {
 		return fmt.Errorf("写入审计记录失败: %w", err)
+	}
+	return nil
+}
+
+// InsertSessionConfigLog 记录一次会话配置变更（改前/改后 config 快照）。
+// JSONB 序列化失败或写入失败均返回错误，由 service 记日志降级。
+func (r *postgresRepo) InsertSessionConfigLog(ctx context.Context, userID, sessionID int64, beforeCfg, afterCfg SessionConfig) error {
+	beforeJSON, err := json.Marshal(beforeCfg)
+	if err != nil {
+		return fmt.Errorf("序列化变更前配置失败: %w", err)
+	}
+	afterJSON, err := json.Marshal(afterCfg)
+	if err != nil {
+		return fmt.Errorf("序列化变更后配置失败: %w", err)
+	}
+	_, err = r.pool.Exec(ctx, sqlInsertSessionConfigLog,
+		userID, sessionID, string(beforeJSON), string(afterJSON),
+	)
+	if err != nil {
+		return fmt.Errorf("写入配置变更日志失败: %w", err)
+	}
+	return nil
+}
+
+// InsertSessionToolSnapshot 记录一轮对话注入前实际装配的工具名（快照）。
+func (r *postgresRepo) InsertSessionToolSnapshot(ctx context.Context, sessionID, userID int64, tools []string) error {
+	if tools == nil {
+		tools = []string{}
+	}
+	_, err := r.pool.Exec(ctx, sqlInsertSessionToolSnapshot, sessionID, userID, tools)
+	if err != nil {
+		return fmt.Errorf("写入工具注入快照失败: %w", err)
 	}
 	return nil
 }

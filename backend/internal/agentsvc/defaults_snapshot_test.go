@@ -297,6 +297,79 @@ func TestService_UpdateSessionConfig_PreservesMissingResources(t *testing.T) {
 	}
 }
 
+// TestService_OperationLogs 操作日志（P6 排查）：UpdateSessionConfig 每次变更
+// 落一条改前/改后快照；newAgentWithConfig 每次注入落一条工具名快照。
+func TestService_OperationLogs(t *testing.T) {
+	ctx := context.Background()
+	repo := newFakeRepo()
+	dv := &stubDomainViewer{defaults: map[string]AgentDefaults{
+		"agent-1": {
+			EnabledResources:       []string{"search", "file"},
+			EnabledResourcesSet:    true,
+			EnabledCapabilitiesSet: true,
+			EnabledSkillsSet:       true,
+		},
+	}}
+	svc, err := newTestServiceWithDomain(repo, &llm.MockProvider{}, dv)
+	if err != nil {
+		t.Fatalf("NewService: %v", err)
+	}
+	s, err := svc.CreateSession(ctx, 1, "agent-1", "操作日志")
+	if err != nil {
+		t.Fatalf("CreateSession: %v", err)
+	}
+
+	// 变更前无日志；第一次变更落一条改前/改后。
+	if _, err := svc.UpdateSessionConfig(ctx, 1, s.ID, SessionConfig{Model: "m2"}); err != nil {
+		t.Fatalf("UpdateSessionConfig: %v", err)
+	}
+	if len(repo.configLogs) != 1 {
+		t.Fatalf("首次变更应落 1 条配置日志，实际 %d", len(repo.configLogs))
+	}
+	cl := repo.configLogs[0]
+	if cl.SessionID != s.ID || cl.UserID != 1 {
+		t.Fatalf("配置日志归属错误: %+v", cl)
+	}
+	if len(cl.Before.EnabledResources) != 2 || len(cl.After.EnabledResources) != 2 {
+		t.Fatalf("配置日志应记录资源白名单（改前/改后均 2 项）: before=%+v after=%+v", cl.Before, cl.After)
+	}
+	if cl.After.Model != "m2" {
+		t.Fatalf("配置日志改后应含新 model: %+v", cl.After)
+	}
+
+	// 第二次变更（显式全不选）→ 再落一条。
+	if _, err := svc.UpdateSessionConfig(ctx, 1, s.ID, SessionConfig{
+		EnabledResources:    []string{},
+		EnabledResourcesSet: true,
+	}); err != nil {
+		t.Fatalf("UpdateSessionConfig 全不选: %v", err)
+	}
+	if len(repo.configLogs) != 2 {
+		t.Fatalf("二次变更应落 2 条配置日志，实际 %d", len(repo.configLogs))
+	}
+	if len(repo.configLogs[1].Before.EnabledResources) != 2 || len(repo.configLogs[1].After.EnabledResources) != 0 {
+		t.Fatalf("全不选日志改前应 2 项、改后应 0 项: before=%+v after=%+v",
+			repo.configLogs[1].Before, repo.configLogs[1].After)
+	}
+
+	// 工具注入快照：创建会话不会触发（无对话）；newAgentWithHistory 触发一次。
+	beforeSnap := len(repo.toolSnapshots)
+	if _, err := svc.newAgentWithHistory(ctx, s.ID); err != nil {
+		t.Fatalf("newAgentWithHistory: %v", err)
+	}
+	if len(repo.toolSnapshots) != beforeSnap+1 {
+		t.Fatalf("应新增 1 条工具快照，实际 %d→%d", beforeSnap, len(repo.toolSnapshots))
+	}
+	last := repo.toolSnapshots[len(repo.toolSnapshots)-1]
+	if last.SessionID != s.ID || last.UserID != 1 {
+		t.Fatalf("工具快照归属错误: %+v", last)
+	}
+	// 全不选后：能力 set=true 且空 → 能力工具为空；技能 set=true 且空 → 技能工具为空。
+	if len(last.Tools) != 0 {
+		t.Fatalf("全不选后工具快照应为空，实际 %v", last.Tools)
+	}
+}
+
 // TestService_Defaults_MCPAllNone 快照 + MCP 全不选（set=true 空列表）：
 // 会话装配时 mcp_ 工具全部过滤（只保留非 MCP 工具）。
 func TestService_Defaults_MCPAllNone(t *testing.T) {

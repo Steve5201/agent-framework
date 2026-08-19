@@ -40,14 +40,15 @@ func TestBuildSystemPrompt_EmptyBase(t *testing.T) {
 }
 
 func TestBuildSystemPromptWithMedia_ToolNames(t *testing.T) {
-	// 不传工具名：保留静态规范段，不出现"当前可用工具"。
+	// 不传工具名（nil）：只保留静态规范段，不注入"当前可用工具"列表行，
+	// 也不出现"无工具"声明（空列表专属文案）。
 	plain := BuildSystemPrompt("你是助手。")
-	if strings.Contains(plain, "当前可用工具") {
-		t.Errorf("未传工具名时不应注入工具名列表，实际：%q", plain)
+	if strings.Contains(plain, "当前可用工具：（空") {
+		t.Errorf("未传工具名（nil）时不应注入无工具声明，实际：%q", plain)
 	}
 	// 传入工具名：静态规范 + 动态列表同时出现，且按传入顺序拼接。
 	got := BuildSystemPromptWithMedia("你是助手。", "", "web_search", "file_ops", "calculator")
-	if !strings.Contains(got, "工具使用规范") || !strings.Contains(got, "当前可用工具") {
+	if !strings.Contains(got, "工具使用规范") || !strings.Contains(got, "当前可用工具：web_search、file_ops、calculator") {
 		t.Errorf("应同时包含静态规范段与动态工具名列表，实际：%q", got)
 	}
 	if !strings.Contains(got, "web_search、file_ops、calculator") {
@@ -55,6 +56,19 @@ func TestBuildSystemPromptWithMedia_ToolNames(t *testing.T) {
 	}
 	if !strings.HasPrefix(got, "你是助手。") {
 		t.Errorf("基础提示词应保留在最前，实际以 %q 开头", got[:min(12, len(got))])
+	}
+}
+
+func TestBuildSystemPromptWithMedia_EmptyTools(t *testing.T) {
+	// 显式传入空列表（非 nil，模拟会话 0 工具）：注入"无工具"声明，
+	// 明确告知模型当前无可调用工具，避免靠历史臆测。
+	empty := make([]string, 0)
+	got := BuildSystemPromptWithMedia("你是助手。", "", empty...)
+	if !strings.Contains(got, "当前可用工具：（空") {
+		t.Errorf("显式空列表应注入无工具声明，实际：%q", got)
+	}
+	if !strings.Contains(got, "不得伪造工具调用") {
+		t.Errorf("无工具声明应含反幻觉约束，实际：%q", got)
 	}
 }
 

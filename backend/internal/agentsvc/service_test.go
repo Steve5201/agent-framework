@@ -26,6 +26,19 @@ import (
 // fakeRepo：内存版 Repository（模拟 PG 语义：seq 递增、轮次/版本/隐藏、软删）
 // ---------------------------------------------------------------------------
 
+type configLogEntry struct {
+	UserID    int64
+	SessionID int64
+	Before    SessionConfig
+	After     SessionConfig
+}
+
+type toolSnapshotEntry struct {
+	SessionID int64
+	UserID    int64
+	Tools     []string
+}
+
 type fakeRepo struct {
 	mu        sync.Mutex
 	sessions  map[int64]*Session
@@ -34,6 +47,10 @@ type fakeRepo struct {
 	nextMsg   int64
 	appendErr error // 故障注入
 	audits    []AuditToolCall
+
+	// 操作日志记录（P6 排查）：断言用。
+	configLogs    []configLogEntry
+	toolSnapshots []toolSnapshotEntry
 
 	// SessionStats 注入：管理端会话统计测试用（避免 fake 复刻 SQL 聚合）。
 	stats     *SessionStats
@@ -159,6 +176,22 @@ func (f *fakeRepo) InsertAuditToolCall(_ context.Context, a *AuditToolCall) erro
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.audits = append(f.audits, *a)
+	return nil
+}
+
+// InsertSessionConfigLog 记录到内存切片；返回 nil 模拟成功。
+func (f *fakeRepo) InsertSessionConfigLog(_ context.Context, userID, sessionID int64, beforeCfg, afterCfg SessionConfig) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.configLogs = append(f.configLogs, configLogEntry{UserID: userID, SessionID: sessionID, Before: beforeCfg, After: afterCfg})
+	return nil
+}
+
+// InsertSessionToolSnapshot 记录到内存切片；返回 nil 模拟成功。
+func (f *fakeRepo) InsertSessionToolSnapshot(_ context.Context, sessionID, userID int64, tools []string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.toolSnapshots = append(f.toolSnapshots, toolSnapshotEntry{SessionID: sessionID, UserID: userID, Tools: tools})
 	return nil
 }
 

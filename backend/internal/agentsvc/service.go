@@ -447,15 +447,19 @@ func validateAgentID(agentID string) error {
 }
 
 // UpdateSessionConfig 更新会话配置（工具权限 / 思考模式，属主校验）。
-// 快照语义：全量替换用户可配字段并落库；管理员级字段（max_rounds/
-// max_messages/max_thinking_rounds）保留当前快照原值——普通用户配置区
-// 不展示、不可改。管理端默认配置只影响新建会话，不在此处参与合并。
+// 合并语义：以当前会话快照为 base，仅覆盖用户本次显式提交的字段；未提交的
+// 资源类字段保留快照现值，防止 base 不完整时全量替换意外清空（如历史异常
+// 会话、或其它弹窗只改单一字段）。管理员级字段（max_rounds/max_messages/
+// max_thinking_rounds）保留当前快照原值——普通用户配置区不展示、不可改。
+// 管理端默认配置只影响新建会话，不在此处参与合并。
 // 配置字段先规范化与校验，非法直接拒绝。
 func (s *Service) UpdateSessionConfig(ctx context.Context, userID, sessionID int64, cfg SessionConfig) (*Session, error) {
 	sess, err := s.getOwnedSession(ctx, userID, sessionID)
 	if err != nil {
 		return nil, err
 	}
+	// 防御性合并：未显式提交的字段保留快照现值（防止清空资源类字段）。
+	cfg = mergeConfigUpdate(sess.Config, cfg)
 	// 落库前规范化（kb_ids/mcp_servers trim/去重），再校验。
 	cfg = cleanConfig(cfg)
 	if err := s.validateConfig(cfg); err != nil {
@@ -470,6 +474,53 @@ func (s *Service) UpdateSessionConfig(ctx context.Context, userID, sessionID int
 		return nil, err
 	}
 	return s.repo.GetSession(ctx, sessionID)
+}
+
+// mergeConfigUpdate 把用户提交的配置增量合并进当前会话快照，避免"全量替换"
+// 在 base 配置不完整（如历史异常会话缺字段、或其它弹窗只改单一字段）时意外
+// 清空资源类字段。合并规则（配合前端各弹窗显式下发 enabled_resources_set）：
+//   - enabled_resources：仅当前端显式置位 enabled_resources_set，或传入非空
+//     列表时覆盖（含全选=非空全量、全不选=set true+空）；否则保留快照现值。
+//   - enabled_tools（旧字段，无 set 标记）：仅当传入非空列表时覆盖，否则保留。
+//   - kb_ids / mcp_servers：分别以对应 set 标记或非空列表为准，否则保留快照。
+//   - 标量字段（thinking/model/mode/orchestrate_plan）与能力/技能 set 标记：
+//     非零/非空即覆盖；空串/零值保留快照（防止误清空）。
+func mergeConfigUpdate(cur, in SessionConfig) SessionConfig {
+	out := cur
+	if in.EnabledResourcesSet || len(in.EnabledResources) > 0 {
+		out.EnabledResources = in.EnabledResources
+		out.EnabledResourcesSet = in.EnabledResourcesSet
+	}
+	if len(in.EnabledTools) > 0 {
+		out.EnabledTools = in.EnabledTools
+	}
+	if in.KBIDsSet || len(in.KBIDs) > 0 {
+		out.KBIDs = in.KBIDs
+		out.KBIDsSet = in.KBIDsSet
+	}
+	if in.MCPServersSet || len(in.MCPServers) > 0 {
+		out.MCPServers = in.MCPServers
+		out.MCPServersSet = in.MCPServersSet
+	}
+	if in.Thinking != nil {
+		out.Thinking = in.Thinking
+	}
+	if in.Model != "" {
+		out.Model = in.Model
+	}
+	if in.Mode != "" {
+		out.Mode = in.Mode
+	}
+	if in.OrchestratePlan != "" {
+		out.OrchestratePlan = in.OrchestratePlan
+	}
+	if in.EnabledCapabilitiesSet {
+		out.EnabledCapabilitiesSet = true
+	}
+	if in.EnabledSkillsSet {
+		out.EnabledSkillsSet = true
+	}
+	return out
 }
 
 // validateConfig 校验会话配置：资源（能力/技能）与工具名必须有效、思考强度合法。

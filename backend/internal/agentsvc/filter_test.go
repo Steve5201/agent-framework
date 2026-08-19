@@ -231,4 +231,15 @@ func TestSessionToolRegistry_KBOverrideCapabilityWhitelist(t *testing.T) {
 			t.Fatalf("勾选知识库后 kb_search 应装配: %v", err)
 		}
 	})
+
+	t.Run("能力/技能 set 标记均为 true 但资源为空 → 空注册表（显式全不选）", func(t *testing.T) {
+		// 复现真实 bug：会话配置 enabled_capabilities_set/skills_set=true 但
+		// enabled_resources 为空/缺失（如旧快照或创建时默认未落库），模型实际
+		// 收不到任何工具（这正是"声称没有工具"的系统侧根因——注册表真为空）。
+		cfg := SessionConfig{EnabledCapabilitiesSet: true, EnabledSkillsSet: true}
+		out := svc.sessionToolRegistry(cfg)
+		if n := len(out.Schemas()); n != 0 {
+			t.Fatalf("空资源 + 双 set=true 应得到空注册表，实际 %d 个工具", n)
+		}
+	})
 }

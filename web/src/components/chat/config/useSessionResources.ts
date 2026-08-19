@@ -85,7 +85,8 @@ export function useSessionResources(agentId: string | undefined, sessionConfig?:
 
   /** 构建保存用的资源选择（含 set 标记）。
    *   - kind 侧以调用方最新选择为准；另一侧沿用当前会话配置（isEnabled 判定）；
-   *   - 全选 → resources=[] + set=false（跟随默认，避免白名单随资源集变动失准）；
+   *   - 全选 → resources=全部 id 列表 + set=false（显式白名单=全量；用完整列表而
+   *     非空数组，避免与"未传该字段"在后端合并时歧义，防止意外清空资源）；
    *   - 全不选 → resources=[] + set=true（显式清空，后端只保留基础对话）；
    *   - 部分选择 → resources=白名单 + set=false（历史语义不变）。
    */
@@ -94,7 +95,7 @@ export function useSessionResources(agentId: string | undefined, sessionConfig?:
     const otherSelected = otherIds.filter(isEnabled)
     const list = [...selected, ...otherSelected]
     if (allIds.length > 0 && allIds.every((id) => list.includes(id))) {
-      return { resources: [], set: false }
+      return { resources: [...allIds], set: false }
     }
     return { resources: list, set: list.length === 0 }
   }

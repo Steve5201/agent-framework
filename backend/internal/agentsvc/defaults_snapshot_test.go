@@ -234,6 +234,69 @@ func TestService_Defaults_InvalidSnapshotSkipped(t *testing.T) {
 	}
 }
 
+// TestService_UpdateSessionConfig_PreservesMissingResources 防御性合并：
+// 更新配置时若未提交资源类字段（enabled_resources 为 nil 且 set 未置位，
+// 模拟其它弹窗只改单一字段 / 历史 base 不完整），资源白名单应保留快照现值，
+// 不被意外清空——修复"配置保存可能清空 enabled_resources"的稳定性问题。
+func TestService_UpdateSessionConfig_PreservesMissingResources(t *testing.T) {
+	ctx := context.Background()
+	repo := newFakeRepo()
+	dv := &stubDomainViewer{defaults: map[string]AgentDefaults{
+		"agent-1": {
+			EnabledResources:       []string{"search", "file"},
+			EnabledResourcesSet:    true,
+			EnabledCapabilitiesSet: true,
+			EnabledSkillsSet:       true,
+		},
+	}}
+	svc, err := newTestServiceWithDomain(repo, &llm.MockProvider{}, dv)
+	if err != nil {
+		t.Fatalf("NewService: %v", err)
+	}
+	s, err := svc.CreateSession(ctx, 1, "agent-1", "合并保资源")
+	if err != nil {
+		t.Fatalf("CreateSession: %v", err)
+	}
+	if len(s.Config.EnabledResources) != 2 {
+		t.Fatalf("快照应含默认资源: %+v", s.Config)
+	}
+
+	// 只改 model，不提交资源字段 → 资源白名单应保留（不因全量替换清空）。
+	got, err := svc.UpdateSessionConfig(ctx, 1, s.ID, SessionConfig{Model: "m2"})
+	if err != nil {
+		t.Fatalf("UpdateSessionConfig: %v", err)
+	}
+	if len(got.Config.EnabledResources) != 2 {
+		t.Fatalf("未提交资源字段应保留快照白名单: %+v", got.Config)
+	}
+	if got.Config.Model != "m2" {
+		t.Fatalf("model 应生效: %+v", got.Config)
+	}
+
+	// 显式全不选（set=true + 空）→ 清空资源白名单（用户主动关闭，仍应生效）。
+	got2, err := svc.UpdateSessionConfig(ctx, 1, s.ID, SessionConfig{
+		EnabledResources:    []string{},
+		EnabledResourcesSet: true,
+	})
+	if err != nil {
+		t.Fatalf("UpdateSessionConfig 全不选: %v", err)
+	}
+	if len(got2.Config.EnabledResources) != 0 || !got2.Config.EnabledResourcesSet {
+		t.Fatalf("显式全不选应清空白名单: %+v", got2.Config)
+	}
+
+	// 显式全选（非空列表 + set false）→ 覆盖为全量白名单。
+	got3, err := svc.UpdateSessionConfig(ctx, 1, s.ID, SessionConfig{
+		EnabledResources: []string{"search", "file", "calculate"},
+	})
+	if err != nil {
+		t.Fatalf("UpdateSessionConfig 全选: %v", err)
+	}
+	if len(got3.Config.EnabledResources) != 3 {
+		t.Fatalf("全选非空列表应覆盖白名单: %+v", got3.Config)
+	}
+}
+
 // TestService_Defaults_MCPAllNone 快照 + MCP 全不选（set=true 空列表）：
 // 会话装配时 mcp_ 工具全部过滤（只保留非 MCP 工具）。
 func TestService_Defaults_MCPAllNone(t *testing.T) {

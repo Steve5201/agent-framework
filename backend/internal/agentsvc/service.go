@@ -997,9 +997,16 @@ func (s *Service) newAgentWithConfig(ctx context.Context, sessionID int64, histo
 	if mcfg.SystemPrompt != "" {
 		basePrompt = mcfg.SystemPrompt
 	}
+	// 当前会话实际可用的工具名（来自会话级注册表，随动态配置实时变化）：
+	// 写进系统提示词，让模型每一轮都能"看到"自己有哪些工具（配合 tools
+	// schema 双保险，缓解推理模型声称没工具/不主动调用工具的嘴硬）。
+	toolNames := make([]string, 0, len(reg.Schemas()))
+	for _, ts := range reg.Schemas() {
+		toolNames = append(toolNames, ts.Name)
+	}
 	cfg := schema.AgentConfig{
 		Model:             model,
-		SystemPrompt:      BuildSystemPromptWithMedia(basePrompt, s.filesBaseURL),
+		SystemPrompt:      BuildSystemPromptWithMedia(basePrompt, s.filesBaseURL, toolNames...),
 		MaxRounds:         s.effectiveRounds(mcfg.MaxRounds),
 		MaxThinkingRounds: mcfg.MaxThinkingRounds,
 		Memory:            schema.MemoryConfig{MaxMessages: s.effectiveMessages(mcfg.MaxMessages)},

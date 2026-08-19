@@ -7,7 +7,7 @@ import (
 
 func TestBuildSystemPrompt_IncludesRenderProtocol(t *testing.T) {
 	got := BuildSystemPrompt("你是助手。")
-	for _, kw := range []string{"echarts", "svg", ".mp4", "Markdown", "ECharts option", "KaTeX", "$x^2$"} {
+	for _, kw := range []string{"echarts", "svg", ".mp4", "Markdown", "ECharts option", "KaTeX", "$x^2$", "工具使用规范"} {
 		if !strings.Contains(got, kw) {
 			t.Errorf("BuildSystemPrompt 缺失协议关键词 %q", kw)
 		}
@@ -33,6 +33,28 @@ func TestBuildSystemPrompt_EmptyBase(t *testing.T) {
 	got := BuildSystemPrompt("")
 	if !strings.Contains(got, "内容渲染协议") {
 		t.Errorf("空基础提示词时也应包含渲染协议，实际：%q", got)
+	}
+	if !strings.Contains(got, "工具使用规范") {
+		t.Errorf("空基础提示词时也应包含工具使用规范，实际：%q", got)
+	}
+}
+
+func TestBuildSystemPromptWithMedia_ToolNames(t *testing.T) {
+	// 不传工具名：保留静态规范段，不出现"当前可用工具"。
+	plain := BuildSystemPrompt("你是助手。")
+	if strings.Contains(plain, "当前可用工具") {
+		t.Errorf("未传工具名时不应注入工具名列表，实际：%q", plain)
+	}
+	// 传入工具名：静态规范 + 动态列表同时出现，且按传入顺序拼接。
+	got := BuildSystemPromptWithMedia("你是助手。", "", "web_search", "file_ops", "calculator")
+	if !strings.Contains(got, "工具使用规范") || !strings.Contains(got, "当前可用工具") {
+		t.Errorf("应同时包含静态规范段与动态工具名列表，实际：%q", got)
+	}
+	if !strings.Contains(got, "web_search、file_ops、calculator") {
+		t.Errorf("动态工具名应按顺序以顿号拼接，实际：%q", got)
+	}
+	if !strings.HasPrefix(got, "你是助手。") {
+		t.Errorf("基础提示词应保留在最前，实际以 %q 开头", got[:min(12, len(got))])
 	}
 }
 

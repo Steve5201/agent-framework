@@ -62,19 +62,40 @@ const protectedDirConvention = `
 4. 用户直接要求保存的内容优先级最高：用户说"把这个保存/记住"时，直接写入 protected/，不必再确认。
 5. 用户的个人画像等系统持久数据由系统存入数据库管理，不要写入 protected/。`
 
+// toolUsagePrompt 工具使用规范（静态，恒追加）：告诉模型它拥有工具能力、
+// 遇到对应任务必须主动调用、不得声称没有工具或用文字编造结果。
+//
+// 工具名不在此硬编码（注册表是动态装配的，能力/技能/MCP 随配置变化）——
+// 具体可用工具名由 BuildSystemPromptWithMedia 的 toolNames 动态注入，
+// 二者配合避免"提示词里的工具清单过期失配"。
+const toolUsagePrompt = `
+## 工具使用规范（重要）
+
+你拥有多种工具能力（信息检索、文件读写、代码执行、计算、时间、识图、文档解析、
+文档生成、本地执行、技能等），以你实际收到的工具列表为准。当任务需要实时信息、
+精确计算、读写文件、运行代码、解析上传内容、生成文档时，必须主动调用对应工具完成，
+严禁声称"我没有工具"，也不要用文字凭空编造结果。不确定用哪个工具时，
+根据工具描述选择最合适的一个；调用结果不符预期时更换工具重试。`
+
 // BuildSystemPrompt 把内容渲染协议拼到基础系统提示词之后。
 // 协议恒存在，确保模型始终知道前端能渲染什么、该输出什么格式。
 func BuildSystemPrompt(base string) string {
 	return BuildSystemPromptWithMedia(base, "")
 }
 
-// BuildSystemPromptWithMedia 同 BuildSystemPrompt，额外注入本地媒体基址。
+// BuildSystemPromptWithMedia 同 BuildSystemPrompt，额外注入本地媒体基址，
+// 并可注入当前实际可用的工具名列表。
 //
 // filesBaseURL 非空（如 http://localhost:8182）时追加第 7 条协议：
 // 模型输出"工作目录内的本地媒体"时，用 <base>/files/<相对路径> 生成 URL，
 // 前端即可直接渲染（与 file_ops 工具、agent /files 静态服务共享同一目录边界）。
 // 未配置基址时不注入，模型不会尝试输出本地文件 URL。
-func BuildSystemPromptWithMedia(base string, filesBaseURL string) string {
+//
+// toolNames 为会话当前实际启用的工具名（来自会话级注册表，动态、随配置变化）。
+// 非空时把工具名列表写进"工具使用规范"，让模型每一轮都确切知道它有哪些工具
+// 可用（配合 tools schema 双保险，缓解推理模型"声称没有工具/不主动调用"的嘴硬）。
+// 空则不注入工具名（仅保留静态规范段，调用方不关心具体工具时用默认两参）。
+func BuildSystemPromptWithMedia(base string, filesBaseURL string, toolNames ...string) string {
 	protocol := strings.TrimSpace(renderProtocolPrompt)
 	if filesBaseURL != "" {
 		protocol += "\n\n8. 本地媒体：服务端工作目录（file_ops 工具根目录，即服务器进程 os.Getwd() 目录）内的文件，可用 `" +
@@ -85,8 +106,13 @@ func BuildSystemPromptWithMedia(base string, filesBaseURL string) string {
 			"   - 公共知识库媒体（rag 检索给出的 `rag-media/<docID>/…` 路径）不带 users 前缀，直接拼 " +
 			filesBaseURL + "/files/rag-media/<docID>/图片.png。"
 	}
-	if base == "" {
-		return protocol + "\n\n" + strings.TrimSpace(protectedDirConvention)
+	toolUsage := strings.TrimSpace(toolUsagePrompt)
+	if len(toolNames) > 0 {
+		toolUsage += "\n\n当前可用工具：" + strings.Join(toolNames, "、") +
+			"。请据此判断该调用哪个工具完成任务。"
 	}
-	return base + "\n\n" + protocol + "\n\n" + strings.TrimSpace(protectedDirConvention)
+	if base == "" {
+		return protocol + "\n\n" + toolUsage + "\n\n" + strings.TrimSpace(protectedDirConvention)
+	}
+	return base + "\n\n" + protocol + "\n\n" + toolUsage + "\n\n" + strings.TrimSpace(protectedDirConvention)
 }

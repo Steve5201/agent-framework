@@ -150,6 +150,8 @@ export interface AdminModule {
 /** 技能（管理端视图，Anthropic Agent Skills：目录 + SKILL.md） */
 export interface Skill {
   name: string
+  /** 展示名（frontmatter display_name，可选；UI 优先用它，空则回退 name） */
+  display_name?: string
   description: string
   license?: string
   /** frontmatter 语义版本号（metadata.version/version，可选） */

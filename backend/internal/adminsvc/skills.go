@@ -64,6 +64,7 @@ func (s *SkillStore) For(agentID string) *SkillStore {
 // Skill 技能对外视图（管理端 JSON 契约）。
 type Skill struct {
 	Name        string         `json:"name"`
+	DisplayName string         `json:"display_name,omitempty"` // 展示名（frontmatter display_name，可选；UI 优先用它）
 	Description string         `json:"description"`
 	License     string         `json:"license,omitempty"`
 	SemVer      string         `json:"semver,omitempty"` // frontmatter 语义版本号（metadata.version/version，可选）
@@ -291,6 +292,7 @@ func (s *SkillStore) readDir(name string) (Skill, error) {
 		return sk, nil
 	}
 	sk.Description = meta.Description
+	sk.DisplayName = meta.DisplayName
 	sk.License = meta.License
 	sk.SemVer = meta.Version
 	sk.ToolName = "skill_" + skill.SanitizeName(meta.Name)

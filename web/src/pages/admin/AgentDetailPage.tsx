@@ -1188,7 +1188,7 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
               <hr className="border-border" />
 
               {/* 管理员级运行限制：随快照固化到新会话，普通用户配置区不可见/不可改。
-                  0 = 不设置该项默认，装配时回退服务实例默认（工具轮次 8 / 记忆窗口 20）。 */}
+                  0 = 不设置该项默认，装配时回退服务实例默认（工具轮次 8 / 记忆窗口 2000）。 */}
               <div className="space-y-3">
                 <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">运行限制（管理员级）</h3>
                 <div className="space-y-3 rounded-md border bg-muted/20 p-3">
@@ -1217,7 +1217,7 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
                         min={0}
                         step={1}
                         value={adminMessages}
-                        placeholder="0 = 实例默认 20"
+                        placeholder="0 = 实例默认 2000"
                         onChange={(e) => { setAdminMessages(e.target.value); markDefaultsDirty() }}
                       />
                       <p className="text-[11px] leading-relaxed text-muted-foreground">

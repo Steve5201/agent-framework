@@ -157,7 +157,7 @@ func NewSession(cfg schema.AgentConfig, provider llm.Provider, reg *tool.Registr
 	// 注入 WithMemoryCondenser 后超限旧消息会被压成摘要而非直接丢弃。
 	maxMsg := cfg.Memory.MaxMessages
 	if maxMsg <= 0 {
-		maxMsg = 20
+		maxMsg = 2000
 	}
 	mem, err := memory.NewCondensingMemory(maxMsg, 1, nil)
 	if err != nil {

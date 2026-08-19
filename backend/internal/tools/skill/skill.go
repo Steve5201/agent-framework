@@ -120,10 +120,16 @@ func (t *skillTool) Schema() schema.ToolSchema {
 	if rel, err := filepath.Rel(t.root, t.dir); err == nil {
 		path = filepath.ToSlash(rel)
 	}
+	// 展示名：display_name 优先（前端 UI 用），空则回退 name。工具名始终基于
+	// name 生成（稳定），展示名独立不影响引用。
+	display := t.meta.Name
+	if t.meta.DisplayName != "" {
+		display = t.meta.DisplayName
+	}
 	return schema.ToolSchema{
 		Name: "skill_" + SanitizeName(t.meta.Name),
 		Description: fmt.Sprintf("技能【%s】：%s。调用后返回该技能的使用指引（SKILL.md）与目录文件清单（@skills/%s/… 虚拟路径，每项附文件大小）。按指引用 file_ops 读取 @skills/<技能名>/ 下的文档/脚本（read 操作），需要执行脚本时用 file_ops 读取脚本内容后用 code_executor 执行其代码完成任务。注意：清单中标明的大小决定文件能否整读——超过 50KB 的（如大型 scripts/*.py 源码）整读会注入海量 token 撑爆上下文，只按 SKILL.md 指引使用、不要 read 全文；小文件可直接 read。",
-			t.meta.Name, t.meta.Description, path),
+			display, t.meta.Description, path),
 		Parameters: json.RawMessage(`{
 			"type":"object",
 			"properties":{

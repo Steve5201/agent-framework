@@ -167,7 +167,7 @@ func NewService(cfg Config) (*Service, error) {
 		cfg.MaxRounds = 8
 	}
 	if cfg.MaxMessages <= 0 {
-		cfg.MaxMessages = 20
+		cfg.MaxMessages = 2000
 	}
 	// 聊天上传限制缺省回退（P4-L）：未配置时沿用内置默认，保证单测/未接线场景
 	// 行为与旧硬编码一致。

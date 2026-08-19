@@ -48,6 +48,8 @@ docs/CAREER-PLAN.md
 docs/PROJECT-GUIDE.md
 
 # ===== 第三方 / 本地资源（P6-F：不入公开仓库）=====
+# 默认技能源目录（含第三方开源技能，本地管理不入库）
+skills/
 skills-main/
 slides_maker-main/
 _slide-maker-lite/

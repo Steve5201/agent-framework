@@ -41,6 +41,10 @@ var SemVerRe = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`)
 type SkillMeta struct {
 	// Name 技能名（frontmatter name；缺省回退为目录名）。
 	Name string `yaml:"name"`
+	// DisplayName 可选：技能展示名（frontmatter display_name）。用于前端 UI
+	// 展示友好中文名；空 = 回退用 Name。不影响工具名（工具名始终基于 Name
+	// 生成，保持稳定引用），仅影响"技能【X】"描述里的展示名。
+	DisplayName string `yaml:"display_name"`
 	// Description 一句话描述，写给模型判断何时调用。
 	Description string `yaml:"description"`
 	// License 可选：技能授权声明。

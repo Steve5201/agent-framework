@@ -390,7 +390,7 @@ func LoadWith(serviceName string, defaultPort int, requireDB bool) (*Config, err
 	v.SetDefault("agent_model", "deepseek-v4-flash")
 	v.SetDefault("agent_system_prompt", "你是智能助手，请用中文简洁、准确地回答问题。你拥有多种工具能力，需要实时信息、精确计算、读写文件、运行代码、解析或生成文档等任务时，应主动调用对应工具完成，不要声称没有工具或凭空编造结果。")
 	v.SetDefault("agent_max_rounds", 12)                           // 单次对话最多 12 轮工具推理（工具多轮往返场景宽松化，P4-L 调优）
-	v.SetDefault("agent_max_messages", 20)                         // 短期记忆窗口 20 条
+	v.SetDefault("agent_max_messages", 2000)                       // 短期记忆窗口 2000 条（适配 100k 上下文窗口的模型）
 	v.SetDefault("agent_llm_base_url", "http://localhost:8083/v1") // 上游 llm-gateway（带 /v1：framework 拼 baseURL+/chat/completions）
 	// 占位密钥：llm-gateway 的 /v1/chat/completions 不校验 Authorization
 	// （user_id 走 X-User-Id），仅为满足 framework 客户端"APIKey 非空"校验。

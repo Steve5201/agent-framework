@@ -512,10 +512,10 @@ export default function SkillsPage({ fixedAgentId }: { fixedAgentId?: string } =
                           avatarColor(sk.name),
                         )}
                       >
-                        {sk.name.slice(0, 1)}
+                        {(sk.display_name || sk.name).slice(0, 1)}
                       </span>
                       <div className="min-w-0">
-                        <div className="truncate font-medium">{sk.name}</div>
+                        <div className="truncate font-medium">{sk.display_name || sk.name}</div>
                         <div className="truncate font-mono text-[11px] text-muted-foreground" title={sk.tool_name}>
                           {sk.tool_name}
                         </div>

@@ -238,15 +238,20 @@ func TestRequireAuth_Guest(t *testing.T) {
 
 // TestSessionConfigBody 回归：会话配置序列化必须回传全部分段
 // （enabled_resources/kb_ids/mcp_servers 曾漏字段，导致前端重开配置弹窗
-// 勾选状态丢失——P2-AH 修复）。
+// 勾选状态丢失——P2-AH 修复；sandbox_* 同理——P7 UI 同步修复）。
 func TestSessionConfigBody(t *testing.T) {
 	t.Run("全字段回传", func(t *testing.T) {
 		body := sessionConfigBody(&agentv1.SessionConfig{
-			EnabledResources: []string{"search", "skill_x"},
-			EnabledTools:     []string{"web_search"},
-			Thinking:         &agentv1.ThinkingConfig{Enabled: true, ReasoningEffort: "high"},
-			KbIds:            []string{"kb_1"},
-			McpServers:       []string{"fs", "github"},
+			EnabledResources:   []string{"search", "skill_x"},
+			EnabledTools:       []string{"web_search"},
+			Thinking:           &agentv1.ThinkingConfig{Enabled: true, ReasoningEffort: "high"},
+			KbIds:              []string{"kb_1"},
+			McpServers:         []string{"fs", "github"},
+			SandboxNetworkEnabled: true,
+			SandboxMemoryMb:        1024,
+			SandboxCpuSeconds:      30,
+			SandboxNofileLimit:     128,
+			SandboxMaxTimeout:      60,
 		})
 		if !reflect.DeepEqual(body["enabled_resources"], []string{"search", "skill_x"}) {
 			t.Fatalf("enabled_resources = %v", body["enabled_resources"])
@@ -264,14 +269,34 @@ func TestSessionConfigBody(t *testing.T) {
 		if !ok || th["enabled"] != true || th["reasoning_effort"] != "high" {
 			t.Fatalf("thinking = %v", body["thinking"])
 		}
+		// 沙盒字段（P7）：联网开关 bool 必须回传（含 false，前端据此区分
+		// "显式禁网"与"未配置"——都显示禁网）；资源限制 0 = 缺省不输出。
+		if body["sandbox_network_enabled"] != true {
+			t.Fatalf("sandbox_network_enabled = %v", body["sandbox_network_enabled"])
+		}
+		if body["sandbox_memory_mb"] != int32(1024) {
+			t.Fatalf("sandbox_memory_mb = %v", body["sandbox_memory_mb"])
+		}
+		if body["sandbox_cpu_seconds"] != int32(30) {
+			t.Fatalf("sandbox_cpu_seconds = %v", body["sandbox_cpu_seconds"])
+		}
+		if body["sandbox_nofile_limit"] != int32(128) {
+			t.Fatalf("sandbox_nofile_limit = %v", body["sandbox_nofile_limit"])
+		}
+		if body["sandbox_max_timeout"] != int32(60) {
+			t.Fatalf("sandbox_max_timeout = %v", body["sandbox_max_timeout"])
+		}
 	})
 
 	t.Run("nil 与空配置返回空对象", func(t *testing.T) {
 		if len(sessionConfigBody(nil)) != 0 {
 			t.Fatalf("nil 应返回空, got %v", sessionConfigBody(nil))
 		}
-		if len(sessionConfigBody(&agentv1.SessionConfig{})) != 0 {
-			t.Fatalf("空配置应返回空, got %v", sessionConfigBody(&agentv1.SessionConfig{}))
+		// 空配置：联网开关默认 false 恒回传（前端据此稳定渲染禁网态），
+		// 其余字段 0 = 缺省不输出。
+		body := sessionConfigBody(&agentv1.SessionConfig{})
+		if body["sandbox_network_enabled"] != false {
+			t.Fatalf("空配置 sandbox_network_enabled = %v", body["sandbox_network_enabled"])
 		}
 	})
 

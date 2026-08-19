@@ -1077,5 +1077,21 @@ func sessionConfigBody(c *agentv1.SessionConfig) map[string]any {
 	if c.OrchestratePlan != "" {
 		out["orchestrate_plan"] = c.OrchestratePlan
 	}
+	// 沙盒配置（管理员级会话配置）：透传给前端配置区回显。
+	// 注意：联网开关是 bool，即使 false（默认禁网）也要回传，否则前端无法
+	// 区分"未配置"与"显式禁网"，UI 同步会丢失用户改动。
+	out["sandbox_network_enabled"] = c.SandboxNetworkEnabled
+	if c.SandboxMemoryMb > 0 {
+		out["sandbox_memory_mb"] = c.SandboxMemoryMb
+	}
+	if c.SandboxCpuSeconds > 0 {
+		out["sandbox_cpu_seconds"] = c.SandboxCpuSeconds
+	}
+	if c.SandboxNofileLimit > 0 {
+		out["sandbox_nofile_limit"] = c.SandboxNofileLimit
+	}
+	if c.SandboxMaxTimeout > 0 {
+		out["sandbox_max_timeout"] = c.SandboxMaxTimeout
+	}
 	return out
 }

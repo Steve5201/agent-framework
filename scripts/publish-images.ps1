@@ -9,6 +9,8 @@
 #   .\scripts\publish-images.ps1                      # 全流程：build + save + gzip + scp + load
 #   .\scripts\publish-images.ps1 -SkipBuild           # 跳过 build，用本地现有镜像打包
 #   .\scripts\publish-images.ps1 -SkipLoad            # 只打包 + scp，不在服务器 load
+#   .\scripts\publish-images.ps1 -IncludeWeb          # 顺带发布 web 前端（后端镜像 + 前端一起同步）
+#   .\scripts\publish-images.ps1 -IncludeWeb -SkipWebBuild  # 发布 web 但跳过本地构建（用现有 web\dist）
 #   .\scripts\publish-images.ps1 -RemoteHost root@IP  # 指定服务器
 #
 # 前置条件：
@@ -36,7 +38,11 @@ param(
     # 跳过服务器 docker load 与基础镜像拉取（只完成打包 + 上传）。
     [switch]$SkipLoad,
     # 服务器上顺带拉取基础镜像（pgvector/pg16；不拉 ollama，生产不部署）。
-    [switch]$PullBase
+    [switch]$PullBase,
+    # 顺带发布 web 前端静态资源（nginx 托管 /opt/agent-stack/web，见 -IncludeWeb）。
+    [switch]$IncludeWeb,
+    # 发布 web 时跳过本地构建（直接用现有 web\dist，需已包含目标服务器 API 地址）。
+    [switch]$SkipWebBuild
 )
 
 $ErrorActionPreference = 'Stop'
@@ -48,6 +54,9 @@ $appServices = @('auth', 'llm-gateway', 'sandbox', 'agent', 'rag', 'gateway')
 $tarFile   = Join-Path $outDir 'agent-stack-images.tar'
 $gzFile    = Join-Path $outDir 'agent-stack-images.tar.gz'
 $tag = if ($ImageVersion) { $ImageVersion } else { 'latest' }
+$webDir   = Join-Path $repoRoot 'web\dist'
+$webTar   = Join-Path $outDir 'web-dist.tar'
+$webGz    = Join-Path $outDir 'web-dist.tar.gz'
 
 # 应用镜像默认命名（compose 项目 agent-stack + 服务名）。
 function Image-Ref([string]$svc, [string]$versionTag) { "agent-stack-$svc`:$versionTag" }
@@ -60,6 +69,7 @@ Write-Host "  目标服务器 : $RemoteHost"
 Write-Host "  镜像版本   : $tag  ($($appServices.Count) 个应用镜像)"
 if ($SkipBuild) { Write-Host "  跳过 build : 是（用本地现有镜像）" }
 if ($SkipLoad)  { Write-Host "  跳过 load  : 是（只打包上传）" }
+if ($IncludeWeb) { Write-Host "  发布 web   : 是（nginx 托管前端）" }
 
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
@@ -142,6 +152,49 @@ if (-not $SkipLoad) {
 }
 else {
     Step "5/5 已跳过 load（部署时执行：ssh root@IP docker load -i /opt/agent-stack/images/agent-stack-images.tar.gz）"
+}
+
+# ---- 6. web 前端静态资源（可选，nginx 托管 /opt/agent-stack/web）----
+if ($IncludeWeb) {
+    Step "6/6 发布 web 前端（nginx root=/opt/agent-stack/web）"
+    if (-not $SkipWebBuild) {
+        Write-Host "  本地构建 web（npm run build -> web\dist，含 web\.env 的 API 地址）"
+        & npm run build --prefix (Join-Path $repoRoot 'web')
+        if ($LASTEXITCODE -ne 0) { throw 'web 构建失败' }
+    }
+    else {
+        Write-Host "  跳过 web 构建，使用现有 web\dist"
+    }
+    if (-not (Test-Path -LiteralPath $webDir)) { throw "未找到 web 构建产物: $webDir" }
+
+    # tar + gzip（复用之前的流式 gzip 逻辑）
+    & tar -cf $webTar -C $webDir .
+    if ($LASTEXITCODE -ne 0) { throw 'web tar 失败' }
+    $py = @'
+import gzip, sys
+fin = open(sys.argv[1], 'rb')
+fout = gzip.open(sys.argv[2], 'wb')
+while True:
+    chunk = fin.read(1 << 20)
+    if not chunk:
+        break
+    fout.write(chunk)
+fout.close(); fin.close()
+'@
+    $pyWebFile = Join-Path $outDir '_gz_web_tmp.py'
+    [System.IO.File]::WriteAllText($pyWebFile, $py, (New-Object System.Text.UTF8Encoding($false)))
+    & python $pyWebFile $webTar $webGz
+    if ($LASTEXITCODE -ne 0) { throw 'web gzip 失败' }
+    Remove-Item -LiteralPath $pyWebFile -Force
+    Remove-Item -LiteralPath $webTar -Force
+
+    # 服务器：备份旧 web -> 解压替换（nginx 静态文件即时生效，无需 reload）
+    $webStmp = Get-Date -Format 'yyyyMMdd-HHmmss'
+    & scp $webGz "${RemoteHost}:/opt/agent-stack/web-$webStmp.tar.gz"
+    if ($LASTEXITCODE -ne 0) { throw 'web scp 上传失败' }
+    & ssh $RemoteHost "cd /opt/agent-stack && cp -r web web.prev && rm -rf web.new && mkdir web.new && tar -xzf web-$webStmp.tar.gz -C web.new && rm -rf web && mv web.new web && rm -f web-$webStmp.tar.gz"
+    if ($LASTEXITCODE -ne 0) { throw 'web 服务器替换失败' }
+    Write-Host "  已发布 web：本地 web\dist -> /opt/agent-stack/web（旧版备份于 web.prev）" -ForegroundColor Green
 }
 
 Write-Host ""

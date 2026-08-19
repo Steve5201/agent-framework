@@ -549,6 +549,7 @@ gateway 会把该 ID 贯穿到内部 gRPC 调用与日志。不带时 gateway �
 - `config.thinking.enabled=false`：关闭思考模式（模型直接回答，不产生思考过程，省 token）。
 - `config.thinking.reasoning_effort` ∈ `low | high | max`（deepseek-v4-pro 支持 high/max；flash 支持 low/high/max；缺省 = 厂商默认 high）。
 - `config.kb_ids`（P3-A6 新增）：会话限定的知识库 ID 列表（用 `GET /v1/agent/kbs` 拉取当前域清单）；空/缺省 = 检索当前智能体域全部知识库。`kb_search` 按此限定默认检索范围（模型显式传 `kb_ids` 时优先）；rag 侧强制校验 kb 归属。
+- **沙盒配置（管理员级）**：`config.sandbox_network_enabled`（bool，会话内沙盒是否联网，默认禁网）；`config.sandbox_memory_mb` / `sandbox_cpu_seconds` / `sandbox_nofile_limit` / `sandbox_max_timeout`（资源限制覆盖，`0` = 跟随实例默认）。**仅管理员（`agent_admin` / `super_admin` / `admin`）可改**：普通用户提交这些字段会被服务端强制覆盖回快照原值（服务端双保险）。普通用户配置区也不渲染该弹窗。
 
 **成功响应**（`200 OK`）：返回更新后的会话对象：
 
@@ -578,6 +579,7 @@ gateway 会把该 ID 贯穿到内部 gRPC 调用与日志。不带时 gateway �
     { "name": "calculator", "description": "...", "external": false },
     { "name": "get_current_time", "description": "...", "external": false },
     { "name": "kb_search", "description": "检索知识库，带来源引用返回相关片段（装配 rag 时出现，L1 只读）", "external": false },
+    { "name": "fetch_url_render", "description": "渲染 JS 动态页并提取正文（需会话沙盒联网，L1 只读）", "external": false },
     { "name": "local_shell", "description": "...", "external": true }
   ]
 }

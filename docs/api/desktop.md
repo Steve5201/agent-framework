@@ -140,12 +140,13 @@ const { invoke } = await import('@tauri-apps/api/core')
 await invoke('app_exit')
 ```
 
-### 5.3 `local_shell_execute(command, cwd?): Promise<LocalExecResult>`（阶段3·本地工具代理）
+### 5.3 `local_shell_execute(command, cwd?, timeoutSecs?): Promise<LocalExecResult>`（阶段3·本地工具代理）
 
 - **作用**：在本机执行 shell 命令并返回输出。配合后端"外部工具异步执行"机制：前端收到 SSE 的 `tool_call` 事件（`external=true` 的本地工具，如 `local_shell`）→ 弹确认弹窗 → 用户允许后调用本命令 → 把结果经 `POST /v1/agent/sessions/{id}/tool-results` 回填给 agent-service 唤醒挂起会话。
 - **参数**：
   - `command: string`：完整命令文本（Windows 走 `cmd /C`，Linux/macOS 走 `sh -c`）；
-  - `cwd?: string`：可选工作目录（空字符串 = 不设置，使用默认）。
+  - `cwd?: string`：可选工作目录（空字符串 = 不设置，使用默认）；
+  - `timeoutSecs?: number`：超时控制（缺省 = 0）。`>0` 强制该秒数超时；`0` = 采用默认超时（30s，可被 `LOCAL_EXEC_TIMEOUT_SECS` 覆盖）；`-1` = 不限超时（自由模式专用，命令可持续运行直至完成）。
 - **返回**：
 
 ```json
@@ -159,13 +160,14 @@ await invoke('app_exit')
 
 - **安全与超时**：
   - **命令全文在确认弹窗中展示**，用户点"允许"后才执行（拒绝 = 前端回填 `is_error: true` 的失败结果）；
+  - **自由模式**（`web` 端本地个人化开关 `agent.free_mode`，仅桌面端显示）：开启后本地 shell 不再逐条弹确认（前端 `handleLocalToolCall` 直接执行）且不限超时（传 `timeoutSecs=-1`）；这是纯本地偏好，与服务器/角色无关，每次开启都弹风险警告确认。关闭自由模式时恢复"弹确认 + 30s 默认超时"；
   - 默认 **30s 超时**，超时 `try_wait` 轮询 + `kill` 终止子进程；可用环境变量 `LOCAL_EXEC_TIMEOUT_SECS` 覆盖（供单测）；
   - 执行在 `spawn_blocking` 线程中运行，不阻塞 Tauri 异步运行时/主线程；双管道读取线程避免子进程输出过多导致管道阻塞。
 - **前端调用**（`web/src/lib/localTools.ts`）：
 
 ```ts
 const { invoke } = await import('@tauri-apps/api/core')
-const res: LocalExecResult = await invoke('local_shell_execute', { command, cwd })
+const res: LocalExecResult = await invoke('local_shell_execute', { command, cwd, timeoutSecs })
 ```
 
 - **注意**：浏览器环境无此命令（`'__TAURI_INTERNALS__' in window` 为 false）→ 前端对本地工具直接回填失败"请使用桌面客户端"，不会等待 120s 超时。

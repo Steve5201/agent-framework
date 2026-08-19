@@ -1,4 +1,4 @@
-import { Bot, Cpu, Database, Network, Settings2, Sparkles, Wand2, Workflow } from 'lucide-react'
+import { Bot, Cpu, Database, Network, Settings2, Shield, Sparkles, Wand2, Workflow } from 'lucide-react'
 import type { ConfigItem } from './types'
 import CapabilitiesDialog from './CapabilitiesDialog'
 import ThinkingDialog from './ThinkingDialog'
@@ -7,8 +7,9 @@ import KBDialog from './KBDialog'
 import MCPDialog from './MCPDialog'
 import LLMDialog from './LLMDialog'
 import ModeDialog from './ModeDialog'
+import SandboxDialog from './SandboxDialog'
 import AgentSwitcherDialog from '../AgentSwitcher'
-import { getUserAgentId, isAllAgentScope } from '@/lib/roles'
+import { getUserAgentId, isAllAgentScope, isAdminRole } from '@/lib/roles'
 
 /**
  * 配置项注册表：输入区配置按钮的单一事实来源。
@@ -97,6 +98,18 @@ export const configRegistry: ConfigItem[] = [
     requiresSession: true,
     renderDialog: ({ activeSession }, onClose) => (
       <LLMDialog sessionConfig={activeSession?.config} agentId={activeSession?.agent_id} onClose={onClose} />
+    ),
+  },
+  // ---- 沙盒配置：仅管理员（agent_admin/super_admin/admin）可见可改。
+  // 普通用户配置区不展示该按钮；后端对非管理员角色强制覆盖回快照原值（双保险）。
+  {
+    key: 'sandbox',
+    label: '沙盒配置',
+    icon: <Shield className="h-4 w-4" />,
+    visible: ({ user }) => isAdminRole(user?.role),
+    requiresSession: true,
+    renderDialog: ({ activeSession, user }, onClose) => (
+      <SandboxDialog sessionConfig={activeSession?.config} role={user?.role} onClose={onClose} />
     ),
   },
   {

@@ -1783,8 +1783,15 @@ type SessionConfig struct {
 	// 编排方案（仅 mode=orchestrate 生效）：
 	// fixed = 固定教研模板（默认，空/缺省）；dynamic = LLM 动态分解子任务 DAG。
 	OrchestratePlan string `protobuf:"bytes,16,opt,name=orchestrate_plan,json=orchestratePlan,proto3" json:"orchestrate_plan,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// 沙盒配置（管理员级，仅 agent_admin/super_admin 可改；proto 层面仅透传，
+	// 普通用户提交由服务端覆盖回快照原值）。
+	SandboxNetworkEnabled bool  `protobuf:"varint,17,opt,name=sandbox_network_enabled,json=sandboxNetworkEnabled,proto3" json:"sandbox_network_enabled,omitempty"` // 沙盒执行是否允许联网（false = 禁网默认）
+	SandboxMemoryMb       int32 `protobuf:"varint,18,opt,name=sandbox_memory_mb,json=sandboxMemoryMb,proto3" json:"sandbox_memory_mb,omitempty"`                   // 沙盒虚拟内存上限（MB，0 = 回退实例默认）
+	SandboxCpuSeconds     int32 `protobuf:"varint,19,opt,name=sandbox_cpu_seconds,json=sandboxCpuSeconds,proto3" json:"sandbox_cpu_seconds,omitempty"`             // 沙盒 CPU 时间上限（秒，0 = 回退实例默认）
+	SandboxNofileLimit    int32 `protobuf:"varint,20,opt,name=sandbox_nofile_limit,json=sandboxNofileLimit,proto3" json:"sandbox_nofile_limit,omitempty"`          // 沙盒最大打开文件数（0 = 回退实例默认）
+	SandboxMaxTimeout     int32 `protobuf:"varint,21,opt,name=sandbox_max_timeout,json=sandboxMaxTimeout,proto3" json:"sandbox_max_timeout,omitempty"`             // 沙盒单次执行最大超时（秒，0 = 回退实例默认）
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *SessionConfig) Reset() {
@@ -1927,6 +1934,41 @@ func (x *SessionConfig) GetOrchestratePlan() string {
 		return x.OrchestratePlan
 	}
 	return ""
+}
+
+func (x *SessionConfig) GetSandboxNetworkEnabled() bool {
+	if x != nil {
+		return x.SandboxNetworkEnabled
+	}
+	return false
+}
+
+func (x *SessionConfig) GetSandboxMemoryMb() int32 {
+	if x != nil {
+		return x.SandboxMemoryMb
+	}
+	return 0
+}
+
+func (x *SessionConfig) GetSandboxCpuSeconds() int32 {
+	if x != nil {
+		return x.SandboxCpuSeconds
+	}
+	return 0
+}
+
+func (x *SessionConfig) GetSandboxNofileLimit() int32 {
+	if x != nil {
+		return x.SandboxNofileLimit
+	}
+	return 0
+}
+
+func (x *SessionConfig) GetSandboxMaxTimeout() int32 {
+	if x != nil {
+		return x.SandboxMaxTimeout
+	}
+	return 0
 }
 
 // ThinkingConfig 思考模式配置（DeepSeek V4）。
@@ -3241,7 +3283,7 @@ const file_agent_v1_agent_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12/\n" +
 	"\x06config\x18\x06 \x01(\v2\x17.agent.v1.SessionConfigR\x06config\x12\x19\n" +
-	"\bagent_id\x18\a \x01(\tR\aagentId\"\xf8\x04\n" +
+	"\bagent_id\x18\a \x01(\tR\aagentId\"\xee\x06\n" +
 	"\rSessionConfig\x12#\n" +
 	"\renabled_tools\x18\x01 \x03(\tR\fenabledTools\x124\n" +
 	"\bthinking\x18\x02 \x01(\v2\x18.agent.v1.ThinkingConfigR\bthinking\x12+\n" +
@@ -3262,7 +3304,12 @@ const file_agent_v1_agent_proto_rawDesc = "" +
 	"\x18enabled_capabilities_set\x18\r \x01(\bR\x16enabledCapabilitiesSet\x12,\n" +
 	"\x12enabled_skills_set\x18\x0e \x01(\bR\x10enabledSkillsSet\x12\x12\n" +
 	"\x04mode\x18\x0f \x01(\tR\x04mode\x12)\n" +
-	"\x10orchestrate_plan\x18\x10 \x01(\tR\x0forchestratePlan\"U\n" +
+	"\x10orchestrate_plan\x18\x10 \x01(\tR\x0forchestratePlan\x126\n" +
+	"\x17sandbox_network_enabled\x18\x11 \x01(\bR\x15sandboxNetworkEnabled\x12*\n" +
+	"\x11sandbox_memory_mb\x18\x12 \x01(\x05R\x0fsandboxMemoryMb\x12.\n" +
+	"\x13sandbox_cpu_seconds\x18\x13 \x01(\x05R\x11sandboxCpuSeconds\x120\n" +
+	"\x14sandbox_nofile_limit\x18\x14 \x01(\x05R\x12sandboxNofileLimit\x12.\n" +
+	"\x13sandbox_max_timeout\x18\x15 \x01(\x05R\x11sandboxMaxTimeout\"U\n" +
 	"\x0eThinkingConfig\x12\x18\n" +
 	"\aenabled\x18\x01 \x01(\bR\aenabled\x12)\n" +
 	"\x10reasoning_effort\x18\x02 \x01(\tR\x0freasoningEffort\"F\n" +

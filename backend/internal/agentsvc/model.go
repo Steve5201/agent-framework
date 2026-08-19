@@ -135,6 +135,17 @@ type SessionConfig struct {
 	//   dynamic = LLM 动态分解：按用户目标实时拆解子任务 DAG（更灵活、多一次 LLM 调用）。
 	// 空/缺省按 fixed 处理，向后兼容（旧配置 / 未设置即固定教研流水线）。
 	OrchestratePlan string `json:"orchestrate_plan,omitempty"`
+
+	// 沙盒配置（管理员级，仅 agent_admin/super_admin 可改；未设置 = 回退服务实例默认）。
+	// SandboxNetworkEnabled 沙盒执行是否允许联网（false/未设置 = 禁网）。
+	// 默认沙盒禁网（unshare -n），仅管理员显式开启后沙盒内工具（如 fetch_url_render
+	// 用 chromium 渲染动态页）可访问外网。普通用户提交该字段服务端覆盖回快照原值。
+	SandboxNetworkEnabled bool `json:"sandbox_network_enabled,omitempty"`
+	// 沙盒资源限制覆盖（0 = 回退服务实例默认）。
+	SandboxMemoryMB    int `json:"sandbox_memory_mb,omitempty"`
+	SandboxCPUSeconds  int `json:"sandbox_cpu_seconds,omitempty"`
+	SandboxNofileLimit int `json:"sandbox_nofile_limit,omitempty"`
+	SandboxMaxTimeout  int `json:"sandbox_max_timeout,omitempty"`
 }
 
 // ThinkingConfig 思考模式配置（DeepSeek V4）。
@@ -182,6 +193,14 @@ type AgentDefaults struct {
 	// OrchestratePlan 智能体域默认编排方案（fixed | dynamic，空 = fixed）。
 	// 仅 mode=orchestrate 生效；新会话创建时随快照固化，普通用户可在配置区改选。
 	OrchestratePlan string `json:"orchestrate_plan,omitempty"`
+
+	// 沙盒默认配置（管理员级，仅 agent_admin/super_admin 可设；0/false = 不设置，
+	// 装配时回退服务实例默认）。随快照固化到新会话，普通用户配置区不展示、不可改。
+	SandboxNetworkEnabled bool `json:"sandbox_network_enabled,omitempty"`
+	SandboxMemoryMB       int  `json:"sandbox_memory_mb,omitempty"`
+	SandboxCPUSeconds     int  `json:"sandbox_cpu_seconds,omitempty"`
+	SandboxNofileLimit    int  `json:"sandbox_nofile_limit,omitempty"`
+	SandboxMaxTimeout     int  `json:"sandbox_max_timeout,omitempty"`
 }
 
 // ToolInfo 工具信息（ListTools 返回，供前端配置 UI 展示）。

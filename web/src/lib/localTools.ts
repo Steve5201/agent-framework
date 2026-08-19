@@ -22,9 +22,11 @@ export interface LocalExecResult {
   isError: boolean
 }
 
-/** 调用 Tauri Rust 端在本地执行 shell 命令（超时由 Rust 端控制）。
- *  仅桌面端可用；浏览器调用会因 invoke 不存在而抛错。 */
-export async function runLocalShell(command: string, cwd?: string): Promise<LocalExecResult> {
+/** 调用 Tauri Rust 端在本地执行 shell 命令（默认超时由 Rust 端控制）。
+ *  仅桌面端可用；浏览器调用会因 invoke 不存在而抛错。
+ *  timeoutSecs 语义：>0 强制该秒数超时；0 = 采用 Rust 端默认（30s）；
+ *  -1 = 不限超时（自由模式专用）。 */
+export async function runLocalShell(command: string, cwd?: string, timeoutSecs = 0): Promise<LocalExecResult> {
   const { invoke } = await import('@tauri-apps/api/core')
-  return (await invoke<LocalExecResult>('local_shell_execute', { command, cwd })) as LocalExecResult
+  return (await invoke<LocalExecResult>('local_shell_execute', { command, cwd, timeoutSecs })) as LocalExecResult
 }

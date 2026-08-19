@@ -242,14 +242,33 @@ func TestExec_Profile(t *testing.T) {
 	}); err == nil {
 		t.Fatal("profile + code 应报错")
 	}
-	// 参数个数不匹配拒绝（各 profile 要求 3 个：input/out/media）
+	// 参数个数不匹配拒绝（各 profile 要求 input/out/media 等固定个数）。
+	// fetch_render 恰好 1 个参数（URL），单独处理。
 	for name, spec := range parserProfiles {
+		if name == "fetch_render" {
+			continue
+		}
 		if _, err := e.Exec(context.Background(), ExecRequest{
 			UserID: 1, Profile: name, Args: []string{"only_one"},
 		}); err == nil {
 			t.Fatalf("profile %s 参数个数不足应报错", name)
 		}
 		_ = spec
+	}
+	// fetch_render：ArgCount=1，单参数合法（本地无 unshare 属执行期错误），过多应拒。
+	frSpec := parserProfiles["fetch_render"]
+	if frSpec.ArgCount != 1 {
+		t.Fatalf("profile fetch_render ArgCount 应为 1，实际 %d", frSpec.ArgCount)
+	}
+	if _, err := e.Exec(context.Background(), ExecRequest{
+		UserID: 1, Profile: "fetch_render", Args: []string{"https://example.com"},
+	}); err != nil {
+		t.Fatalf("profile fetch_render 参数合法（1 个）不应返回校验错误: %v", err)
+	}
+	if _, err := e.Exec(context.Background(), ExecRequest{
+		UserID: 1, Profile: "fetch_render", Args: []string{"a", "b"},
+	}); err == nil {
+		t.Fatal("profile fetch_render 参数过多应报错")
 	}
 
 	// render 系列（P4-D 文档渲染）：恰好 2 个参数（spec.json + 输出文件）。
@@ -299,6 +318,57 @@ func TestExec_Profile(t *testing.T) {
 		if time.Since(start) > 5*time.Second {
 			t.Fatal("profile 执行不应被普通 MaxTimeout 截断")
 		}
+	}
+}
+
+// TestBuildCommandArgs_NetworkAndLimits 测沙盒命令组装：禁网默认、开网放行、
+// 资源限制按请求覆盖、chromium profile 跳过 RLIMIT_AS。
+func TestBuildCommandArgs_NetworkAndLimits(t *testing.T) {
+	e := NewExecutor(Config{WorkRoot: "/work", CPUSeconds: 10, MemoryLimitMB: 256, NofileLimit: 64, AgentUID: 100, AgentGID: 101, UIDBase: 2000})
+
+	// 默认：禁网（unshare -n）+ 全局资源限制。
+	args := e.buildCommandArgs(ExecRequest{UserID: 1}, false, []string{"sh", "-c", "echo hi"}, 2001)
+	joined := strings.Join(args, " ")
+	if !strings.Contains(joined, "unshare") {
+		t.Fatalf("默认应禁网（含 unshare）: %v", args)
+	}
+	if !strings.Contains(joined, "--cpu=10") || !strings.Contains(joined, "--as=268435456") || !strings.Contains(joined, "--nofile=64") {
+		t.Fatalf("应含全局资源限制: %v", joined)
+	}
+
+	// 开网：跳过 unshare。
+	args = e.buildCommandArgs(ExecRequest{UserID: 1, NetworkEnabled: true}, false, []string{"sh", "-c", "curl x"}, 2001)
+	joined = strings.Join(args, " ")
+	if strings.Contains(joined, "unshare") {
+		t.Fatalf("network_enabled=true 不应禁网: %v", args)
+	}
+
+	// 请求覆盖资源限制。
+	args = e.buildCommandArgs(ExecRequest{UserID: 1, MemoryMB: 512, CPUSeconds: 30, NofileLimit: 128}, false, []string{"sh", "-c", "x"}, 2001)
+	joined = strings.Join(args, " ")
+	if !strings.Contains(joined, "--as=536870912") || !strings.Contains(joined, "--cpu=30") || !strings.Contains(joined, "--nofile=128") {
+		t.Fatalf("应覆盖资源限制: %v", joined)
+	}
+
+	// chromium profile（render_pdf/fetch_render）：跳过 RLIMIT_AS（无 --as）。
+	for _, p := range []string{"render_pdf", "fetch_render"} {
+		args = e.buildCommandArgs(ExecRequest{UserID: 1, Profile: p}, true, []string{"python3", "script"}, 2001)
+		joined = strings.Join(args, " ")
+		if strings.Contains(joined, "--as=") {
+			t.Fatalf("profile %s 应跳过 RLIMIT_AS: %v", p, joined)
+		}
+	}
+
+	// 普通 profile（parse_pdf）：仍应用内存限制。
+	args = e.buildCommandArgs(ExecRequest{UserID: 1, Profile: "parse_pdf"}, true, []string{"python3", "p"}, 2001)
+	joined = strings.Join(args, " ")
+	if !strings.Contains(joined, "--as=") {
+		t.Fatalf("parse_pdf 应保留内存限制: %v", joined)
+	}
+
+	// 降权链始终存在。
+	if !strings.Contains(joined, "--reuid=2001") || !strings.Contains(joined, "--clear-groups") {
+		t.Fatalf("应含降权 setpriv: %v", joined)
 	}
 }
 

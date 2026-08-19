@@ -232,6 +232,12 @@ export default function AgentDetailPage() {
   const [adminRounds, setAdminRounds] = useState('')
   const [adminMessages, setAdminMessages] = useState('')
   const [adminThinkingRounds, setAdminThinkingRounds] = useState('')
+  // 沙盒默认配置（管理员级）：联网开关 + 资源限制覆盖。
+  const [defSandboxNetwork, setDefSandboxNetwork] = useState(false)
+  const [defSandboxMemory, setDefSandboxMemory] = useState('')
+  const [defSandboxCpu, setDefSandboxCpu] = useState('')
+  const [defSandboxNofile, setDefSandboxNofile] = useState('')
+  const [defSandboxTimeout, setDefSandboxTimeout] = useState('')
   // 默认大模型（公开 /v1/models 列表 = 实际可选的启用模型）
   const [modelList, setModelList] = useState<Model[]>([])
   // 当前选中；modelTouched 区分"未动过"（保留原默认配置）与"主动改选"
@@ -302,6 +308,12 @@ export default function AgentDetailPage() {
         setAdminRounds(d.max_rounds ? String(d.max_rounds) : '')
         setAdminMessages(d.max_messages ? String(d.max_messages) : '')
         setAdminThinkingRounds(d.max_thinking_rounds ? String(d.max_thinking_rounds) : '')
+        // 沙盒默认配置回填。
+        setDefSandboxNetwork(d.sandbox_network_enabled ?? false)
+        setDefSandboxMemory(d.sandbox_memory_mb ? String(d.sandbox_memory_mb) : '')
+        setDefSandboxCpu(d.sandbox_cpu_seconds ? String(d.sandbox_cpu_seconds) : '')
+        setDefSandboxNofile(d.sandbox_nofile_limit ? String(d.sandbox_nofile_limit) : '')
+        setDefSandboxTimeout(d.sandbox_max_timeout ? String(d.sandbox_max_timeout) : '')
         // 默认大模型：快照已选的值保留为原值（保存时未改动则原样写回）；
         // 下拉无"不设置"选项——选项即实际可选的启用模型，未设置时展示系统默认。
         const curModel = d.model ?? ''
@@ -507,6 +519,16 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
     if (rounds) payload.max_rounds = rounds
     if (messages) payload.max_messages = messages
     if (thinking) payload.max_thinking_rounds = thinking
+    // 沙盒默认配置：联网开关恒下发（false = 禁网默认）；资源限制 0 = 不下发。
+    payload.sandbox_network_enabled = defSandboxNetwork
+    const sMem = defSandboxMemory.trim() === '' ? 0 : Number(defSandboxMemory.trim())
+    const sCpu = defSandboxCpu.trim() === '' ? 0 : Number(defSandboxCpu.trim())
+    const sNofile = defSandboxNofile.trim() === '' ? 0 : Number(defSandboxNofile.trim())
+    const sTimeout = defSandboxTimeout.trim() === '' ? 0 : Number(defSandboxTimeout.trim())
+    if (sMem) payload.sandbox_memory_mb = sMem
+    if (sCpu) payload.sandbox_cpu_seconds = sCpu
+    if (sNofile) payload.sandbox_nofile_limit = sNofile
+    if (sTimeout) payload.sandbox_max_timeout = sTimeout
     // 默认大模型：主动改选才写入选中的模型——选中系统默认 = 不锁定
     //（跟随系统默认，与配置区 LLMDialog 语义一致）；未改动保留原值
     //（快照有值则原样写回，避免"无关保存"清掉已有配置）。
@@ -552,6 +574,12 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
       setAdminRounds('')
       setAdminMessages('')
       setAdminThinkingRounds('')
+      // 清除沙盒默认配置：恢复"禁网 + 跟随实例默认资源限制"。
+      setDefSandboxNetwork(false)
+      setDefSandboxMemory('')
+      setDefSandboxCpu('')
+      setDefSandboxNofile('')
+      setDefSandboxTimeout('')
       // 清除默认模型配置：恢复"跟随系统默认"，下拉回显系统默认模型。
       setOrigModel('')
       setModelTouched(false)
@@ -1243,6 +1271,78 @@ function adminRangeError(rounds: string, messages: string, thinking: string): st
                   </div>
                   <p className="text-[11px] leading-relaxed text-muted-foreground">
                     管理员级配置：随快照固化到新建会话，普通用户配置区不可见、不可改；修改只影响后续新建会话，旧会话不受影响。
+                  </p>
+                </div>
+              </div>
+
+              {/* 沙盒默认配置（管理员级）：联网开关 + 资源限制覆盖，随快照固化到新会话。 */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">沙盒配置（管理员级）</h3>
+                <div className="space-y-3 rounded-md border bg-muted/20 p-3">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={defSandboxNetwork}
+                      onChange={(e) => { setDefSandboxNetwork(e.target.checked); markDefaultsDirty() }}
+                      className="h-4 w-4"
+                    />
+                    <span className="text-sm font-medium">默认允许沙盒联网</span>
+                  </label>
+                  <p className="text-[11px] leading-relaxed text-muted-foreground">
+                    开启后沙盒内工具（如 fetch_url_render 渲染 JS 动态页）可访问外网；默认禁网。此为新会话默认值，仍需该会话为管理员级配置。
+                  </p>
+                  <div className="grid gap-2.5 sm:grid-cols-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="ad-sandbox-mem">内存上限（MB）</Label>
+                      <Input
+                        id="ad-sandbox-mem"
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={defSandboxMemory}
+                        placeholder="0 = 实例默认"
+                        onChange={(e) => { setDefSandboxMemory(e.target.value); markDefaultsDirty() }}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="ad-sandbox-cpu">CPU 时间（秒）</Label>
+                      <Input
+                        id="ad-sandbox-cpu"
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={defSandboxCpu}
+                        placeholder="0 = 实例默认"
+                        onChange={(e) => { setDefSandboxCpu(e.target.value); markDefaultsDirty() }}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="ad-sandbox-nofile">最大打开文件数</Label>
+                      <Input
+                        id="ad-sandbox-nofile"
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={defSandboxNofile}
+                        placeholder="0 = 实例默认"
+                        onChange={(e) => { setDefSandboxNofile(e.target.value); markDefaultsDirty() }}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="ad-sandbox-timeout">最大超时（秒）</Label>
+                      <Input
+                        id="ad-sandbox-timeout"
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={defSandboxTimeout}
+                        placeholder="0 = 实例默认"
+                        onChange={(e) => { setDefSandboxTimeout(e.target.value); markDefaultsDirty() }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-muted-foreground">
+                    0 = 不设置该项默认（装配时回退服务实例默认）；联网放行属安全放宽，仅在可信环境配置。
                   </p>
                 </div>
               </div>

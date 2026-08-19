@@ -90,6 +90,20 @@ describe('ConfigButtonArea', () => {
     expect(apiMocks.createSession).not.toHaveBeenCalled()
   })
 
+  it('沙盒配置按钮仅管理员可见（普通用户不渲染）', () => {
+    setUser('user', 'tutor')
+    useChatStore.setState({ sessions: [makeSession('s0')], activeId: 's0' })
+    render(<ConfigButtonArea />)
+    expect(screen.queryByRole('button', { name: '沙盒配置' })).not.toBeInTheDocument()
+  })
+
+  it('沙盒配置按钮对 agent_admin 可见', () => {
+    setUser('agent_admin', 'tutor')
+    useChatStore.setState({ sessions: [makeSession('s0')], activeId: 's0' })
+    render(<ConfigButtonArea />)
+    expect(screen.getByRole('button', { name: '沙盒配置' })).toBeInTheDocument()
+  })
+
   it('建会话失败时给出错误提示且不打开弹窗', async () => {
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
     apiMocks.createSession.mockRejectedValue(new Error('network down'))

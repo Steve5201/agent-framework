@@ -66,8 +66,8 @@ func TestResourceToTools(t *testing.T) {
 		resources []string
 		want      []string
 	}{
-		{"能力翻译", []string{"search"}, []string{"web_search", "fetch_url"}},
-		{"能力去重", []string{"search", "file", "search"}, []string{"web_search", "fetch_url", "file_ops"}},
+		{"能力翻译", []string{"search"}, []string{"web_search", "fetch_url", "fetch_url_render"}},
+		{"能力去重", []string{"search", "file", "search"}, []string{"web_search", "fetch_url", "fetch_url_render", "file_ops"}},
 		{"识图能力翻译", []string{"vision"}, []string{"describe_image"}},
 		{"文档解析能力翻译", []string{"doc"}, []string{"read_document"}},
 		{"网页文档能力翻译", []string{"webdoc"}, []string{"render_html"}},
@@ -209,7 +209,7 @@ func TestBuildResourceTools_PresenceSemantics(t *testing.T) {
 		if restrict {
 			t.Fatal("非空白名单不应置 restrictEmpty")
 		}
-		want := []string{"web_search", "fetch_url", "calculator", "skill_emoji-helper"}
+		want := []string{"web_search", "fetch_url", "fetch_url_render", "calculator", "skill_emoji-helper"}
 		if !sameStringSet(tools, want) {
 			t.Fatalf("tools = %v, want %v", tools, want)
 		}
@@ -223,7 +223,7 @@ func TestBuildResourceTools_PresenceSemantics(t *testing.T) {
 		if restrict {
 			t.Fatal("非空能力白名单不应置 restrictEmpty")
 		}
-		want := append([]string{"web_search", "fetch_url"}, allSkills...)
+		want := append([]string{"web_search", "fetch_url", "fetch_url_render"}, allSkills...)
 		if !sameStringSet(tools, want) {
 			t.Fatalf("tools = %v, want(web_search+全部技能) = %v", tools, want)
 		}

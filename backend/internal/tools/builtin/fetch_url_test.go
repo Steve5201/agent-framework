@@ -79,6 +79,23 @@ func TestFetchURLTool_ExtractPageText(t *testing.T) {
 	}
 }
 
+// TestFetchURLTool_ExtractEmbeddedState 测纯 JS 渲染页：正文在 script 内嵌
+// window.__INITIAL_STATE__ 里，提取器应捞出并并入返回文本。
+func TestFetchURLTool_ExtractEmbeddedState(t *testing.T) {
+	body := []byte(`<html><head><title>动态页</title></head>
+<body><script>window.__INITIAL_STATE__={"video":{"title":"示例视频","desc":"这是动态加载的正文内容","count":123}}</script><div id="app"></div></body></html>`)
+	_, text := extractPageText(body)
+	if !strings.Contains(text, "示例视频") {
+		t.Errorf("应提取内嵌 JSON 里的标题：%q", text)
+	}
+	if !strings.Contains(text, "这是动态加载的正文内容") {
+		t.Errorf("应提取内嵌 JSON 里的正文：%q", text)
+	}
+	if strings.Contains(text, "__INITIAL_STATE__") {
+		t.Errorf("不应输出内嵌变量名本身：%q", text)
+	}
+}
+
 // TestFetchURLTool_Truncation 大内容截断。
 func TestFetchURLTool_Truncation(t *testing.T) {
 	long := strings.Repeat("很长的内容", 8000) // > 20000 rune

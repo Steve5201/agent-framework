@@ -64,10 +64,17 @@ type codeExecutorArgs struct {
 // sandboxExecRequest / sandboxExecResponse：与 sandbox-service POST /v1/exec 契约。
 // 字段与 backend/internal/sandboxsvc 保持一一对应（不引入额外依赖）。
 type sandboxExecRequest struct {
-	UserID      int64  `json:"user_id"`
-	Language    string `json:"language"`
-	Code        string `json:"code"`
-	TimeoutSecs int    `json:"timeout_seconds"`
+	UserID          int64    `json:"user_id"`
+	Language        string   `json:"language"`
+	Code            string   `json:"code"`
+	TimeoutSecs     int      `json:"timeout_seconds"`
+	Profile         string   `json:"profile"`
+	Args            []string `json:"args"`
+	NetworkEnabled  bool     `json:"network_enabled"`
+	MemoryMB        int64    `json:"memory_mb"`
+	CPUSeconds      int64    `json:"cpu_seconds"`
+	NofileLimit     int64    `json:"nofile_limit"`
+	MaxTimeoutSecs  int      `json:"max_timeout_secs"`
 }
 
 type sandboxExecResponse struct {
@@ -176,7 +183,8 @@ func (t *CodeExecutorTool) Execute(ctx context.Context, args json.RawMessage) (s
 	// 4. 沙盒路径（阶段2）：配置了 sandbox 服务时，代码执行委托给独立容器。
 	if t.SandboxURL != "" {
 		uid, _ := UserIDFromContext(ctx)
-		return t.remoteExec(ctx, uid, p.Language, p.Code, timeout)
+		scfg := SandboxConfigFromContext(ctx)
+		return t.remoteExec(ctx, uid, p.Language, p.Code, timeout, scfg)
 	}
 
 	// 5. 本地降级执行（无 sandbox 容器：本地开发 / 单机部署）。
@@ -227,12 +235,17 @@ func (t *CodeExecutorTool) Execute(ctx context.Context, args json.RawMessage) (s
 // sandbox 执行完成并回传结果。模型视角与本地执行一致，只是执行环境换到
 // 独立沙盒容器。工具级"并行执行"（慢工具等待期间模型继续）是 future
 // work，接口与审计/tool_call_id 设计已按并行兼容预留（见 PROGRESS）。
-func (t *CodeExecutorTool) remoteExec(ctx context.Context, userID int64, language, code string, timeout time.Duration) (string, error) {
+func (t *CodeExecutorTool) remoteExec(ctx context.Context, userID int64, language, code string, timeout time.Duration, scfg SandboxConfig) (string, error) {
 	body, err := json.Marshal(sandboxExecRequest{
-		UserID:      userID,
-		Language:    language,
-		Code:        code,
-		TimeoutSecs: int(timeout.Seconds()),
+		UserID:         userID,
+		Language:       language,
+		Code:           code,
+		TimeoutSecs:    int(timeout.Seconds()),
+		NetworkEnabled: scfg.NetworkEnabled,
+		MemoryMB:       scfg.MemoryMB,
+		CPUSeconds:     scfg.CPUSeconds,
+		NofileLimit:    scfg.NofileLimit,
+		MaxTimeoutSecs: int(scfg.MaxTimeoutSecs),
 	})
 	if err != nil {
 		return "", fmt.Errorf("code_executor: 构造沙盒请求失败: %w", err)

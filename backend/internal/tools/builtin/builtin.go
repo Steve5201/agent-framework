@@ -45,6 +45,7 @@ func (b Builtin) Tools() []tool.Tool {
 		CalculatorTool{},
 		&WebSearchTool{Backend: b.WebSearchBackend},
 		&FetchURLTool{},
+		&fetchRenderTool{SandboxURL: b.SandboxURL},
 		&FileOpsTool{SkillsRoot: b.SkillsRoot, SandboxURL: b.SandboxURL, DiskQuota: b.DiskQuota},
 		&CodeExecutorTool{Allowlist: b.CodeExecAllowlist, SandboxURL: b.SandboxURL},
 	}

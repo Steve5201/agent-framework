@@ -33,7 +33,7 @@ type capability struct {
 // defaultCapabilities 内置能力全集（顺序即前端展示顺序）。
 // 注意：工具必须是 DefaultToolSet 注册过的；未注册的工具翻译时会忽略。
 var defaultCapabilities = []capability{
-	{id: "search", name: "搜索", description: "在互联网搜索最新信息、并读取网页正文内容，回答时效性问题", tools: []string{"web_search", "fetch_url"}},
+	{id: "search", name: "搜索", description: "在互联网搜索最新信息、并读取网页正文内容（含 JS 动态渲染页面），回答时效性问题", tools: []string{"web_search", "fetch_url", "fetch_url_render"}},
 	{id: "file", name: "文件读写", description: "在个人工作区读取/写入/搜索文件，梳理目录结构", tools: []string{"file_ops"}},
 	{id: "code", name: "代码执行", description: "运行 shell / Python 代码（沙盒内执行，用于计算与脚本任务）", tools: []string{"code_executor"}},
 	{id: "calculate", name: "计算", description: "精确四则运算", tools: []string{"calculator"}},

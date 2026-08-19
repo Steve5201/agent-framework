@@ -44,6 +44,14 @@ type ExecRequest struct {
 	TimeoutSecs int      `json:"timeout_seconds"` // 可选，默认 60，上限 MaxTimeout（profile 模式放宽到其专属上限）
 	Profile     string   `json:"profile"`         // 可选：预置解析器名（parse_pdf|parse_docx|parse_pptx），与 language/code 互斥
 	Args        []string `json:"args"`            // profile 模式的脚本参数（相对用户工作区的 input/out/media 路径）
+	// 以下为按请求覆盖（0/false = 回退服务实例 Config 默认），供会话级沙盒配置
+	// 动态切换（agent_admin 设定，见 agentsvc.SessionConfig.Sandbox*）。禁网为
+	// 默认安全基线：除非显式 network_enabled=true，一律 unshare -n 禁网。
+	NetworkEnabled bool `json:"network_enabled,omitempty"`
+	MemoryMB       int64 `json:"memory_mb,omitempty"`       // 虚拟内存上限（MB），0 = 回退全局
+	CPUSeconds     int64 `json:"cpu_seconds,omitempty"`     // CPU 时间上限（秒），0 = 回退全局
+	NofileLimit    int64 `json:"nofile_limit,omitempty"`    // 最大打开文件数，0 = 回退全局
+	MaxTimeoutSecs int   `json:"max_timeout_secs,omitempty"` // 单次执行最大超时（秒），0 = 回退全局
 }
 
 // ExecResult 执行结果。
@@ -225,6 +233,9 @@ func (e *Executor) Exec(ctx context.Context, req ExecRequest) (*ExecResult, erro
 		timeout = time.Duration(req.TimeoutSecs) * time.Second
 	}
 	maxT := e.cfg.MaxTimeout
+	if req.MaxTimeoutSecs > 0 {
+		maxT = time.Duration(req.MaxTimeoutSecs) * time.Second
+	}
 	if profileMaxTimeout > maxT {
 		maxT = profileMaxTimeout
 	}
@@ -235,41 +246,7 @@ func (e *Executor) Exec(ctx context.Context, req ExecRequest) (*ExecResult, erro
 	defer cancel()
 
 	// ---- 6. 构建命令：unshare -n（禁网）→ prlimit（资源上限）→ setpriv（降权） ----
-	args := []string{"unshare", "-n", "--"}
-	prlimitArgs := []string{"prlimit"}
-	if e.cfg.CPUSeconds > 0 {
-		prlimitArgs = append(prlimitArgs, fmt.Sprintf("--cpu=%d", e.cfg.CPUSeconds))
-	}
-	// profile 模式执行的是镜像内可信脚本（解析/渲染，非用户代码）：内存上限
-	// 单独放宽（ProfileMemoryLimitMB），避免 matplotlib/numpy 渲染公式/图片时
-	// 虚拟内存不足导致 syscall 风暴卡死；普通代码执行仍按 MemoryLimitMB 收紧。
-	memLimit := e.cfg.MemoryLimitMB
-	if profileMode && e.cfg.ProfileMemoryLimitMB > 0 {
-		memLimit = e.cfg.ProfileMemoryLimitMB
-	}
-	// render_pdf（Chromium headless）与 RLIMIT_AS 存在兼容性缺陷（P5-HTML 实测）：
-	// Alpine/musl 下只要设置 RLIMIT_AS（与值大小无关，2/4/8GB 均触发），chromium
-	// 内部 CHECK 即崩溃（Trace/breakpoint trap），只能不设置。chromium 渲染也会
-	// mmap 大量虚拟地址空间。故跳过 --as 限制；降权/禁网/nofile/cpu/超时仍生效。
-	if profileMode && req.Profile == "render_pdf" {
-		memLimit = 0
-	}
-	if memLimit > 0 {
-		prlimitArgs = append(prlimitArgs, fmt.Sprintf("--as=%d", memLimit<<20))
-	}
-	if e.cfg.NofileLimit > 0 {
-		prlimitArgs = append(prlimitArgs, fmt.Sprintf("--nofile=%d", e.cfg.NofileLimit))
-	}
-	prlimitArgs = append(prlimitArgs, "--")
-	args = append(args, prlimitArgs...)
-	args = append(args,
-		"setpriv",
-		fmt.Sprintf("--reuid=%d", wsUid),
-		fmt.Sprintf("--regid=%d", wsUid),
-		"--clear-groups", "--",
-	)
-	args = append(args, runArgs...)
-
+	args := e.buildCommandArgs(req, profileMode, runArgs, wsUid)
 	cmd := exec.CommandContext(execCtx, args[0], args[1:]...)
 	cmd.Dir = ws
 	setProcAttr(cmd) // 独立进程组：超时/异常时整体终止子进程树
@@ -310,6 +287,64 @@ func (e *Executor) Exec(ctx context.Context, req ExecRequest) (*ExecResult, erro
 		zap.Int64("duration_ms", res.DurationMs),
 		zap.Bool("timed_out", timedOut))
 	return res, nil
+}
+
+// buildCommandArgs 组装沙盒执行命令参数：unshare -n（禁网）→ prlimit（资源
+// 上限）→ setpriv（降权）。网络开关默认禁网（安全基线）；仅当请求显式
+// network_enabled=true 时跳过 unshare -n（放行联网）。放行由会话级管理员配置
+// 驱动（如 fetch_url_render 需 chromium 渲染外网动态页），普通 code 执行保持禁网。
+// 资源限制取"请求覆盖 > 全局配置"，0 = 该限制不设置。
+func (e *Executor) buildCommandArgs(req ExecRequest, profileMode bool, runArgs []string, wsUid int) []string {
+	var args []string
+	if !req.NetworkEnabled {
+		args = []string{"unshare", "-n", "--"}
+	}
+	prlimitArgs := []string{"prlimit"}
+	cpu := e.cfg.CPUSeconds
+	if req.CPUSeconds > 0 {
+		cpu = req.CPUSeconds
+	}
+	if cpu > 0 {
+		prlimitArgs = append(prlimitArgs, fmt.Sprintf("--cpu=%d", cpu))
+	}
+	// profile 模式执行的是镜像内可信脚本（解析/渲染，非用户代码）：内存上限
+	// 单独放宽（ProfileMemoryLimitMB），避免 matplotlib/numpy 渲染公式/图片时
+	// 虚拟内存不足导致 syscall 风暴卡死；普通代码执行仍按 MemoryLimitMB 收紧。
+	memLimit := e.cfg.MemoryLimitMB
+	if profileMode && e.cfg.ProfileMemoryLimitMB > 0 {
+		memLimit = e.cfg.ProfileMemoryLimitMB
+	}
+	if req.MemoryMB > 0 {
+		memLimit = req.MemoryMB
+	}
+	// render_pdf / fetch_render（Chromium headless）与 RLIMIT_AS 存在兼容性缺陷
+	// （P5-HTML 实测）：Alpine/musl 下只要设置 RLIMIT_AS（与值大小无关，
+	// 2/4/8GB 均触发），chromium 内部 CHECK 即崩溃（Trace/breakpoint trap），只能
+	// 不设置。chromium 渲染也会 mmap 大量虚拟地址空间。故跳过 --as 限制；
+	// 降权/禁网/nofile/cpu/超时仍生效。
+	if profileMode && (req.Profile == "render_pdf" || req.Profile == "fetch_render") {
+		memLimit = 0
+	}
+	if memLimit > 0 {
+		prlimitArgs = append(prlimitArgs, fmt.Sprintf("--as=%d", memLimit<<20))
+	}
+	nofile := e.cfg.NofileLimit
+	if req.NofileLimit > 0 {
+		nofile = req.NofileLimit
+	}
+	if nofile > 0 {
+		prlimitArgs = append(prlimitArgs, fmt.Sprintf("--nofile=%d", nofile))
+	}
+	prlimitArgs = append(prlimitArgs, "--")
+	args = append(args, prlimitArgs...)
+	args = append(args,
+		"setpriv",
+		fmt.Sprintf("--reuid=%d", wsUid),
+		fmt.Sprintf("--regid=%d", wsUid),
+		"--clear-groups", "--",
+	)
+	args = append(args, runArgs...)
+	return args
 }
 
 // ensureWorkspace 确保用户工作区目录链存在且权限模型正确（档位 B：每用户独立 uid）。

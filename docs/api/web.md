@@ -205,7 +205,8 @@ await streamChat(
 外部工具（`external=true`，当前仅 `local_shell`）由**桌面客户端**在本机执行。前端链路：SSE 收到 `tool_call`（带 `tool_call_id`）→ 若是本地工具 → `handleLocalToolCall` 分流：
 
 - **浏览器环境**：无 Tauri 运行时 → 直接 `submitToolResult(sessionId, toolCallId, '请使用桌面客户端...', true)` 回填失败，agent 不会挂起 120s 等桌面端；
-- **桌面环境**：弹 `LocalToolModal` 确认弹窗（命令全文展示）→ 用户点"允许"→ `invoke('local_shell_execute', { command, cwd })` 本机执行 → `submitToolResult` 回填 `{content, is_error}` 唤醒会话；点"拒绝"→ 回填失败结果。
+- **桌面环境 + 非自由模式**：弹 `LocalToolModal` 确认弹窗（命令全文展示）→ 用户点"允许"→ `invoke('local_shell_execute', { command, cwd })` 本机执行 → `submitToolResult` 回填 `{content, is_error}` 唤醒会话；点"拒绝"→ 回填失败结果；
+- **桌面环境 + 自由模式**（本地个人化开关 `agent.free_mode`，仅桌面端显示，每次开启都弹风险警告）：跳过确认、直接执行，且不限超时（`runLocalShell` 传 `timeoutSecs=-1`）。
 
 ### 接口
 
@@ -213,8 +214,10 @@ await streamChat(
 |---|---|
 | `LOCAL_TOOL_NAMES: Set<string>` | 本地工具名集合（当前 `{local_shell}`） |
 | `isTauri(): boolean` | 是否运行在 Tauri 环境（`'__TAURI_INTERNALS__' in window`） |
-| `runLocalShell(command, cwd?): Promise<{content: string, is_error: boolean}>` | 动态 import `@tauri-apps/api/core` 调 `local_shell_execute` |
-| `useChatStore.handleLocalToolCall(toolCallId, name, args)` | chat store 导出：解析参数 → 浏览器降级回填 / 桌面弹窗 |
+| `runLocalShell(command, cwd?, timeoutSecs?)` | 动态 import `@tauri-apps/api/core` 调 `local_shell_execute`；`timeoutSecs`：`>0` 强制超时 / `0` 默认 / `-1` 不限超时（自由模式） |
+| `isFreeMode() / setFreeMode(on)` | `src/lib/freeMode.ts`：读写本地偏好 `agent.free_mode`（仅本机、与服务器/角色无关） |
+| `FreeModeToggle` | `src/components/chat/FreeModeToggle.tsx`：桌面端专属开关，开启时弹风险警告确认 |
+| `useChatStore.handleLocalToolCall(toolCallId, name, args)` | chat store 导出：解析参数 → 浏览器降级回填 / 桌面弹窗（自由模式直接执行） |
 | `useChatStore.resolveLocalCall(allow)` | 桌面确认回调：执行 + 回填（或拒绝回填） |
 
 ### 组件

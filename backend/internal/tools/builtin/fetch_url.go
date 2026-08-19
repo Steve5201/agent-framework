@@ -193,12 +193,16 @@ func isPublicIP(ip net.IP) bool {
 }
 
 // extractPageText 用 HTML5 解析器提取标题与正文文本，去掉脚本/样式/导航噪音，
-// 并压缩连续空白。
+// 并压缩连续空白。同时尝试从 <script> 内嵌的全局状态对象（__INITIAL_STATE__ /
+// __NEXT_DATA__ 等）提取结构化数据并入正文——纯 JS 渲染页（SSR/CSR 混合）的
+// HTML 骨架为空，正文在脚本变量里，需捞出来避免"抓不到内容"。
 func extractPageText(body []byte) (title, text string) {
 	doc, err := html.Parse(strings.NewReader(string(body)))
 	if err != nil {
 		return "", ""
 	}
+	// 先单独收集内嵌 JSON 状态（SSR 数据源），供后续并入正文。
+	embedded := collectEmbeddedState(doc)
 	var sb strings.Builder
 	var walk func(n *html.Node)
 	walk = func(n *html.Node) {
@@ -221,7 +225,123 @@ func extractPageText(body []byte) (title, text string) {
 	walkTitle(doc, &title)
 	walk(doc)
 	text = collapseWhitespace(sb.String())
+	// 内嵌 JSON 状态并入正文（页面正文为空或很短时尤其有用）。
+	if embedded != "" {
+		if text != "" {
+			text += " "
+		}
+		text += embedded
+	}
 	return title, text
+}
+
+// embeddedStateVars 常见前端框架的全局状态变量名（值通常是 JSON 对象）。
+// 命中任一即尝试按 JSON 提取。
+var embeddedStateVars = []string{
+	"__INITIAL_STATE__",
+	"__NEXT_DATA__",
+	"__PRELOADED_STATE__",
+	"__NUXT__",
+	"window.__APOLLO_STATE__",
+}
+
+// collectEmbeddedState 遍历 <script> 节点，从 "window.XXX=..." 形式的内嵌
+// JSON 中提取可读文本。返回空串表示无可用内嵌数据。只捞安全上限内的文本，
+// 避免把巨大脚本刷爆上下文。
+func collectEmbeddedState(root *html.Node) string {
+	if root == nil {
+		return ""
+	}
+	var b strings.Builder
+	var walk func(n *html.Node)
+	walk = func(n *html.Node) {
+		if b.Len() >= fetchURLReturnMax {
+			return
+		}
+		if n.Type == html.ElementNode && strings.ToLower(n.Data) == "script" {
+			code := n.FirstChild
+			if code != nil && code.Type == html.TextNode {
+				extractStateFromScript(code.Data, &b)
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			walk(c)
+		}
+	}
+	walk(root)
+	return b.String()
+}
+
+// extractStateFromScript 从一段脚本源码提取 "window.XXX=<json>" 内嵌数据。
+func extractStateFromScript(code string, b *strings.Builder) {
+	for _, varName := range embeddedStateVars {
+		idx := strings.Index(code, varName+"=")
+		if idx < 0 {
+			continue
+		}
+		rest := code[idx+len(varName)+1:]
+		// 取到行尾（内嵌 JSON 通常一行内结束）。
+		if eol := strings.IndexByte(rest, ';'); eol >= 0 {
+			rest = rest[:eol]
+		}
+		if eol := strings.IndexByte(rest, '\n'); eol >= 0 {
+			rest = rest[:eol]
+		}
+		rest = strings.TrimSpace(rest)
+		if rest == "" || rest[0] != '{' {
+			continue
+		}
+		var obj map[string]any
+		if err := json.Unmarshal([]byte(rest), &obj); err != nil {
+			continue
+		}
+		// 递归扁平化 JSON 为可读 key: value 文本。
+		flattenJSON("", obj, b)
+		b.WriteString("\n")
+	}
+}
+
+// flattenJSON 递归把 JSON 对象扁平化为 "key: value" 文本（value 为标量时
+// 才输出，数组/对象递归展开，避免输出纯结构噪音）。
+func flattenJSON(prefix string, v any, b *strings.Builder) {
+	if b.Len() >= fetchURLReturnMax {
+		return
+	}
+	writeVal := func(key string, val any) {
+		s, ok := val.(string)
+		if ok && strings.TrimSpace(s) != "" {
+			if prefix != "" {
+				fmt.Fprintf(b, "%s.%s: %s\n", prefix, key, strings.TrimSpace(s))
+			} else {
+				fmt.Fprintf(b, "%s: %s\n", key, strings.TrimSpace(s))
+			}
+		}
+	}
+	switch t := v.(type) {
+	case map[string]any:
+		for k, val := range t {
+			switch val.(type) {
+			case map[string]any, []any:
+				child := k
+				if prefix != "" {
+					child = prefix + "." + k
+				}
+				flattenJSON(child, val, b)
+			default:
+				writeVal(k, val)
+			}
+		}
+	case []any:
+		for i, val := range t {
+			switch val.(type) {
+			case map[string]any, []any:
+				child := fmt.Sprintf("%s[%d]", prefix, i)
+				flattenJSON(child, val, b)
+			default:
+				writeVal(fmt.Sprintf("%s[%d]", prefix, i), val)
+			}
+		}
+	}
 }
 
 // walkTitle 查找页面 <title> 元素文本。

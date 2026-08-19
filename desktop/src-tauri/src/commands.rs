@@ -24,6 +24,17 @@ fn local_exec_timeout() -> std::time::Duration {
         .unwrap_or(std::time::Duration::from_secs(30))
 }
 
+/// 计算命令执行的超时截止时间。
+/// None/0 = 采用默认超时（local_exec_timeout）；正值 = 强制该秒数；
+/// -1 = 不限超时（返回 None，命令可持续运行直至完成）。
+fn local_exec_deadline(timeout_secs: Option<i64>) -> Option<std::time::Instant> {
+    match timeout_secs {
+        Some(n) if n > 0 => Some(std::time::Instant::now() + std::time::Duration::from_secs(n as u64)),
+        Some(-1) => None,
+        _ => Some(std::time::Instant::now() + local_exec_timeout()),
+    }
+}
+
 /// 读取管道到 EOF（子进程退出后自动结束），返回原始字节。
 ///
 /// 历史教训：早期用 read_to_string 读取，Windows cmd 的中文输出（GBK 编码）
@@ -69,7 +80,7 @@ fn temp_bat_path() -> std::path::PathBuf {
 ///   卷标语法不正确"。规避方案：把命令原样写入临时 .bat 文件（内容不经过
 ///   任何参数转义），再 `cmd /C <bat>` 执行；bat 内容用 GBK 编码，中文路径
 ///   在中文系统上也能正确解析。执行后立即删除临时文件。
-fn run_local_shell_blocking(command: &str, cwd: Option<String>) -> Result<LocalExecResult, String> {
+fn run_local_shell_blocking(command: &str, cwd: Option<String>, timeout_secs: Option<i64>) -> Result<LocalExecResult, String> {
     use std::io::Write;
     use std::process::{Command, Stdio};
     use std::thread;
@@ -120,15 +131,18 @@ fn run_local_shell_blocking(command: &str, cwd: Option<String>) -> Result<LocalE
     let out_th = thread::spawn(move || read_pipe(stdout));
     let err_th = thread::spawn(move || read_pipe(stderr));
 
-    let deadline = Instant::now() + local_exec_timeout();
+    let deadline = local_exec_deadline(timeout_secs);
     let status = loop {
         match child.try_wait() {
             Ok(Some(st)) => break st,
             Ok(None) => {
-                if Instant::now() >= deadline {
-                    let _ = child.kill();
-                    cleanup();
-                    return Err("命令执行超时（30s），已终止".to_string());
+                // deadline 为 None（不限超时）时永不超时终止。
+                if let Some(deadline) = deadline {
+                    if Instant::now() >= deadline {
+                        let _ = child.kill();
+                        cleanup();
+                        return Err("命令执行超时，已终止".to_string());
+                    }
                 }
                 thread::sleep(std::time::Duration::from_millis(50));
             }
@@ -174,12 +188,15 @@ fn run_local_shell_blocking(command: &str, cwd: Option<String>) -> Result<LocalE
 
 /// 本地 shell 执行命令（invoke('local_shell_execute')）。
 /// spawn_blocking 保证不阻塞 Tauri 异步运行时/主线程。
+/// timeout_secs：None/0 = 采用默认（30s，可用 LOCAL_EXEC_TIMEOUT_SECS 覆盖）；
+/// 正值 = 强制该秒数超时；-1 = 不限超时（自由模式，命令可持续运行直至完成）。
 #[tauri::command]
 pub async fn local_shell_execute(
     command: String,
     cwd: Option<String>,
+    timeout_secs: Option<i64>,
 ) -> Result<LocalExecResult, String> {
-    tauri::async_runtime::spawn_blocking(move || run_local_shell_blocking(&command, cwd))
+    tauri::async_runtime::spawn_blocking(move || run_local_shell_blocking(&command, cwd, timeout_secs))
         .await
         .map_err(|e| format!("本地执行任务异常: {e}"))?
 }
@@ -190,14 +207,14 @@ mod tests {
 
     #[test]
     fn local_shell_success_returns_output() {
-        let res = run_local_shell_blocking("echo hello-world", None).unwrap();
+        let res = run_local_shell_blocking("echo hello-world", None, None).unwrap();
         assert!(!res.is_error, "预期成功, got {}", res.content);
         assert!(res.content.contains("hello-world"), "got {}", res.content);
     }
 
     #[test]
     fn local_shell_nonzero_exit_is_error() {
-        let res = run_local_shell_blocking("exit 3", None).unwrap();
+        let res = run_local_shell_blocking("exit 3", None, None).unwrap();
         assert!(res.is_error, "非零退出码应标记失败, got {}", res.content);
         assert!(res.content.contains("退出码: 3"), "got {}", res.content);
     }
@@ -205,7 +222,7 @@ mod tests {
     #[test]
     fn local_shell_no_output_placeholder() {
         let cmd = if cfg!(windows) { "rem noop" } else { ":" };
-        let res = run_local_shell_blocking(cmd, None).unwrap();
+        let res = run_local_shell_blocking(cmd, None, None).unwrap();
         assert!(!res.is_error);
         assert!(res.content.contains("无输出"), "got {}", res.content);
     }
@@ -218,8 +235,37 @@ mod tests {
         } else {
             "sleep 30"
         };
-        let err = run_local_shell_blocking(cmd, None).expect_err("超时应返回错误");
+        let err = run_local_shell_blocking(cmd, None, None).expect_err("超时应返回错误");
         assert!(err.contains("超时"), "got {err}");
+        std::env::remove_var("LOCAL_EXEC_TIMEOUT_SECS");
+    }
+
+    #[test]
+    fn local_shell_no_timeout_runs_to_completion() {
+        // 自由模式（timeout_secs = -1）：即使默认超时极短也不中断命令。
+        std::env::set_var("LOCAL_EXEC_TIMEOUT_SECS", "1");
+        let cmd = if cfg!(windows) {
+            "ping -n 3 127.0.0.1 > nul"
+        } else {
+            "sleep 2"
+        };
+        let res = run_local_shell_blocking(cmd, None, Some(-1)).expect("不限超时应执行完成");
+        assert!(!res.is_error, "命令应成功完成, got {}", res.content);
+        std::env::remove_var("LOCAL_EXEC_TIMEOUT_SECS");
+    }
+
+    #[test]
+    fn local_shell_positive_timeout_overrides_default() {
+        // 显式正值超时（timeout_secs = 2）优先于默认超时（1s）：命令超过 2s 才成功，
+        // 默认 1s 已可杀——此处验证正值被采用（命令不因 1s 默认被杀）。
+        std::env::set_var("LOCAL_EXEC_TIMEOUT_SECS", "1");
+        let cmd = if cfg!(windows) {
+            "ping -n 3 127.0.0.1 > nul"
+        } else {
+            "sleep 2"
+        };
+        let res = run_local_shell_blocking(cmd, None, Some(3)).expect("显式超时应生效");
+        assert!(!res.is_error, "命令应在显式超时内完成, got {}", res.content);
         std::env::remove_var("LOCAL_EXEC_TIMEOUT_SECS");
     }
 
@@ -238,6 +284,7 @@ mod tests {
         let res = run_local_shell_blocking(
             &format!("type \"{}\"", file.display()),
             Some(dir.to_string_lossy().into_owned()),
+            None,
         )
         .expect("type 执行应成功");
         let _ = std::fs::remove_file(&file);
@@ -260,6 +307,7 @@ mod tests {
         let res = run_local_shell_blocking(
             &format!("type \"{}\"", file.display()),
             Some(dir.to_string_lossy().into_owned()),
+            None,
         )
         .expect("type 执行应成功");
         let _ = std::fs::remove_file(&file);

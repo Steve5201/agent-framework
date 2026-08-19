@@ -106,6 +106,17 @@ export interface SessionConfig {
    * true = 技能白名单 = enabled_resources 中的技能项（空技能项 = 默认不启用
    * 任何技能）；false/缺省 = 技能未设置（跟随实例全量）。 */
   enabled_skills_set?: boolean
+  /** 沙盒执行是否允许联网（管理员级，agent_admin+ 可改；false = 禁网默认）。
+   *  仅管理员开启后沙盒内工具（如 fetch_url_render 渲染动态页）可访问外网。 */
+  sandbox_network_enabled?: boolean
+  /** 沙盒虚拟内存上限（MB，管理员级；0 = 回退服务实例默认） */
+  sandbox_memory_mb?: number
+  /** 沙盒 CPU 时间上限（秒，管理员级；0 = 回退服务实例默认） */
+  sandbox_cpu_seconds?: number
+  /** 沙盒最大打开文件数（管理员级；0 = 回退服务实例默认） */
+  sandbox_nofile_limit?: number
+  /** 沙盒单次执行最大超时（秒，管理员级；0 = 回退服务实例默认） */
+  sandbox_max_timeout?: number
 }
 
 /** 工具信息（GET /v1/agent/tools，管理/调试用） */
@@ -375,6 +386,13 @@ export interface AgentDefaults {
   enabled_capabilities_set?: boolean
   /** 默认技能全不选标记（语义同 enabled_capabilities_set）。 */
   enabled_skills_set?: boolean
+  /** 默认沙盒联网（管理员级；false = 禁网默认）。随快照固化到新会话。 */
+  sandbox_network_enabled?: boolean
+  /** 默认沙盒资源限制（0 = 不设置该项默认，装配时回退服务实例默认） */
+  sandbox_memory_mb?: number
+  sandbox_cpu_seconds?: number
+  sandbox_nofile_limit?: number
+  sandbox_max_timeout?: number
 }
 
 /** 智能体用量聚合（llm-gateway /v1/usage/agents/{id}；最近 N 天成功调用） */

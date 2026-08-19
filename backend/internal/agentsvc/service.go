@@ -27,6 +27,7 @@ import (
 	apperr "github.com/Steve5201/agent-backend/internal/errors"
 	"github.com/Steve5201/agent-backend/internal/rag/sandboxclient"
 	"github.com/Steve5201/agent-backend/internal/tools/kb"
+	"github.com/Steve5201/agent-backend/internal/tools/builtin"
 	"github.com/Steve5201/agent-backend/internal/tools/mcp"
 	"github.com/Steve5201/agent-framework/agent"
 	"github.com/Steve5201/agent-framework/llm"
@@ -470,6 +471,15 @@ func (s *Service) UpdateSessionConfig(ctx context.Context, userID, sessionID int
 	cfg.MaxMessages = sess.Config.MaxMessages
 	cfg.MaxThinkingRounds = sess.Config.MaxThinkingRounds
 	cfg.SystemPrompt = sess.Config.SystemPrompt
+	// 沙盒配置（管理员级）：仅 agent_admin/super_admin/admin 可改；普通用户
+	// 提交的沙盒字段覆盖回快照原值（防自提权限/放宽沙盒限制）。
+	if !sandboxAdminRole(userRoleFromMetadata(ctx)) {
+		cfg.SandboxNetworkEnabled = sess.Config.SandboxNetworkEnabled
+		cfg.SandboxMemoryMB = sess.Config.SandboxMemoryMB
+		cfg.SandboxCPUSeconds = sess.Config.SandboxCPUSeconds
+		cfg.SandboxNofileLimit = sess.Config.SandboxNofileLimit
+		cfg.SandboxMaxTimeout = sess.Config.SandboxMaxTimeout
+	}
 	if err := s.repo.UpdateSessionConfig(ctx, sessionID, cfg); err != nil {
 		return nil, err
 	}
@@ -479,6 +489,16 @@ func (s *Service) UpdateSessionConfig(ctx context.Context, userID, sessionID int
 		s.log.Warn("记录会话配置变更日志失败", zap.Int64("session_id", sessionID), zap.Error(err))
 	}
 	return s.repo.GetSession(ctx, sessionID)
+}
+
+// sandboxAdminRole 判断调用方角色是否有权修改沙盒配置（agent_admin 及以上）。
+// super_admin / agent_admin / admin（遗留管理员）均有权限；空串/普通用户无权限。
+func sandboxAdminRole(role string) bool {
+	switch role {
+	case "super_admin", "agent_admin", "admin":
+		return true
+	}
+	return false
 }
 
 // mergeConfigUpdate 把用户提交的配置增量合并进当前会话快照，避免"全量替换"
@@ -524,6 +544,23 @@ func mergeConfigUpdate(cur, in SessionConfig) SessionConfig {
 	}
 	if in.EnabledSkillsSet {
 		out.EnabledSkillsSet = true
+	}
+	// 沙盒配置（管理员级）：非零/显式提交即覆盖（admin 提交时后续会被授权保留）。
+	// 注：这里不校验角色——角色门禁在 UpdateSessionConfig 的覆盖逻辑完成。
+	// bool 直接赋值以支持"开启/关闭"双向切换；非 admin 提交的值会在
+	// UpdateSessionConfig 被覆盖回快照原值，此处覆盖不产生安全问题。
+	out.SandboxNetworkEnabled = in.SandboxNetworkEnabled
+	if in.SandboxMemoryMB > 0 {
+		out.SandboxMemoryMB = in.SandboxMemoryMB
+	}
+	if in.SandboxCPUSeconds > 0 {
+		out.SandboxCPUSeconds = in.SandboxCPUSeconds
+	}
+	if in.SandboxNofileLimit > 0 {
+		out.SandboxNofileLimit = in.SandboxNofileLimit
+	}
+	if in.SandboxMaxTimeout > 0 {
+		out.SandboxMaxTimeout = in.SandboxMaxTimeout
 	}
 	return out
 }
@@ -580,6 +617,10 @@ func (s *Service) validateConfig(cfg SessionConfig) error {
 	if p := cfg.OrchestratePlan; p != "" && p != "fixed" && p != "dynamic" {
 		return apperr.New(apperr.CodeInvalidArgument, "orchestrate_plan 仅支持 fixed 或 dynamic")
 	}
+	// 沙盒资源限制：非法负值拒绝（0 = 回退实例默认）。
+	if cfg.SandboxMemoryMB < 0 || cfg.SandboxCPUSeconds < 0 || cfg.SandboxNofileLimit < 0 || cfg.SandboxMaxTimeout < 0 {
+		return apperr.New(apperr.CodeInvalidArgument, "沙盒资源限制不能为负值")
+	}
 	return nil
 }
 
@@ -635,7 +676,8 @@ func isZeroSessionConfig(c SessionConfig) bool {
 		len(c.MCPServers) == 0 && !c.MCPServersSet &&
 		c.MaxRounds == 0 && c.MaxMessages == 0 && c.MaxThinkingRounds == 0 &&
 		c.Model == "" && !c.EnabledCapabilitiesSet && !c.EnabledSkillsSet &&
-		c.Mode == ""
+		c.Mode == "" && !c.SandboxNetworkEnabled && c.SandboxMemoryMB == 0 &&
+		c.SandboxCPUSeconds == 0 && c.SandboxNofileLimit == 0 && c.SandboxMaxTimeout == 0
 }
 
 // ListTools 列出工具清单（名称 + 描述），供配置 UI 使用。
@@ -1098,13 +1140,21 @@ func (s *Service) newAgentWithConfig(ctx context.Context, sessionID int64, histo
 	return ag, nil
 }
 
-// runCtx 把会话级配置注入对话运行上下文（当前：kb_ids 默认检索范围）。
+// runCtx 把会话级配置注入对话运行上下文（当前：kb_ids 默认检索范围 + 沙盒配置）。
 // framework 的 Run/RunStream 会把 ctx 透传给工具 Execute，kb_search
-// 据此在模型未显式限定 kb_ids 时按会话配置的知识库检索。
+// 据此在模型未显式限定 kb_ids 时按会话配置的知识库检索；沙盒类工具据此
+// 按会话的沙盒配置动态开网/限资源。
 func runCtx(ctx context.Context, cfg SessionConfig) context.Context {
 	if len(cfg.KBIDs) > 0 {
 		ctx = kb.WithKBIDs(ctx, cfg.KBIDs)
 	}
+	ctx = builtin.WithSandboxConfig(ctx, builtin.SandboxConfig{
+		NetworkEnabled: cfg.SandboxNetworkEnabled,
+		MemoryMB:       int64(cfg.SandboxMemoryMB),
+		CPUSeconds:     int64(cfg.SandboxCPUSeconds),
+		NofileLimit:    int64(cfg.SandboxNofileLimit),
+		MaxTimeoutSecs: int64(cfg.SandboxMaxTimeout),
+	})
 	return ctx
 }
 

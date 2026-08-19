@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useChatStore } from '@/stores/chat'
 import { cn } from '@/lib/utils'
 import ConfigButtonArea from './config/ConfigButtonArea'
+import FreeModeToggle from './FreeModeToggle'
 
 // 聊天上传文件（模块二）：类型白名单、大小与份数上限（与后端校验一致）。
 // 图片类型为视觉解析预留：落盘原图 + 前端渲染，内容理解暂未接线。
@@ -318,6 +319,10 @@ export default function ChatInput({ canConfigure = true }: { canConfigure?: bool
         {/* 输入提示行（参照 ui_chat.html input-hint） */}
         <div className="mt-1.5 text-center text-[11px] text-muted-foreground/70">
           按 Enter 发送 · Shift+Enter 换行 · 支持 Markdown 格式
+        </div>
+        {/* 自由模式（仅桌面端显示）：本机本地 shell 不询问、不限超时的个人化开关 */}
+        <div className="mt-1.5 flex justify-center">
+          <FreeModeToggle />
         </div>
       </div>
     </div>

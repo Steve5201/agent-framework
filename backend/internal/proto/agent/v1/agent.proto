@@ -316,6 +316,13 @@ message SessionConfig {
   // 编排方案（仅 mode=orchestrate 生效）：
   // fixed = 固定教研模板（默认，空/缺省）；dynamic = LLM 动态分解子任务 DAG。
   string orchestrate_plan = 16;
+  // 沙盒配置（管理员级，仅 agent_admin/super_admin 可改；proto 层面仅透传，
+  // 普通用户提交由服务端覆盖回快照原值）。
+  bool sandbox_network_enabled = 17; // 沙盒执行是否允许联网（false = 禁网默认）
+  int32 sandbox_memory_mb = 18;      // 沙盒虚拟内存上限（MB，0 = 回退实例默认）
+  int32 sandbox_cpu_seconds = 19;    // 沙盒 CPU 时间上限（秒，0 = 回退实例默认）
+  int32 sandbox_nofile_limit = 20;   // 沙盒最大打开文件数（0 = 回退实例默认）
+  int32 sandbox_max_timeout = 21;    // 沙盒单次执行最大超时（秒，0 = 回退实例默认）
 }
 
 // ThinkingConfig 思考模式配置（DeepSeek V4）。

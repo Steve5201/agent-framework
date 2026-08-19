@@ -15,6 +15,7 @@ import {
 } from '@/lib/api'
 import { streamChat, regenerateStream } from '@/lib/sse'
 import { LOCAL_TOOL_NAMES, isTauri, runLocalShell } from '@/lib/localTools'
+import { isFreeMode } from '@/lib/freeMode'
 import { ALL_AGENT_ID, DEFAULT_AGENT_ID, getHomeScope } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth'
 import { genUuid } from '@/lib/uuid'
@@ -324,7 +325,8 @@ export interface LocalPendingCall {
 /** 处理一条本地工具（External=true）调用：
  *   - 浏览器：无本地执行能力，立即回填失败结果，agent 据此给出降级答复；
  *   - 桌面端：弹出确认弹窗（pendingLocalCall），用户决定后执行并回填。
- *  导出供单测直接验证两条分支。 */
+ *   自由模式（纯本地个人化开关）：跳过确认直接执行，且不设超时。
+ *  导出供单测直接验证各分支。 */
 export async function handleLocalToolCall(
   sessionId: string,
   toolCallId: string,
@@ -351,7 +353,44 @@ export async function handleLocalToolCall(
     )
     return
   }
+  if (isFreeMode()) {
+    // 自由模式：跳过确认 + 不限超时，直接在本机执行。
+    await executeLocalCall(sessionId, toolCallId, command, cwd, true, -1)
+    return
+  }
   useChatStore.setState({ pendingLocalCall: { sessionId, toolCallId, name, command, cwd } })
+}
+
+/** 执行一条本地调用并回填结果（允许与否由调用方决定）。timeoutSecs>0 时按秒设超时，
+ *  0 = 采用 Rust 端默认（非自由模式）；自由模式透传 0 且由 Rust 端放开超时。 */
+async function executeLocalCall(
+  sessionId: string,
+  toolCallId: string,
+  command: string,
+  cwd: string | undefined,
+  allow: boolean,
+  timeoutSecs = 0,
+): Promise<void> {
+  try {
+    let content: string
+    let isError: boolean
+    if (!allow) {
+      content = '用户拒绝在本地执行该命令'
+      isError = true
+    } else {
+      const result = await runLocalShell(command, cwd, timeoutSecs)
+      content = result.content
+      isError = result.isError
+    }
+    await submitToolResult(sessionId, toolCallId, content, isError)
+  } catch (err) {
+    await submitToolResult(
+      sessionId,
+      toolCallId,
+      `本地工具执行失败：${(err as Error).message}`,
+      true,
+    ).catch(() => {})
+  }
 }
 
 interface ChatState {
@@ -947,25 +986,6 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     if (!pending) return
     set({ pendingLocalCall: null })
     const { sessionId, toolCallId, command, cwd } = pending
-    try {
-      let content: string
-      let isError: boolean
-      if (!allow) {
-        content = '用户拒绝在本地执行该命令'
-        isError = true
-      } else {
-        const result = await runLocalShell(command, cwd)
-        content = result.content
-        isError = result.isError
-      }
-      await submitToolResult(sessionId, toolCallId, content, isError)
-    } catch (err) {
-      await submitToolResult(
-        sessionId,
-        toolCallId,
-        `本地工具执行失败：${(err as Error).message}`,
-        true,
-      ).catch(() => {})
-    }
+    await executeLocalCall(sessionId, toolCallId, command, cwd, allow)
   },
 }))

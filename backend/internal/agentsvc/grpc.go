@@ -766,6 +766,12 @@ func toProtoSession(s *Session) *agentv1.Session {
 	cfg.Mode = s.Config.Mode
 	// 编排方案（fixed | dynamic，仅 orchestrate 生效）。
 	cfg.OrchestratePlan = s.Config.OrchestratePlan
+	// 沙盒配置（管理员级，快照固化后透传）。
+	cfg.SandboxNetworkEnabled = s.Config.SandboxNetworkEnabled
+	cfg.SandboxMemoryMb = int32(s.Config.SandboxMemoryMB)
+	cfg.SandboxCpuSeconds = int32(s.Config.SandboxCPUSeconds)
+	cfg.SandboxNofileLimit = int32(s.Config.SandboxNofileLimit)
+	cfg.SandboxMaxTimeout = int32(s.Config.SandboxMaxTimeout)
 	if s.Config.Thinking != nil {
 		cfg.Thinking = &agentv1.ThinkingConfig{
 			Enabled:         s.Config.Thinking.Enabled,
@@ -804,6 +810,11 @@ func fromProtoConfig(c *agentv1.SessionConfig) SessionConfig {
 		EnabledSkillsSet:       c.EnabledSkillsSet,
 		Mode:                   c.Mode,
 		OrchestratePlan:        c.OrchestratePlan,
+		SandboxNetworkEnabled:  c.SandboxNetworkEnabled,
+		SandboxMemoryMB:        int(c.SandboxMemoryMb),
+		SandboxCPUSeconds:      int(c.SandboxCpuSeconds),
+		SandboxNofileLimit:     int(c.SandboxNofileLimit),
+		SandboxMaxTimeout:      int(c.SandboxMaxTimeout),
 	}
 	if c.Thinking != nil {
 		cfg.Thinking = &ThinkingConfig{

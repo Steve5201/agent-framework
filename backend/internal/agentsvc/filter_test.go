@@ -33,6 +33,7 @@ func stubRegistry() *tool.Registry {
 	for _, name := range []string{
 		"web_search",             // 搜索能力
 		"fetch_url",              // 搜索能力（网页解析）
+		"fetch_url_render",       // 搜索能力（渲染版网页解析）
 		"file_ops",               // 文件读写能力
 		"code_executor",          // 代码执行能力
 		"calculator",             // 计算能力

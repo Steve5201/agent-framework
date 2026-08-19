@@ -43,4 +43,10 @@ var parserProfiles = map[string]profileSpec{
 	// 对 render_pdf 跳过 --as 限制（见 executor.go），其余限制（禁网/降权/nofile/
 	// cpu/超时）不变。
 	"render_pdf": {Cmd: "python3", Script: "render_pdf.py", ArgCount: 2, MaxTimeout: 60 * time.Second},
+	// fetch_render：用 Chromium headless 渲染 JS 动态页面并提取正文（解决纯 JS
+	// 渲染页——如 B 站等——HTML 骨架为空导致 fetch_url 抓不到内容的问题）。
+	// 参数 = [URL 绝对地址, 输出正文 txt 绝对路径]。复用 render_pdf 的 chromium
+	// 运行配置（跳过 RLIMIT_AS），且必须联网（由 agent 侧在请求里
+	// network_enabled=true 放行，否则 unshare -n 禁网下 chromium 无法加载页面）。
+	"fetch_render": {Cmd: "python3", Script: "fetch_render.py", ArgCount: 1, MaxTimeout: 60 * time.Second},
 }

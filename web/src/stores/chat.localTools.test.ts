@@ -19,6 +19,10 @@ vi.mock('@/lib/localTools', () => ({
   runLocalShell: vi.fn(),
 }))
 
+vi.mock('@/lib/freeMode', () => ({
+  isFreeMode: vi.fn(() => false),
+}))
+
 vi.mock('@/lib/api', () => ({
   listSessions: vi.fn(async () => ({ sessions: [], total: 0 })),
   listMessages: vi.fn(async () => ({ messages: [] })),
@@ -35,16 +39,19 @@ vi.mock('@/lib/api', () => ({
 }))
 
 import { isTauri, runLocalShell } from '@/lib/localTools'
+import { isFreeMode } from '@/lib/freeMode'
 import { submitToolResult } from '@/lib/api'
 import { useChatStore, handleLocalToolCall } from '@/stores/chat'
 
 const mockIsTauri = vi.mocked(isTauri)
 const mockRunLocalShell = vi.mocked(runLocalShell)
 const mockSubmitToolResult = vi.mocked(submitToolResult)
+const mockIsFreeMode = vi.mocked(isFreeMode)
 
 beforeEach(() => {
   vi.clearAllMocks()
   mockIsTauri.mockReturnValue(false)
+  mockIsFreeMode.mockReturnValue(false)
   useChatStore.setState({ pendingLocalCall: null })
 })
 
@@ -81,7 +88,7 @@ describe('桌面端：确认弹窗决策', () => {
     })
     await useChatStore.getState().resolveLocalCall(true)
 
-    expect(mockRunLocalShell).toHaveBeenCalledWith('git status', undefined)
+    expect(mockRunLocalShell).toHaveBeenCalledWith('git status', undefined, 0)
     expect(mockSubmitToolResult).toHaveBeenCalledWith('s1', 'call_1', '工作区干净', false)
     expect(useChatStore.getState().pendingLocalCall).toBeNull()
   })
@@ -128,5 +135,30 @@ describe('桌面端：确认弹窗决策', () => {
       cwd: '/tmp',
     })
     expect(mockSubmitToolResult).not.toHaveBeenCalled()
+  })
+})
+
+describe('自由模式：跳过确认 + 不限超时', () => {
+  it('自由模式开启且桌面端时，本地调用直接执行（不弹窗、不设超时）', async () => {
+    mockIsTauri.mockReturnValue(true)
+    mockIsFreeMode.mockReturnValue(true)
+    mockRunLocalShell.mockResolvedValue({ content: 'git: done', isError: false })
+
+    await handleLocalToolCall('s1', 'call_1', 'local_shell', '{"command":"git pull"}')
+
+    expect(useChatStore.getState().pendingLocalCall).toBeNull()
+    expect(mockRunLocalShell).toHaveBeenCalledWith('git pull', undefined, -1)
+    expect(mockSubmitToolResult).toHaveBeenCalledWith('s1', 'call_1', 'git: done', false)
+  })
+
+  it('自由模式开启但本地执行失败：仍直接回填失败结果', async () => {
+    mockIsTauri.mockReturnValue(true)
+    mockIsFreeMode.mockReturnValue(true)
+    mockRunLocalShell.mockResolvedValue({ content: 'error: no repo', isError: true })
+
+    await handleLocalToolCall('s1', 'call_1', 'local_shell', '{"command":"git status"}')
+
+    expect(mockRunLocalShell).toHaveBeenCalledWith('git status', undefined, -1)
+    expect(mockSubmitToolResult).toHaveBeenCalledWith('s1', 'call_1', 'error: no repo', true)
   })
 })

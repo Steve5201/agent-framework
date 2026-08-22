@@ -148,14 +148,16 @@ npx tauri android build --target aarch64
 
 **结论**：面向"App 沙盒内文件/脚本操作"够用；系统级管理需换 Android 原生方案（Service/WorkManager），属原生开发范畴。
 
-## 7. Release 签名（上架前置，🚧 规划中）
+## 7. Release 签名（✅ 已配置）
 
-当前 release 产物是 unsigned。上架需：
-1. 生成 keystore（`keytool -genkey -v -keystore xxx.keystore ...`）
-2. 在 `gen/android/app/build.gradle.kts` 的 `release` buildType 配置 `signingConfig`
-3. 重新 `tauri android build` → 产出签名 APK
+release 版已配置签名 keystore（本机 `desktop/nebula-release.keystore`，**已 gitignore**，换机需重新生成）：
 
-> debug 包不涉及此步，可直接用于功能验证。
+1. 生成 keystore：`keytool -genkey -v -keystore nebula-release.keystore -alias nebula -keyalg RSA -keysize 2048 -validity 10000 ...`
+2. 在 `gen/android/app/build.gradle.kts` 的 `signingConfigs` 创建 `release`（storeFile 指向 `../../../../nebula-release.keystore`），并在 `release` buildType 引用 `signingConfig = signingConfigs.getByName("release")`；同时 release 设 `usesCleartextTraffic=true`（当前后端为 http，允许明文，后续上 HTTPS 可改回 false）
+3. `npx tauri android build --target aarch64` → 产出**已签名** `app-universal-release.apk`，可直接安装/分发
+
+> ⚠️ `gen/android` 是生成的、gitignore；签名配置只在本机 gen/android 生效。新机需重新 `tauri android init` + 重新配置签名 + 重新生成 keystore。
+> debug 包用 Android 调试签名，无需此配置。
 
 ## 8. 环境迁移清单（换新机时）
 

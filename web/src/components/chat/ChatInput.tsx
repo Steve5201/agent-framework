@@ -1,9 +1,10 @@
-import { useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent } from 'react'
+import { useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react'
 import { AlertCircle, CheckCircle2, FileText, Loader2, Paperclip, Send, Square, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useChatStore } from '@/stores/chat'
 import { cn } from '@/lib/utils'
+import { useIsMobile } from '@/lib/useIsMobile'
 import ConfigButtonArea from './config/ConfigButtonArea'
 
 // 聊天上传文件（模块二）：类型白名单、大小与份数上限（与后端校验一致）。
@@ -54,6 +55,7 @@ export default function ChatInput({ canConfigure = true }: { canConfigure?: bool
   const [uploading, setUploading] = useState(false)
   const [uploadHint, setUploadHint] = useState('')
   const [dragging, setDragging] = useState(false)
+  const isMobile = useIsMobile()
   const taRef = useRef<HTMLTextAreaElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -103,6 +105,22 @@ export default function ChatInput({ canConfigure = true }: { canConfigure?: bool
     e.target.value = '' // 允许重复选择同一文件
     if (files.length === 0 || uploading || sending || regenerating) return
     addFiles(files)
+  }
+
+  /** 粘贴上传：剪贴板含图片/文件时（如截图 Ctrl+V）接管并加入待发列表。
+   *  纯文本粘贴保持默认（插入输入框），不拦截。 */
+  function onPaste(e: ClipboardEvent<HTMLTextAreaElement>) {
+    const files = Array.from(e.clipboardData.files ?? [])
+    if (files.length === 0) return // 纯文本，走默认粘贴
+    e.preventDefault() // 有文件才接管，避免把图片当作文本塞进输入框
+    if (uploading || sending || regenerating) return
+    // 粘贴的截图常无扩展名（image/png 等），补一个可识别类型名以便通过白名单校验。
+    const normalized = files.map((f) => {
+      if (f.name.includes('.')) return f
+      const ext = f.type.split('/')[1]?.toLowerCase() ?? ''
+      return ext ? new File([f], `${f.name || 'pasted'}.${ext}`, { type: f.type }) : f
+    })
+    addFiles(normalized)
   }
 
   /** 拖拽投放：同样只加入待发列表。 */
@@ -163,7 +181,7 @@ export default function ChatInput({ canConfigure = true }: { canConfigure?: bool
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     // 中文输入法组合期间不触发发送
-    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !isMobile) {
       e.preventDefault()
       void handleSubmit()
     }
@@ -235,7 +253,7 @@ export default function ChatInput({ canConfigure = true }: { canConfigure?: bool
         {/* 拖拽高亮：仅视觉提示，投放区域即整个输入区 */}
         <div
           className={cn(
-            'flex items-end gap-1.5 rounded-2xl border bg-card px-2.5 py-1.5 shadow-sm',
+            'flex items-end gap-1.5 rounded-2xl border bg-card px-2 py-1.5 shadow-sm md:px-2.5',
             dragging && 'ring-2 ring-primary/60',
           )}
         >
@@ -247,16 +265,19 @@ export default function ChatInput({ canConfigure = true }: { canConfigure?: bool
               uploading
                 ? '正在解析文件…'
                 : pendingFiles.length > 0
-                  ? '可输入文字，与待发文件一起发送；Enter 发送'
-                  : '输入消息，Enter 发送，Shift+Enter 换行（可拖入文档）'
+                  ? '可输入文字，与待发文件一起发送；发送按钮发送'
+                  : isMobile
+                    ? '输入消息，回车换行；点发送按钮发送'
+                    : '输入消息，Enter 发送，Shift+Enter 换行（可拖入/粘贴图片）'
             }
             onChange={(e) => {
               setValue(e.target.value)
               autoResize()
             }}
             onKeyDown={onKeyDown}
+            onPaste={onPaste}
             disabled={busy}
-            className="min-h-[40px] max-h-[200px] flex-1 resize-none border-0 bg-transparent px-1 py-2 shadow-none focus-visible:ring-0"
+            className="min-h-[40px] max-h-[200px] flex-1 resize-none border-0 bg-transparent px-1 py-2 text-[16px] leading-relaxed shadow-none focus-visible:ring-0 md:min-h-[40px] md:text-sm md:leading-normal"
           />
           {(sending || regenerating) ? (
             <Button
@@ -266,11 +287,12 @@ export default function ChatInput({ canConfigure = true }: { canConfigure?: bool
               onClick={stopStreaming}
               title={regenerating ? '停止重新生成' : '停止生成'}
               aria-label="停止生成"
+              className="size-10 shrink-0 md:size-9"
             >
               <Square />
             </Button>
           ) : uploading ? (
-            <Button type="button" variant="secondary" size="icon" disabled title="正在解析文件…" aria-label="正在解析文件">
+            <Button type="button" variant="secondary" size="icon" disabled title="正在解析文件…" aria-label="正在解析文件" className="size-10 shrink-0 md:size-9">
               <Loader2 className="animate-spin" />
             </Button>
           ) : (
@@ -281,15 +303,16 @@ export default function ChatInput({ canConfigure = true }: { canConfigure?: bool
               disabled={!sendable}
               title="发送"
               aria-label="发送"
-              className="size-9 shrink-0 rounded-full shadow-sm"
+              className="size-10 shrink-0 rounded-full shadow-sm md:size-9"
             >
               <Send />
             </Button>
           )}
         </div>
-        {/* 上传 + 配置按钮区：输入框下方一行，左对齐。上传按钮始终渲染（游客也可
-            上传文件），配置按钮区按 canConfigure 条件隐藏（游客模式）。 */}
-        <div className="mt-1.5 flex items-center gap-0.5">
+        {/* 上传 + 配置按钮区：统一工具条（上传按钮作 leading 传入，同尺寸同视觉，
+            超宽可横向滑动）。上传按钮始终渲染（游客也可上传），配置按钮按 canConfigure
+            条件隐藏（游客模式）。 */}
+        <div className="mt-1.5">
           <input
             ref={fileRef}
             type="file"
@@ -299,19 +322,37 @@ export default function ChatInput({ canConfigure = true }: { canConfigure?: bool
             onChange={handleFile}
             aria-label="选择文件"
           />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => fileRef.current?.click()}
-            disabled={busy || pendingFiles.length >= CHAT_DOC_MAX_FILES}
-            title="选择文件（支持 md/txt/html/xlsx/pdf/docx/pptx 及常见图片，≤20MB，随消息一起发送）"
-            aria-label="选择文件"
-            className="h-8 w-8 text-muted-foreground"
-          >
-            <Paperclip />
-          </Button>
-          {canConfigure && <ConfigButtonArea />}
+          {canConfigure ? (
+            <ConfigButtonArea
+              leading={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={busy || pendingFiles.length >= CHAT_DOC_MAX_FILES}
+                  title="选择文件（支持 md/txt/html/xlsx/pdf/docx/pptx 及常见图片，≤20MB，随消息一起发送）"
+                  aria-label="选择文件"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground md:h-8 md:w-8 md:rounded-md"
+                >
+                  <Paperclip />
+                </Button>
+              }
+            />
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => fileRef.current?.click()}
+              disabled={busy || pendingFiles.length >= CHAT_DOC_MAX_FILES}
+              title="选择文件（支持 md/txt/html/xlsx/pdf/docx/pptx 及常见图片，≤20MB，随消息一起发送）"
+              aria-label="选择文件"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground md:h-8 md:w-8 md:rounded-md"
+            >
+              <Paperclip />
+            </Button>
+          )}
         </div>
         {/* 上传反馈行：成功/失败提示，短暂显示后消失 */}
         {uploadHint && <div className="mt-1.5 text-xs text-muted-foreground">{uploadHint}</div>}

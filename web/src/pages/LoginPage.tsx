@@ -7,12 +7,12 @@ import { isAdminRole, isAllAgentScope, getHomeScope } from '@/lib/roles'
 import { getServerUrl, setServerUrl as persistServerUrl } from '@/lib/settings'
 import { clearRemembered, loadRemembered, saveRemembered } from '@/lib/remember'
 import { useAuthStore } from '@/stores/auth'
-import { Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+import NebulaLogo from '@/components/brand/NebulaLogo'
 
 type Mode = 'login' | 'register'
 
@@ -115,7 +115,7 @@ export default function LoginPage() {
   // 仅普通门户允许注册；超管门户（*）隐藏注册入口（账号由最高超管创建）
   const isSuperPortal = isAllAgentScope(effectiveAgentId)
   const canRegister = !isSuperPortal
-  const title = isSuperPortal ? '智能体助手 · 超管专属门户' : `智能体助手 · ${effectiveAgentId}`
+  const title = isSuperPortal ? '星云 · 超管专属门户' : `星云 · ${effectiveAgentId}`
   const subTitle =
     mode === 'register'
       ? '创建账号（注册即该门户普通用户）'
@@ -147,7 +147,7 @@ export default function LoginPage() {
       <div className="flex h-full justify-center overflow-y-auto p-4">
         <Card className="my-auto w-full max-w-sm">
           <CardHeader>
-            <CardTitle className="text-lg">智能体助手 · {effectiveAgentId}</CardTitle>
+            <CardTitle className="text-lg">星云 · {effectiveAgentId}</CardTitle>
             <CardDescription>正在校验门户……</CardDescription>
           </CardHeader>
         </Card>
@@ -266,8 +266,8 @@ export default function LoginPage() {
     <div className="flex h-full justify-center overflow-y-auto p-4">
       <Card className="my-auto w-full max-w-sm">
         <CardHeader className="items-center text-center">
-          <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <Bot className="size-6" />
+          <div className="flex size-12 items-center justify-center">
+            <NebulaLogo className="size-12" />
           </div>
           <CardTitle className="text-lg">{title}</CardTitle>
           <CardDescription>{subTitle}</CardDescription>

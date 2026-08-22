@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
+import { registerBackHandler, unregisterBackHandler } from '@/lib/backstack'
 import { configRegistry } from './registry'
 import type { ConfigCtx } from './types'
 
@@ -13,7 +14,7 @@ import type { ConfigCtx } from './types'
  *   使弹窗内部状态（勾选/开关）每次打开都以会话最新配置为初始值；
  * - 新配置项只需在 registry.tsx 注册，本组件骨架不再改动。
  */
-export default function ConfigButtonArea() {
+export default function ConfigButtonArea({ leading }: { leading?: React.ReactNode }) {
   const activeId = useChatStore((s) => s.activeId)
   const sessions = useChatStore((s) => s.sessions)
   const createSession = useChatStore((s) => s.createSession)
@@ -27,9 +28,18 @@ export default function ConfigButtonArea() {
   const items = configRegistry.filter((i) => i.visible(ctx))
   const openItem = configRegistry.find((i) => i.key === openKey) ?? null
 
+  // 安卓返回键：配置弹窗打开时，返回键关闭弹窗而非退出应用。
+  useEffect(() => {
+    if (!openItem) return
+    registerBackHandler(() => setOpenKey(null))
+    return () => unregisterBackHandler()
+  }, [openItem])
+
   return (
     <>
-      <div className="flex shrink-0 items-center gap-0.5">
+      {/* 统一工具条：文件上传 + 配置按钮同排、同尺寸（44px 触控），超宽可横向滑动 */}
+      <div className="flex items-center gap-1 overflow-x-auto md:gap-0.5">
+        {leading}
         {items.map((item) => (
           <Button
             key={item.key}
@@ -55,7 +65,7 @@ export default function ConfigButtonArea() {
                 setNonce((n) => n + 1)
               })()
             }}
-            className="h-8 w-8 text-muted-foreground"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground md:h-8 md:w-8 md:rounded-md"
           >
             {item.icon}
           </Button>

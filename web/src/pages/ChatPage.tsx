@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Bot, LogIn, Menu, ShieldAlert } from 'lucide-react'
+import { LogIn, Menu, ShieldAlert } from 'lucide-react'
 import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
 import { isTauri } from '@/lib/storage'
@@ -15,12 +15,13 @@ import {
   getHomeScope,
 } from '@/lib/roles'
 import SessionSidebar from '@/components/chat/SessionSidebar'
-import MenuButton from '@/menus/MenuButton'
+import NebulaLogo from '@/components/brand/NebulaLogo'
 import MessageList from '@/components/chat/MessageList'
 import ChatInput from '@/components/chat/ChatInput'
 import LocalToolModal from '@/components/chat/LocalToolModal'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { registerBackHandler, unregisterBackHandler } from '@/lib/backstack'
 
 // 模块级：跨组件挂载跟踪上次登录态。游客 → 登录页 → 回本域的流程会卸载/重挂
 // ChatPage，useRef 在重挂时丢失旧值（agentId 相同 initAgent 会跳过、status 与
@@ -167,6 +168,13 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
     return () => window.removeEventListener('focus', onFocus)
   }, [superPortalBlocked])
 
+  // 安卓返回键：会话列表抽屉打开时，返回键关闭抽屉而非退出应用。
+  useEffect(() => {
+    if (!sidebarOpen) return
+    registerBackHandler(() => setSidebarOpen(false))
+    return () => unregisterBackHandler()
+  }, [sidebarOpen])
+
   // 智能体域名称展示（管理端域固定文案；agent 域用 URL 中的 ID，'*' = 超管专属门户）
   const scopeTitle =
     mode === 'admin'
@@ -227,7 +235,7 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
             onClick={() => setSidebarOpen(false)}
             aria-hidden
           />
-          <aside className="absolute inset-y-0 left-0 w-72 border-r bg-card shadow-lg">
+          <aside className="absolute inset-y-0 left-0 w-[82vw] max-w-xs border-r bg-card shadow-lg" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
             <SessionSidebar onNavigate={() => setSidebarOpen(false)} />
           </aside>
         </div>
@@ -235,30 +243,31 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
 
       <main className="flex min-w-0 flex-1 flex-col">
         {/* 移动端顶栏 */}
-        <div className="flex items-center border-b bg-card px-2 py-1.5 md:hidden">
+        <div className="flex items-center border-b bg-card px-1.5 py-1 md:hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setSidebarOpen(true)}
             aria-label="打开会话列表"
+            className="size-9 shrink-0 rounded-lg md:hidden"
           >
-            <Menu />
+            <Menu className="size-5" />
           </Button>
-          <span className="ml-1 flex min-w-0 items-center gap-1.5">
-            <Bot className="size-3.5 shrink-0 text-primary" />
-            <span className="truncate text-base font-medium">{scopeTitle}</span>
+          <span className="ml-1.5 flex min-w-0 items-center gap-2">
+            <NebulaLogo className="size-6 shrink-0" />
+            <span className="truncate text-lg font-semibold">{scopeTitle}</span>
           </span>
           {isGuest && mode === 'agent' ? (
             <Link
               to={loginUrl}
-              className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'ml-auto')}
+              className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'ml-auto size-9 rounded-lg md:hidden')}
+              aria-label="登录"
             >
-              <LogIn className="mr-1 h-3.5 w-3.5" />
-              登录
+              <LogIn className="h-5 w-5" />
             </Link>
           ) : (
-            /* 登录用户：顶栏右侧菜单入口（设置/管理端/退出登录等，注册表驱动） */
-            <MenuButton className="ml-auto" />
+            /* 登录用户：移动顶栏不放菜单按钮（侧边栏内已含菜单/退出入口，避免重复） */
+            <span className="ml-auto" />
           )}
         </div>
 
@@ -266,7 +275,7 @@ export default function ChatPage({ mode }: { mode: 'agent' | 'admin' }) {
         <div className="hidden items-center justify-between border-b bg-card px-5 py-2.5 md:flex">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-sm">
-              <Bot className="size-4.5" />
+              <NebulaLogo className="size-6" />
             </div>
             <div className="min-w-0">
               <div className="truncate text-base font-semibold">{scopeTitle}</div>

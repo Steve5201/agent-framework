@@ -19,11 +19,10 @@ export async function openExternal(url: string): Promise<void> {
   if (!url) return
   if (isTauri()) {
     try {
-      const { invoke } = await import('@tauri-apps/api/core')
-      await invoke('open_external', { url })
+      const { openUrl } = await import('@tauri-apps/plugin-opener')
+      await openUrl(url)
       return
     } catch (err) {
-      // invoke 失败（如命令未注册/被拒）回退到新窗口打开，不抛给调用方
       console.error('[external] Tauri 打开外部链接失败，回退新窗口：', err)
     }
   }

@@ -76,7 +76,7 @@ describe('LoginPage', () => {
     expect(screen.getByLabelText('密码')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '登录' })).toBeInTheDocument()
     // 地址即门户：标题与副标题均体现智能体 ID
-    expect(screen.getByText('智能体助手 · tutor')).toBeInTheDocument()
+    expect(screen.getByText('星云 · tutor')).toBeInTheDocument()
     expect(screen.getByText(/登录以继续对话（智能体 tutor）/)).toBeInTheDocument()
   })
 
@@ -101,7 +101,7 @@ describe('LoginPage', () => {
 
   it('超管门户（*）隐藏注册入口与游客返回，仅提供登录', () => {
     renderPage('/login/*')
-    expect(screen.getByText('智能体助手 · 超管专属门户')).toBeInTheDocument()
+    expect(screen.getByText('星云 · 超管专属门户')).toBeInTheDocument()
     expect(screen.queryByText('去注册')).not.toBeInTheDocument()
     // 超管域游客禁止对话：登录页不再提供"以游客身份继续"
     expect(screen.queryByText('以游客身份继续（不登录）')).not.toBeInTheDocument()

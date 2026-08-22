@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/ui/avatar'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import NebulaLogo from '@/components/brand/NebulaLogo'
 import MenuButton from '@/menus/MenuButton'
 
 interface Props {
@@ -77,7 +78,7 @@ function SessionRow({
           onChange={(e) => setValue(e.target.value)}
           onBlur={commit}
           onKeyDown={onKeyDown}
-          className="h-8 px-2 text-sm"
+          className="h-10 px-2 text-base md:h-8 md:text-sm"
           aria-label="会话名称"
         />
       ) : (
@@ -90,7 +91,7 @@ function SessionRow({
           }}
           title={session.title || '新对话'}
           className={cn(
-            'relative w-full cursor-pointer rounded-md px-3 py-2 pl-4 text-left text-sm transition-colors',
+            'relative w-full cursor-pointer rounded-md px-3 py-2.5 pl-4 text-left text-[17px] transition-colors md:py-2 md:text-sm',
             active
               ? 'bg-primary/10 font-medium text-primary'
               : 'text-foreground/90 hover:bg-accent/60',
@@ -102,9 +103,9 @@ function SessionRow({
               aria-hidden
             />
           )}
-          <span className="flex min-w-0 items-baseline gap-2 pr-9">
+          <span className="flex min-w-0 items-baseline gap-2 pr-24 md:pr-9">
             <span className="truncate">{session.title || '新对话'}</span>
-            <span className="shrink-0 text-[11px] text-muted-foreground/70">
+            <span className="shrink-0 text-[14px] text-muted-foreground/70 md:text-[11px]">
               {relativeTime(session.updated_at)}
             </span>
           </span>
@@ -121,11 +122,10 @@ function SessionRow({
               setEditing(true)
             }}
             className={cn(
-              'absolute right-7 top-1/2 -translate-y-1/2 cursor-pointer rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-background hover:text-foreground',
-              'group-hover:opacity-100 focus-visible:opacity-100',
+              'absolute right-7 top-1/2 -translate-y-1/2 cursor-pointer rounded p-2 text-muted-foreground transition-opacity hover:bg-background hover:text-foreground md:p-1.5 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100',
             )}
           >
-            <Pencil className="size-3.5" />
+            <Pencil className="size-5 md:size-3.5" />
           </button>
           <button
             type="button"
@@ -136,11 +136,10 @@ function SessionRow({
               deleteSession(session.id).catch((err) => alert(`删除失败：${(err as Error).message}`))
             }}
             className={cn(
-              'absolute right-1.5 top-1/2 -translate-y-1/2 cursor-pointer rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-background hover:text-destructive',
-              'group-hover:opacity-100 focus-visible:opacity-100',
+              'absolute right-1.5 top-1/2 -translate-y-1/2 cursor-pointer rounded p-2 text-muted-foreground transition-opacity hover:bg-background hover:text-destructive md:p-1.5 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100',
             )}
           >
-            <Trash2 className="size-3.5" />
+            <Trash2 className="size-5 md:size-3.5" />
           </button>
         </>
       )}
@@ -195,7 +194,10 @@ export default function SessionSidebar({ onNavigate }: Props) {
       {/* 顶栏：应用名 + 刷新（新建对话为下方全宽主按钮） */}
       <div className="border-b px-3 pb-2.5 pt-2.5">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold">智能体助手</span>
+          <span className="flex items-center gap-2 text-base font-semibold md:text-sm">
+            <NebulaLogo className="size-6 md:size-5" />
+            星云
+          </span>
           <div className="flex items-center gap-0.5">
             {isTauri() && (
               <Button
@@ -259,10 +261,10 @@ export default function SessionSidebar({ onNavigate }: Props) {
       {isGuest ? (
         <div className="flex items-center justify-between border-t px-3 py-2.5">
           <div className="flex min-w-0 items-center gap-2">
-            <Avatar fallback="游" />
-            <span className="truncate text-xs text-muted-foreground">游客模式</span>
+            <Avatar fallback="游" className="size-10 text-lg md:size-8 md:text-sm" />
+            <span className="truncate text-sm text-muted-foreground md:text-xs">游客模式</span>
           </div>
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-1">
             {isTauri() && (
               <Button
                 variant="ghost"
@@ -270,8 +272,9 @@ export default function SessionSidebar({ onNavigate }: Props) {
                 title="退出应用"
                 aria-label="退出应用"
                 onClick={() => void quitApp()}
+                className="size-11 md:size-8"
               >
-                <Power className="size-3.5" />
+                <Power className="size-6 md:size-3.5" />
               </Button>
             )}
             <Button
@@ -280,8 +283,9 @@ export default function SessionSidebar({ onNavigate }: Props) {
               title="登录 / 注册"
               aria-label="登录"
               onClick={goLogin}
+              className="size-11 md:size-8"
             >
-              <LogIn className="size-4" />
+              <LogIn className="size-6 md:size-4" />
             </Button>
           </div>
         </div>
@@ -289,10 +293,10 @@ export default function SessionSidebar({ onNavigate }: Props) {
         <div className="border-t p-1.5">
           {/* 用户区：Avatar+用户名 纯展示；菜单入口为独立三角按钮（点击弹出菜单）。
               原分散在底部的 3 个图标按钮已收拢到菜单系统（src/menus，注册表驱动）。 */}
-          <div className="flex min-w-0 items-center gap-2 px-2 py-1.5">
-            <Avatar fallback={user?.username} />
-            <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{user?.username}</span>
-            <MenuButton />
+          <div className="flex min-w-0 items-center gap-2 px-2 py-2">
+            <Avatar fallback={user?.username} className="size-10 text-lg md:size-8 md:text-sm" />
+            <span className="min-w-0 flex-1 truncate text-base text-muted-foreground md:text-xs">{user?.username}</span>
+            <MenuButton className="md:hidden" />
           </div>
         </div>
       )}

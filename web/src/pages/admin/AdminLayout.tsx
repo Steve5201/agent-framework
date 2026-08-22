@@ -23,6 +23,7 @@ import { useAuthStore } from '@/stores/auth'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useIsMobile } from '@/lib/useIsMobile'
 
 /** 模块 key → 图标（顺序与后端 /v1/admin/modules 注册顺序一致；新增模块只需在此追加一行）。 */
 const MODULE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -177,6 +178,7 @@ export default function AdminLayout() {
   const [error, setError] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { pathname } = useLocation()
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     adminListModules()
@@ -192,6 +194,20 @@ export default function AdminLayout() {
   const currentTitle = modules.find((m) => m.key === seg)?.name ?? (seg ? seg : '管理端')
 
   return (
+    <>
+      {/* 手机端不提供管理端：界面元素多且复杂，建议在电脑/平板使用（P 阶段·移动端收敛） */}
+      {isMobile ? (
+        <div className="flex h-screen flex-col items-center justify-center gap-3 bg-muted/30 p-8 text-center">
+          <ShieldCheck className="size-12 text-muted-foreground" />
+          <div className="text-lg font-semibold">管理端请在电脑上访问</div>
+          <p className="max-w-xs text-sm text-muted-foreground">
+            管理端功能较多，为获得更好的操作体验，请使用电脑或平板浏览器登录管理端。
+          </p>
+          <Link to="/" className={cn(buttonVariants(), 'mt-2')}>
+            返回对话
+          </Link>
+        </div>
+      ) : (
     <div className="flex h-screen bg-muted/30 md:flex-row">
       {/* 桌面侧边栏（md 以上常驻） */}
       <aside className="hidden w-60 shrink-0 flex-col border-r bg-card md:flex xl:w-64">
@@ -253,5 +269,7 @@ export default function AdminLayout() {
         </main>
       </div>
     </div>
+      )}
+    </>
   )
 }

@@ -317,6 +317,7 @@ mod tests {
 }
 
 use std::fs;
+#[cfg(desktop)]
 use std::sync::atomic::Ordering;
 
 use serde::{Deserialize, Serialize};
@@ -336,7 +337,7 @@ pub struct TokenPair {
     pub refresh_token: String,
 }
 
-/// 会话文件：%APPDATA%/com.agentframework.desktop/session.json
+/// 会话文件：%APPDATA%/com.nebula.agent/session.json
 /// （Linux/macOS 对应各自的 app_config_dir）。
 const SESSION_FILE: &str = "session.json";
 
@@ -358,9 +359,17 @@ pub fn app_info(app: AppHandle) -> AppInfo {
 
 /// 退出整个桌面应用（前端"退出应用"按钮调用，配合托盘"退出"）。
 /// 置位 QUITTING 后 exit：窗口关闭拦截逻辑（lib.rs）看到置位不再隐藏，进程真正退出。
+/// 桌面端：置位 QUITTING 再退出；安卓/移动端无托盘隐藏逻辑，直接退出。
+#[cfg(desktop)]
 #[tauri::command]
 pub fn app_exit(app: AppHandle) {
     crate::QUITTING.store(true, Ordering::SeqCst);
+    app.exit(0);
+}
+
+#[cfg(not(desktop))]
+#[tauri::command]
+pub fn app_exit(app: AppHandle) {
     app.exit(0);
 }
 
@@ -409,7 +418,7 @@ pub fn tokens_clear(app: AppHandle) -> Result<(), String> {
 // ---------------------------------------------------------------------------
 
 /// 凭据条目服务名（唯一命名空间，避免与其它应用冲突）。
-const REMEMBER_SERVICE: &str = "com.agentframework.desktop.login";
+const REMEMBER_SERVICE: &str = "com.nebula.agent.login";
 /// 凭据条目用户名（单条 JSON 存 username+password，无需枚举条目）。
 const REMEMBER_ACCOUNT: &str = "saved-credentials";
 

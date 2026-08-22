@@ -15,6 +15,7 @@ desktop 是**桌面客户端外壳**：把浏览器里的 web 应用装进系统
 - 前端完全复用 web/（dev 加载 `:3001`，打包嵌入 `web/dist`），**desktop 目录里没有任何 UI 代码**。
 - 运行开发：`cd desktop && npm run tauri dev`（自动启动 web dev server(:3001) + 编译 Rust + 开窗口）。
 - 打包：`npm run tauri build` → 生成安装包（Windows: NSIS）。
+- **安卓端**：同一 `desktop/` Tauri 工程，`tauri android build` 出 APK——前端复用同一份 `web/dist`，壳代码为安卓做条件编译适配（见 [android.md](./android.md)）。
 
 一句话：**web 负责"长什么样"，desktop 负责"像个桌面软件"。**
 
@@ -37,7 +38,7 @@ web (React) ──invoke──▶ Rust 命令（desktop/src-tauri/src/commands.r
 
 ### 3.1 模块定位
 
-解决"web 的 localStorage 在桌面端不安全"的问题。token 落盘到**应用配置目录** `%APPDATA%/com.agentframework.desktop/session.json`（Linux/macOS 为各自 app_config_dir），与 WebView2 数据目录隔离。
+解决"web 的 localStorage 在桌面端不安全"的问题。token 落盘到**应用配置目录** `%APPDATA%/com.nebula.agent/session.json`（Linux/macOS 为各自 app_config_dir），与 WebView2 数据目录隔离。
 
 前端 `src/lib/storage.ts` 检测到 Tauri 环境后自动改走这三条命令，**组件层完全无感**。
 
@@ -172,15 +173,15 @@ const res: LocalExecResult = await invoke('local_shell_execute', { command, cwd,
 
 - **注意**：浏览器环境无此命令（`'__TAURI_INTERNALS__' in window` 为 false）→ 前端对本地工具直接回填失败"请使用桌面客户端"，不会等待 120s 超时。
 
-### 5.4 `open_external(url): Promise<void>`（外部链接打开）
+### 5.4 外部链接 / 文件打开（`openExternal`，跨平台统一）
 
-- **作用**：用**系统默认浏览器**打开外部链接，防止 WebView2 在当前窗口内导航把整个应用界面替换成目标网页（聊天消息里出现 `https://www.example.edu.cn` 这类链接时，此前点击会导致界面"消失"）。
-- **参数**：`url: string`。
+- **作用**：用**系统默认浏览器**打开外部链接/下载文件，防止在当前 webview 窗口内导航把整个应用界面替换成目标网页（聊天消息里出现 `https://...` 链接时，此前点击会导致界面"消失"）。
+- **实现（跨平台，含安卓）**：统一用 **`tauri-plugin-opener`**（`Cargo.toml` + `lib.rs` 注册 + `capabilities/default.json` 加 `opener:default`）。`tauri::command open_external`（Windows `cmd /C start` / macOS `open` / Linux `xdg-open`）仍保留（处理 `data:image/*` 解码落盘打开），但前端 `external.ts` 的 `openExternal` 在 Tauri 环境改走 opener `openUrl`——**安卓端无需 `xdg-open`，用系统 Intent 打开默认浏览器**，修复了安卓无 `xdg-open` 导致回退 `window.open` 劫持页面的问题。
 - **触发链路**：web 端 `web/src/lib/external.ts` 的 `openExternal()`：
-  1. 检测到 Tauri 环境 → `invoke('open_external', { url })`；
+  1. 检测到 Tauri 环境 → `@tauri-apps/plugin-opener` 的 `openUrl(url)`；
   2. 浏览器环境 → `window.open(url, '_blank', 'noopener,noreferrer')` 新标签页。
-- **安全**：`validate_external_url` 仅放行 `http/https/mailto/tel` 白名单协议，且长度 ≤ 2048——`file://`、`javascript:`、`cmd://` 等一律拒绝（防命令注入），非法链接直接返回错误、不触发系统调用。
-- **跨平台实现**：Windows `cmd /C start "" "<url>"`；macOS `open`；Linux `xdg-open`。
+- **安全**：`open_external` 命令内 `validate_external_url` 仅放行 `http/https/mailto/tel` 白名单协议，且长度 ≤ 2048——`file://`、`javascript:`、`cmd://` 等一律拒绝（防命令注入）。
+- **覆盖**：`RichContent` Markdown 链接、`ImageMessageCard`/`DocDownloadCard` 下载（`rich.ts` 的 `downloadUrl` 在 Tauri 环境统一走 `openExternal`）。
 - **前端调用示例**：
 
 ```ts
@@ -244,3 +245,4 @@ sendNotification({ title: '智能体助手', body: '回答完成' })
 3. 图标重生成：改 `desktop/app-icon.png` 后执行 `npm run tauri icon app-icon.png`。
 4. 代码质量：`cargo check`（零警告目标）;改动命令后跑 web 的 build/test 确认 IPC 契约没被破坏。
 5. 打包：`npm run tauri build`（Windows 首次会下载 NSIS 等打包器）。
+6. **安卓构建**：`npx tauri android build --target aarch64 --debug`（debug 签名可直接装真机）；release 需配签名 keystore（详见 [android.md](./android.md)）。壳代码中桌面专属逻辑（托盘/窗口）须用 `#[cfg(desktop)]` 隔离，新增命令若调用桌面 API 需同步考虑安卓兼容。

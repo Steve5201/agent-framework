@@ -1,7 +1,7 @@
 [package]
 name = "agent-desktop"
 version = "0.1.0"
-description = "智能体助手桌面端（Tauri 2 + Rust 壳）"
+description = "星云 Nebula 桌面端（Tauri 2 + Rust 壳）"
 authors = ["agent-framework contributors"]
 edition = "2021"
 rust-version = "1.77"
@@ -14,10 +14,19 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
+[features]
+# 托盘（桌面端专属）：启用 tauri 的 tray-icon 得到 tauri::tray / tauri::menu 模块。
+# tauri 内部用 #[cfg(all(desktop, feature="tray-icon"))] 门控，安卓（非 desktop）
+# 即使 feature 启用也不编译该模块，因此默认启用不影响安卓构建。
+default = ["tray-icon"]
+tray-icon = ["tauri/tray-icon"]
+
 [dependencies]
-tauri = { version = "2", features = ["tray-icon"] }
+tauri = { version = "2", features = [] }
 # 系统通知（P2-85）
 tauri-plugin-notification = "2"
+# 外部链接/文件打开（跨平台，安卓端用系统浏览器打开 URL 的正确方案）
+tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # Windows 中文控制台输出解码（GBK→UTF-8）：cmd 错误信息/中文文件内容兜底解码

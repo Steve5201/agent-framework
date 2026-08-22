@@ -10,3 +10,4 @@ app-icon.png
 .vscode/
 .idea/
 *.suo
+src-tauri/.cargo/

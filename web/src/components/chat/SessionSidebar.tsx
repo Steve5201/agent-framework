@@ -296,7 +296,7 @@ export default function SessionSidebar({ onNavigate }: Props) {
           <div className="flex min-w-0 items-center gap-2 px-2 py-2">
             <Avatar fallback={user?.username} className="size-10 text-lg md:size-8 md:text-sm" />
             <span className="min-w-0 flex-1 truncate text-base text-muted-foreground md:text-xs">{user?.username}</span>
-            <MenuButton className="md:hidden" />
+            <MenuButton />
           </div>
         </div>
       )}

@@ -133,6 +133,7 @@ npx tauri android build --target aarch64
 
 - 图标源 `web/public/nebula-icon.svg` 为**浅色系**：浅紫蓝渐变背景 + 星空蓝渐变核心。
 - `NebulaLogo.tsx` 内联 SVG 组件用 `useId()` 生成唯一 gradient/filter id——**避免多个实例同页渲染时 ID 冲突导致背景消失**（同 id 会解析到首个实例，`showBg=false` 实例缺渐变会让后续实例背景失效）。
+- **可见性**：`NebulaLogo` 默认**仅移动端（安卓）显示**（内部用 `useIsMobile()` 判断，网页端/桌面端内部 UI 返回 null）。品牌图标只用于安卓端界面 + 安装包/桌面快捷方式/网站 favicon（`public/nebula-icon.svg` 与 tauri 生成图标），不在网页/桌面端界面内重复展示。
 - 桌面/安卓 launcher 图标由该源生成（`npx tauri icon`）。注意：`tauri icon` 生成的安卓 launcher 大尺寸会变透明，需手动用方形背景 PNG 覆盖 `gen/android/app/src/main/res/mipmap-*/ic_launcher*.png`。
 
 ## 6. 安卓端的 local shell（本地工具）

@@ -1,11 +1,16 @@
 import { useId } from 'react'
 import { cn } from '@/lib/utils'
+import { useIsMobile } from '@/lib/useIsMobile'
 
 /**
  * 星云 Nebula 品牌 Logo（内联 SVG）。
  * 设计：紫→蓝渐变核心 + 环绕轨道与节点——无数智能体/工具如星云般汇聚协作。
  *
- * 注意：页面会同时渲染多个实例（顶栏/侧栏/登录页/桌面头部），若共用同一组
+ * 可见性：默认仅移动端（安卓）显示。网页端/桌面端内部 UI 不渲染本图标
+ * （品牌图标只用于安装包/桌面快捷方式/网站 favicon，见 public/nebula-icon.svg
+ * 与 tauri 生成的桌面/安卓图标），避免与界面视觉重复。
+ *
+ * 注意：页面会同时渲染多个实例（顶栏/侧栏/登录页），若共用同一组
  * gradient/filter id 会导致 DOM 内 id 冲突——浏览器 url(#...) 解析到首个实例的
  * defs，showBg=false 的实例缺 nebBg 渐变时后续实例背景会消失。故用 useId 为
  * 每个实例生成唯一 id，保证各实例独立渲染。
@@ -13,15 +18,21 @@ import { cn } from '@/lib/utils'
 export default function NebulaLogo({
   className,
   showBg = true,
+  forceShow = false,
 }: {
   className?: string
   showBg?: boolean
+  /** 强制显示（默认仅移动端；个别场景如需在桌面端展示可传 true）。 */
+  forceShow?: boolean
 }) {
+  const isMobile = useIsMobile()
   const uid = useId()
   const core = `nebCore${uid}`
   const bg = `nebBg${uid}`
   const halo = `nebHalo${uid}`
   const glow = `nebGlow${uid}`
+
+  if (!isMobile && !forceShow) return null
 
   return (
     <svg

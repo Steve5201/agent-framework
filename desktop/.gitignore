@@ -11,3 +11,5 @@ app-icon.png
 .idea/
 *.suo
 src-tauri/.cargo/
+src-tauri/gen/android/app/*.keystore
+nebula-release.keystore

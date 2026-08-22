@@ -8,6 +8,7 @@ import RichContent from './RichContent'
 import ChatDocCard from './ChatDocCard'
 import ImageMessageCard from './ImageMessageCard'
 import { isDocMarker, isImageMarker } from './docMarker'
+import { useIsMobile } from '@/lib/useIsMobile'
 
 /** AI 头像：蓝色渐变方卡 + Bot 图标（参照 ui_chat.html agent-avatar）。 */
 function AiAvatar() {
@@ -46,6 +47,7 @@ export default function MessageItem({
   message: ChatMessage
   attachments?: ChatMessage[]
 }) {
+  const isMobile = useIsMobile()
   if (message.role === 'tool') {
     return (
       <div className="msg-in px-4 py-1.5 sm:px-12">
@@ -85,7 +87,7 @@ export default function MessageItem({
           ) : null}
           <MessageActions message={message} align="right" />
         </div>
-        <UserAvatar />
+        {isMobile && <UserAvatar />}
       </div>
     )
   }
@@ -93,7 +95,7 @@ export default function MessageItem({
   // assistant
   return (
     <div className="msg-in flex justify-start gap-3 px-4 py-2 sm:px-12">
-      <AiAvatar />
+      {isMobile && <AiAvatar />}
       <div className="flex max-w-[90%] min-w-0 flex-col sm:max-w-[65%]">
         {/* 思考过程折叠块：思考文本 + 工具调用/返回可视化（需求 9）。
          *  工具调没调、返回什么，由真实执行事件渲染，一眼可辨，杜绝幻觉。

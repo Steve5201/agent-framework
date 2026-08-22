@@ -103,7 +103,7 @@ function SessionRow({
               aria-hidden
             />
           )}
-          <span className="flex min-w-0 items-baseline gap-2 pr-24 md:pr-9">
+          <span className="flex min-w-0 items-baseline gap-2 pr-13">
             <span className="truncate">{session.title || '新对话'}</span>
             <span className="shrink-0 text-[14px] text-muted-foreground/70 md:text-[11px]">
               {relativeTime(session.updated_at)}

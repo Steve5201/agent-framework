@@ -4,7 +4,7 @@
 // 浏览器环境（web 网页 / vitest）：localStorage
 //   —— 有 XSS 读取风险，但 access 15 分钟短过期 + refresh 可吊销，风险面可控。
 // Tauri 桌面环境（WebView2）：自定义 Rust 命令（desktop/src-tauri/src/commands.rs）
-//   —— token 持久化到系统应用配置目录（%APPDATA%/com.agentframework.desktop/session.json），
+//   —— token 持久化到系统应用配置目录（%APPDATA%/com.nebula.agent/session.json），
 //      与 WebView2 数据目录隔离，浏览器 JS/其他站点无法访问（P2-86）。
 //      明文落盘，威胁模型与 tauri-plugin-store 等价；防本机进程读取需升级
 //      Windows Credential Manager（keyring），列入后续硬化项。

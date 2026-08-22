@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "agent-desktop",
+  "productName": "Nebula",
   "version": "0.1.0",
-  "identifier": "com.agentframework.desktop",
+  "identifier": "com.nebula.agent",
   "build": {
     "beforeDevCommand": "npm run dev --prefix ../web -- --port 3001 --strictPort",
     "devUrl": "http://localhost:3001",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "智能体助手",
+        "title": "星云 Nebula",
         "width": 1200,
         "height": 800,
         "minWidth": 900,
@@ -37,7 +37,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "shortDescription": "智能体助手桌面端",
-    "longDescription": "基于通用 Agent 框架的多功能智能体桌面客户端"
+    "shortDescription": "星云 Nebula 桌面客户端",
+    "longDescription": "星云 Nebula——多智能体协同的智能助手平台桌面客户端"
   }
 }

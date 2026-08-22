@@ -5,7 +5,11 @@
 //   - 托盘菜单"显示主窗口" / "退出"；
 //   - 单击托盘图标显示主窗口；
 //   - 关闭主窗口默认最小化到托盘（见 lib.rs 的 on_window_event）。
+//
+// 仅桌面端：安卓无系统托盘，整个模块在非 desktop 目标下不编译。
 // ---------------------------------------------------------------------------
+
+#![cfg(desktop)]
 
 use tauri::{
     menu::{Menu, MenuItem},
@@ -25,7 +29,7 @@ pub fn setup(app: &AppHandle) -> tauri::Result<()> {
                 .cloned()
                 .expect("缺少默认窗口图标，请检查 tauri.conf.json 的 bundle.icon"),
         )
-        .tooltip("智能体助手")
+        .tooltip("星云 Nebula")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id().as_ref() {
